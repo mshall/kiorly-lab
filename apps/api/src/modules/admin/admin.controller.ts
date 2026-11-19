@@ -15,7 +15,7 @@ const Staff = z.object({ email: z.string().email(), displayName: z.string().min(
 const StaffPatch = z.object({ displayName: z.string().min(2).optional(), role: Role.optional(), labIds: z.array(z.string()).optional(), signatoryLicenceNo: z.string().nullable().optional(), active: z.boolean().optional() }).strict();
 const Lab = z.object({ name: z.string().min(2), code: z.string().regex(/^[A-Za-z0-9]{2,6}$/), address: z.string().optional(), licenceNo: z.string().optional() }).strict();
 const Settings = z.object({ name: z.string().min(2).optional(), vatRatePercent: z.coerce.number().min(0).max(100).optional(), referringDoctorStatements: z.boolean().optional(), qcValidityHours: z.number().int().min(1).max(168).optional() }).strict();
-const Client = z.object({ source: z.enum(["KIOREX_BOOKING", "KIORLY_CLINIC"]) }).strict();
+const Client = z.object({ source: z.enum(["KIOREX_BOOKING", "KIORLY_CLINIC"]), kiorexBaseUrl: z.string().url().optional() }).strict();
 
 @ApiTags("admin")
 @Controller()
@@ -42,5 +42,5 @@ export class AdminController {
   @ApiBearerAuth() @Get("audit-logs") @Perm("audit.read") audit(@CurrentUser() u: AuthUser, @Query() q: Record<string, string>) { return this.svc.auditLogs(u.orgId, q); }
   @ApiBearerAuth() @Get("dev/inbox") @Perm("settings.manage") inbox(@CurrentUser() u: AuthUser, @Query() q: { purpose?: string; limit?: string }) { return this.svc.inbox(u.orgId, q); }
   @ApiBearerAuth() @Get("integration-clients") @Perm("settings.manage") clients(@CurrentUser() u: AuthUser) { return this.svc.listClients(u.orgId); }
-  @ApiBearerAuth() @Post("integration-clients") @Perm("settings.manage") @ZBody(Client) createClient(@CurrentUser() u: AuthUser, @Body() b: z.infer<typeof Client>) { return this.svc.createClient(u, b.source); }
+  @ApiBearerAuth() @Post("integration-clients") @Perm("settings.manage") @ZBody(Client) createClient(@CurrentUser() u: AuthUser, @Body() b: z.infer<typeof Client>) { return this.svc.createClient(u, b.source, b.kiorexBaseUrl); }
 }

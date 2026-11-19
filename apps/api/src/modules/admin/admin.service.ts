@@ -160,14 +160,15 @@ export class AdminService {
 
   // ---------------------------------------------------- integration clients
   async listClients(orgId: string) {
-    return this.prisma.integrationClient.findMany({ where: { orgId }, select: { id: true, key: true, source: true, active: true, createdAt: true } });
+    return this.prisma.integrationClient.findMany({ where: { orgId }, select: { id: true, key: true, source: true, kiorexBaseUrl: true, active: true, createdAt: true } });
   }
   /** Issues an HMAC client (key + secret). The secret is returned ONCE and stored encrypted. */
-  async createClient(u: AuthUser, source: "KIOREX_BOOKING" | "KIORLY_CLINIC") {
+  async createClient(u: AuthUser, source: "KIOREX_BOOKING" | "KIORLY_CLINIC", kiorexBaseUrl?: string) {
     const key = `kl_${randomBytes(9).toString("hex")}`;
     const secret = randomBytes(32).toString("base64url");
-    const c = await this.prisma.integrationClient.create({ data: { orgId: u.orgId, key, secretEnc: seal(secret), source } });
+    const webhookSecret = randomBytes(32).toString("base64url");
+    const c = await this.prisma.integrationClient.create({ data: { orgId: u.orgId, key, secretEnc: seal(secret), source, kiorexBaseUrl, webhookSecretEnc: seal(webhookSecret) } });
     await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "integration_client.create", entityType: "IntegrationClient", entityId: c.id, meta: { source } });
-    return { id: c.id, key, secret, source };
+    return { id: c.id, key, secret, webhookSecret, source };
   }
 }

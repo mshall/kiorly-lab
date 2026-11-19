@@ -1165,6 +1165,10 @@ model IntegrationClient {
   source    String
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
+  /// KIOREX_BOOKING only: Kiorex API base (e.g. http://localhost:4000); outbox events go to `${base}/api/v1/webhooks/lab`.
+  kiorexBaseUrl    String?
+  /// Per-partner webhook signing secret (AES-GCM sealed). Kiorex verifies it via X-Kiorly-Client-Key.
+  webhookSecretEnc String?
 
   @@index([orgId])
 }

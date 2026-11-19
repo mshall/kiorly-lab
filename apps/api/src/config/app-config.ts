@@ -18,8 +18,8 @@ export const appConfig = {
   storageMode: () => mode(process.env.STORAGE_MODE),
   analyzerMode: () => mode(process.env.ANALYZER_MODE),
   kiorexMode: () => mode(process.env.KIOREX_MODE),
-  kiorexWebhookUrl: () => process.env.KIOREX_WEBHOOK_URL ?? "http://localhost:4000/api/v1/webhooks/kiorly",
-  kiorexWebhookSecret: () => process.env.KIOREX_WEBHOOK_SECRET ?? "kx_dev_webhook_secret",
+  kiorexWebhookUrl: () => process.env.KIOREX_WEBHOOK_URL ?? "http://localhost:4000/api/v1/webhooks/lab",
+  kiorexWebhookSecret: () => process.env.KIOREX_WEBHOOK_SECRET ?? "kx_dev_lab_webhook_secret",
   flagsWebhookSecret: () => process.env.KIOREX_FLAGS_WEBHOOK_SECRET ?? process.env.KIOREX_PRODUCT_SECRET ?? "ff_dev_secret_change_me",
   /** Platform key-encryption-key for integration client secrets (dev default only). */
   kek: () => process.env.INTEGRATION_KEK ?? "dev-kek-change-me-dev-kek-change-me!",

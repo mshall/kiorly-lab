@@ -31,7 +31,7 @@ export class OutboxDispatcher implements OnModuleInit, OnModuleDestroy {
     let sent = 0;
     let failed = 0;
     for (const r of rows) {
-      const res = await this.transport.deliver({ body: JSON.stringify(r.payload), eventId: r.id, eventType: r.type });
+      const res = await this.transport.deliver({ orgId: r.orgId, body: JSON.stringify(r.payload), eventId: r.id, eventType: r.type });
       if (res.ok) {
         await this.prisma.outboxEvent.update({ where: { id: r.id }, data: { status: "SENT", sentAt: new Date(), attempts: { increment: 1 }, lastError: null } });
         sent++;

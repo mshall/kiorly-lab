@@ -5,6 +5,8 @@ import { dirname, join } from "node:path";
 import { signWebhook, signKiorlyRequest, validateEnvelope, validateEvent } from "@kiorex/contracts";
 import { type Lab, type TestApp, NORMAL, bootApp, call, enterAndTechValidate, makeLab, makeOrder, qcPass, toProcessing } from "./helpers/app";
 import { post } from "./helpers/hmac";
+import { createServer } from "node:http";
+import { verifyWebhook } from "@kiorex/contracts";
 
 describe("integration: Kiorex bookings + Kiorly Clinic handoff (HMAC), outbox, flag webhook, contracts", () => {
   let t: TestApp;
@@ -43,7 +45,7 @@ describe("integration: Kiorex bookings + Kiorly Clinic handoff (HMAC), outbox, f
     assert.equal(o.body.homeCollection.status, "SCHEDULED");
     const ev = await t.prisma.outboxEvent.findMany({ where: { orgId: lab.orgId, type: "LabOrderCreated", aggregateId: a.body.orderId } });
     assert.equal(ev.length, 1);
-    assert.equal(validateEnvelope(ev[0].payload).valid, false, "local draft type is not in @kiorex/contracts yet (NH-LB-025)");
+    assert.equal(validateEvent("LabOrderCreated", ev[0].payload).valid, true, "LabOrderCreated is a draft contract since kiorex-contracts 1.3.0 (NH-LB-025)");
   });
 
   it("status events flow to Kiorex as the order progresses (outbox, deduplicated eventIds)", async () => {
@@ -127,6 +129,82 @@ describe("integration: Kiorex bookings + Kiorly Clinic handoff (HMAC), outbox, f
     const again = await t.app.get((await import("../src/outbox/outbox.service")).OutboxService).enqueue({ orgId: lab.orgId, type: "LabOrderCreated", aggregateType: "LabOrder", aggregateId: "agg1", data: { x: 1 }, eventId });
     assert.equal(again, id);
     assert.equal(await t.prisma.outboxEvent.count({ where: { id } }), 1);
+  });
+
+  it("1.4.0 marketplace read side: labs, test catalogue + quote in minor units, slots with capacity; Kiorex clients only", async () => {
+    const labs = await post(t, kx, "/integration/v1/labs", undefined, { method: "GET" });
+    assert.equal(labs.status, 200, JSON.stringify(labs.body));
+    assert.deepEqual(labs.body.items.map((l: { id: string; homeCollection: boolean }) => [l.id, l.homeCollection]), [[lab.labId, true]]);
+    const tests = await post(t, kx, "/integration/v1/tests?q=cbc", undefined, { method: "GET" });
+    const cbc = tests.body.items.find((x: { code: string }) => x.code === "CBC");
+    assert.equal(cbc.labId, lab.labId);
+    assert.equal(Number.isInteger(cbc.priceMinor), true);
+    const q = await post(t, kx, "/integration/v1/tests/quote", { labId: lab.labId, testCodes: ["CBC", "glu"], collectionType: "HOME" });
+    assert.equal(q.status, 200, JSON.stringify(q.body));
+    assert.deepEqual(q.body.tests.map((x: { code: string }) => x.code), ["CBC", "GLU"]);
+    assert.equal(q.body.tests[0].priceMinor, cbc.priceMinor);
+    assert.equal(q.body.collectionFeeMinor, 0);
+    assert.equal((await post(t, kx, "/integration/v1/tests/quote", { testCodes: ["NOPE"] })).body.code, "UNKNOWN_TESTS");
+    assert.equal((await post(t, clinic, "/integration/v1/tests", undefined, { method: "GET" })).status, 404, "clinic handoff clients do not use the marketplace read side");
+
+    const from = new Date(Date.now() + 86_400_000).toISOString(), to = new Date(Date.now() + 3 * 86_400_000).toISOString();
+    const slots = await post(t, kx, `/integration/v1/labs/${lab.labId}/slots?collectionType=HOME&from=${from}&to=${to}`, undefined, { method: "GET" });
+    assert.equal(slots.status, 200, JSON.stringify(slots.body));
+    assert.ok(slots.body.slots.length >= 10);
+    assert.equal(slots.body.slots[0].available, 4);
+    assert.equal((await post(t, kx, `/integration/v1/labs/${lab.labId}/slots?collectionType=HOME&from=${to}&to=${from}`, undefined, { method: "GET" })).status, 400);
+    assert.equal((await post(t, kx, `/integration/v1/labs/nope/slots?collectionType=HOME&from=${from}&to=${to}`, undefined, { method: "GET" })).status, 404);
+
+    // booking on an offered slot consumes capacity atomically; the slot disappears when full
+    const s0 = slots.body.slots[0] as { startsAt: string; endsAt: string };
+    for (let n = 0; n < 4; n++) {
+      const r = await post(t, kx, "/integration/v1/orders", booking(`kx_slot_${n}`, { labId: lab.labId, patient: { fullName: `Slot Patient ${n}`, phone: `+20100000090${n}`, dateOfBirth: "1990-01-01" }, collection: { type: "HOME", address: "1 Test St", windowStart: s0.startsAt, windowEnd: s0.endsAt } }));
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+    }
+    const full = await post(t, kx, "/integration/v1/orders", booking("kx_slot_4", { labId: lab.labId, collection: { type: "HOME", address: "1 Test St", windowStart: s0.startsAt, windowEnd: s0.endsAt } }));
+    assert.equal(full.status, 409);
+    assert.equal(full.body.code, "SLOT_FULL");
+    const after = await post(t, kx, `/integration/v1/labs/${lab.labId}/slots?collectionType=HOME&from=${from}&to=${to}`, undefined, { method: "GET" });
+    assert.equal(after.body.slots.some((x: { startsAt: string }) => x.startsAt === s0.startsAt), false);
+    const walkin = await post(t, kx, `/integration/v1/labs/${lab.labId}/slots?collectionType=WALK_IN&from=${from}&to=${to}`, undefined, { method: "GET" });
+    assert.equal(walkin.body.slots.some((x: { startsAt: string }) => x.startsAt === s0.startsAt), true, "walk-in has no capacity limit");
+  });
+
+  it("lab.kiorex_bookings OFF: catalogue and orders answer 403 FEATURE_DISABLED {key,scope}; existing orders stay readable", async () => {
+    const flags = t.flags;
+    flags.setSnapshot({ product: "kiorly-lab", version: 1, generatedAt: new Date().toISOString(), signature: "x", flags: [{ key: "lab.kiorex_bookings", class: "Module", scopes: ["global", "market", "org"], dependsOn: [], launchLocked: false, gateSatisfied: true, values: { global: "OFF", markets: {}, orgs: {} } }] } as never);
+    try {
+      for (const r of [await post(t, kx, "/integration/v1/tests", undefined, { method: "GET" }), await post(t, kx, "/integration/v1/orders", booking("kx_off_1"))]) {
+        assert.equal(r.status, 403, JSON.stringify(r.body));
+        assert.deepEqual({ code: r.body.code, key: r.body.key }, { code: "FEATURE_DISABLED", key: "lab.kiorex_bookings" });
+      }
+      assert.equal((await post(t, kx, "/integration/v1/orders/kx_ref_2", undefined, { method: "GET" })).status, 200, "OFF never hides data");
+    } finally { flags.setSnapshot(null); }
+  });
+
+  it("real mode: events go to the tenant's Kiorex base /api/v1/webhooks/lab with the per-partner secret and X-Kiorly-Client-Key", async () => {
+    const seen: Array<{ url: string; h: Record<string, string>; body: string }> = [];
+    const srv = createServer((req, res) => { let b = ""; req.on("data", (c) => (b += c)); req.on("end", () => { seen.push({ url: req.url!, h: req.headers as Record<string, string>, body: b }); res.end("{}"); }); });
+    await new Promise<void>((r) => srv.listen(0, "127.0.0.1", r));
+    const prev = process.env.KIOREX_MODE;
+    try {
+      process.env.KIOREX_MODE = "real";
+      const made = (await call(t, "POST", "/integration-clients", { token: lab.tokens.OWNER, body: { source: "KIOREX_BOOKING", kiorexBaseUrl: `http://127.0.0.1:${(srv.address() as { port: number }).port}` } })).body;
+      await t.prisma.integrationClient.updateMany({ where: { orgId: lab.orgId, source: "KIOREX_BOOKING", id: { not: made.id } }, data: { active: false } });
+      await t.outbox.dispatchDue(new Date(Date.now() + 600_000), 500);
+      seen.length = 0;
+      const { OutboxService } = await import("../src/outbox/outbox.service");
+      await t.app.get(OutboxService).enqueue({ orgId: lab.orgId, type: "LabOrderCreated", aggregateType: "LabOrder", aggregateId: "agg_real", data: { orderId: "agg_real" }, eventId: `evt_real_${Date.now()}` });
+      const r = await t.outbox.dispatchDue(new Date(Date.now() + 1000), 500);
+      assert.equal(r.sent >= 1, true, JSON.stringify(r));
+      const hit = seen.find((x) => x.body.includes("agg_real"))!;
+      assert.equal(hit.url, "/api/v1/webhooks/lab");
+      assert.equal(hit.h["x-kiorly-client-key"], made.key);
+      assert.equal(verifyWebhook({ secret: made.webhookSecret, body: hit.body, timestamp: hit.h["x-kiorly-timestamp"], signature: hit.h["x-kiorly-signature"] }).ok, true);
+    } finally {
+      if (prev === undefined) delete process.env.KIOREX_MODE; else process.env.KIOREX_MODE = prev;
+      srv.close();
+    }
   });
 
   it("LabResultReleased cannot be enqueued with raw values (schema forbids values/results)", async () => {

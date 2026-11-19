@@ -18,7 +18,7 @@
     "openapi": "rm -rf .tmp-openapi && tsc --outDir .tmp-openapi --rootDir . --module commonjs --target ES2022 --experimentalDecorators --emitDecoratorMetadata --esModuleInterop --skipLibCheck --strict --strictPropertyInitialization false scripts/export-openapi.ts && node .tmp-openapi/scripts/export-openapi.js; rm -rf .tmp-openapi"
   },
   "dependencies": {
-    "@kiorex/contracts": "file:../../../kiorex-contracts/dist-pack/kiorex-contracts-1.0.0.tgz",
+    "@kiorex/contracts": "file:../../../kiorex-contracts/dist-pack/kiorex-contracts-1.4.0.tgz",
     "@kiorly/lab-shared": "*",
     "@nestjs/common": "^10.4.15",
     "@nestjs/core": "^10.4.15",

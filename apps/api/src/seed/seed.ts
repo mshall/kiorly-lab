@@ -16,6 +16,7 @@ import { SpecimensService } from "../modules/specimens/specimens.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { STARTER_ANALYTES } from "../modules/admin/starter-catalogue";
 import { seal } from "../common/secret-box";
+import { PARTNER_DEV_DEFAULTS } from "@kiorex/contracts";
 
 /**
  * SYNTHETIC demo data (no real patients, labs or analyzers). Idempotent: skips when the demo tenant exists.
@@ -34,13 +35,22 @@ function rng(seed: number) {
 }
 const gauss = (r: () => number) => Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(2 * Math.PI * r());
 
+/** DEV registration of Kiorex as a booking client of the demo tenant (kiorex-contracts PARTNER_DEV_DEFAULTS; local only, idempotent). */
+async function ensureDevKiorexClient(prisma: PrismaService, orgId: string) {
+  const d = PARTNER_DEV_DEFAULTS.lab;
+  const data = { orgId, secretEnc: seal(d.clientSecret), webhookSecretEnc: seal(d.webhookSecret), kiorexBaseUrl: process.env.KIOREX_BASE_URL ?? "http://localhost:4000", source: "KIOREX_BOOKING", active: true };
+  await prisma.integrationClient.upsert({ where: { key: d.clientKey }, create: { key: d.clientKey, ...data }, update: data });
+}
+
 async function main() {
   if (process.env.NODE_ENV === "production") throw new Error("refusing to seed demo data in production");
   loadEnv();
   const app = await NestFactory.createApplicationContext(AppModule, { logger: ["error"] });
   const prisma = app.get(PrismaService);
-  if (await prisma.tenant.findUnique({ where: { slug: SLUG } })) {
-    console.log(`demo tenant "${SLUG}" already exists: nothing to do`);
+  const existing = await prisma.tenant.findUnique({ where: { slug: SLUG } });
+  if (existing) {
+    await ensureDevKiorexClient(prisma, existing.id);
+    console.log(`demo tenant "${SLUG}" already exists: dev Kiorex client ${PARTNER_DEV_DEFAULTS.lab.clientKey} ensured`);
     await app.close();
     return;
   }
@@ -150,8 +160,7 @@ async function main() {
   const pl = await prisma.priceList.create({ data: { orgId: tenant.id, name: "Insurer demo", currency: "EGP" } });
   await prisma.b2bAccount.create({ data: { orgId: tenant.id, name: "Demo Insurance Co", priceListId: pl.id, paymentTermsDays: 45 } });
   const admin = app.get(AdminService);
-  const kx = await admin.createClient(users.OWNER, "KIOREX_BOOKING");
-  await prisma.integrationClient.update({ where: { id: kx.id }, data: { key: "kl_dev_kiorex", secretEnc: seal("dev_kiorex_secret_change_me") } });
+  await ensureDevKiorexClient(prisma, tenant.id);
   const cl = await admin.createClient(users.OWNER, "KIORLY_CLINIC");
   await prisma.integrationClient.update({ where: { id: cl.id }, data: { key: "kl_dev_clinic", secretEnc: seal("dev_clinic_secret_change_me") } });
 
