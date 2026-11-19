@@ -1,0 +1,113 @@
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
+import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import { dt } from "@/lib/format";
+import { Badge, Button, Card, CardTitle, Empty, Field, Input, Select, Table, Tabs, Td, useToast } from "@/components/ui";
+import { ErrorNote, PageHeader } from "@/components/common";
+
+const ROLES = ["OWNER", "LAB_DIRECTOR", "AUTHORIZED_SIGNATORY", "TECHNOLOGIST", "PHLEBOTOMIST", "RECEPTION", "BRANCH_MANAGER"];
+
+/** Staff & RBAC, labs, tenant settings, integrations (HMAC clients, flag state, dev inbox), audit log. */
+export function SettingsPage() {
+  const { t, i18n } = useTranslation();
+  const { can, me } = useAuth();
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [tab, setTab] = useState("staff");
+  const [s, setS] = useState({ email: "", displayName: "", role: "TECHNOLOGIST", signatoryLicenceNo: "" });
+  const [lab, setLab] = useState({ name: "", code: "" });
+  const [secret, setSecret] = useState<any>(null);
+  const staff = useQuery({ queryKey: ["staff"], queryFn: () => api<any[]>("/staff"), enabled: can("staff.manage") });
+  const rbac = useQuery({ queryKey: ["rbac"], queryFn: () => api<any>("/rbac"), enabled: tab === "rbac" });
+  const labs = useQuery({ queryKey: ["labs"], queryFn: () => api<any[]>("/labs") });
+  const settings = useQuery({ queryKey: ["settings"], queryFn: () => api<any>("/settings"), enabled: tab === "general" });
+  const clients = useQuery({ queryKey: ["clients"], queryFn: () => api<any[]>("/integration-clients"), enabled: tab === "integrations" && can("settings.manage") });
+  const inbox = useQuery({ queryKey: ["inbox"], queryFn: () => api<any[]>("/dev/inbox?limit=50"), enabled: tab === "integrations" && can("settings.manage") });
+  const audit = useQuery({ queryKey: ["audit"], queryFn: () => api<any[]>("/audit-logs?limit=100"), enabled: tab === "audit" && can("audit.read") });
+  const [g, setG] = useState<any>(null);
+  const refresh = () => void qc.invalidateQueries();
+  const addStaff = useMutation({ mutationFn: () => api("/staff", { body: { ...s, signatoryLicenceNo: s.signatoryLicenceNo || undefined } }), onSuccess: () => { setS({ ...s, email: "", displayName: "", signatoryLicenceNo: "" }); refresh(); toast(t("common.saved")); } });
+  const patchStaff = useMutation({ mutationFn: (v: { id: string; body: object }) => api(`/staff/${v.id}`, { method: "PUT", body: v.body }), onSuccess: refresh });
+  const addLab = useMutation({ mutationFn: () => api("/labs", { body: lab }), onSuccess: () => { setLab({ name: "", code: "" }); refresh(); } });
+  const save = useMutation({ mutationFn: () => api("/settings", { method: "PUT", body: g }), onSuccess: () => { refresh(); toast(t("common.saved")); } });
+  const newClient = useMutation({ mutationFn: (source: string) => api<any>("/integration-clients", { body: { source } }), onSuccess: (r) => { setSecret(r); refresh(); } });
+  const starter = useMutation({ mutationFn: () => api<any>("/onboarding/starter-catalogue", { body: {} }), onSuccess: (r) => toast(t("set.starterLoaded", { tests: r.tests })) });
+  const form = g ?? settings.data;
+  const tabs = [
+    ...(can("staff.manage") ? [{ id: "staff", label: t("set.staff") }, { id: "rbac", label: t("set.rbac") }] : []),
+    { id: "labs", label: t("set.labs") },
+    ...(can("settings.manage") ? [{ id: "general", label: t("set.general") }, { id: "integrations", label: t("set.integrations") }] : []),
+    ...(can("audit.read") ? [{ id: "audit", label: t("set.audit") }] : []),
+  ];
+  return (
+    <>
+      <PageHeader title={t("set.title")} sub={t("set.sub")} />
+      <Tabs tabs={tabs} value={tab} onChange={setTab} />
+      {tab === "staff" ? (
+        <div className="space-y-4">
+          <Card className="grid gap-3 sm:grid-cols-5">
+            <Field label={t("auth.email")}><Input value={s.email} onChange={(e) => setS({ ...s, email: e.target.value })} type="email" /></Field>
+            <Field label={t("common.name")}><Input value={s.displayName} onChange={(e) => setS({ ...s, displayName: e.target.value })} /></Field>
+            <Field label={t("set.role")}><Select value={s.role} onChange={(e) => setS({ ...s, role: e.target.value })}>{ROLES.map((r) => <option key={r} value={r}>{t(`role.${r}`)}</option>)}</Select></Field>
+            <Field label={t("set.licence")} hint={t("set.licenceHint")}><Input value={s.signatoryLicenceNo} onChange={(e) => setS({ ...s, signatoryLicenceNo: e.target.value })} /></Field>
+            <div className="flex items-end"><Button disabled={!s.email || !s.displayName} onClick={() => addStaff.mutate()}>{t("common.add")}</Button></div>
+            <div className="sm:col-span-5"><ErrorNote error={addStaff.error ?? patchStaff.error} /></div>
+          </Card>
+          <Table head={[t("common.name"), t("auth.email"), t("set.role"), t("set.licence"), t("common.status")]}>
+            {staff.data?.map((x) => (
+              <tr key={x.id}><Td>{x.displayName}</Td><Td className="text-xs">{x.email}</Td><Td><Select className="h-8 text-xs" value={x.role} onChange={(e) => patchStaff.mutate({ id: x.id, body: { role: e.target.value } })}>{ROLES.map((r) => <option key={r} value={r}>{t(`role.${r}`)}</option>)}</Select></Td><Td className="text-xs">{x.signatoryLicenceNo ?? "-"}</Td><Td><Button size="sm" variant={x.active ? "outline" : "secondary"} onClick={() => patchStaff.mutate({ id: x.id, body: { active: !x.active } })}>{x.active ? t("set.active") : t("common.inactive")}</Button></Td></tr>
+            ))}
+          </Table>
+        </div>
+      ) : null}
+      {tab === "rbac" && rbac.data ? (
+        <div className="overflow-x-auto rounded-lg ring-1 ring-border">
+          <table className="w-full text-xs"><thead className="bg-muted"><tr><th className="px-2 py-2 text-start">{t("set.permission")}</th>{ROLES.map((r) => <th key={r} className="px-2 py-2">{t(`role.${r}`)}</th>)}</tr></thead>
+            <tbody className="divide-y divide-border bg-card">{rbac.data.permissions.map((p: string) => <tr key={p}><td className="px-2 py-1 font-mono">{p}</td>{ROLES.map((r) => <td key={r} className="px-2 py-1 text-center">{rbac.data.roles[r].includes(p) ? "●" : ""}</td>)}</tr>)}</tbody></table>
+        </div>
+      ) : null}
+      {tab === "labs" ? (
+        <div className="space-y-4">
+          {can("settings.manage") ? <Card className="flex flex-wrap items-end gap-3"><Field label={t("common.name")}><Input value={lab.name} onChange={(e) => setLab({ ...lab, name: e.target.value })} /></Field><Field label={t("onboarding.labCode")}><Input value={lab.code} maxLength={6} onChange={(e) => setLab({ ...lab, code: e.target.value.toUpperCase() })} /></Field><Button disabled={!lab.name || !lab.code} onClick={() => addLab.mutate()}>{t("common.add")}</Button><div className="w-full"><ErrorNote error={addLab.error} /></div></Card> : null}
+          <Table head={[t("onboarding.labCode"), t("common.name"), t("set.licence")]}>{labs.data?.map((l) => <tr key={l.id}><Td className="font-mono">{l.code}</Td><Td>{l.name}</Td><Td>{l.licenceNo ?? "-"}</Td></tr>)}</Table>
+        </div>
+      ) : null}
+      {tab === "general" && form ? (
+        <Card className="grid gap-3 sm:grid-cols-2">
+          <Field label={t("common.name")}><Input value={form.name} onChange={(e) => setG({ ...form, name: e.target.value })} /></Field>
+          <Field label={t("set.vat")} hint={t("set.vatHint")}><Input type="number" step="0.01" value={form.vatRatePercent} onChange={(e) => setG({ ...form, vatRatePercent: Number(e.target.value) })} /></Field>
+          <Field label={t("set.qcHours")} hint={t("set.qcHoursHint")}><Input type="number" value={form.qcValidityHours} onChange={(e) => setG({ ...form, qcValidityHours: Number(e.target.value) })} /></Field>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.referringDoctorStatements} onChange={(e) => setG({ ...form, referringDoctorStatements: e.target.checked })} />{t("set.statements")}</label>
+          <div className="sm:col-span-2 flex flex-wrap items-center gap-2"><Button disabled={!g || save.isPending} onClick={() => save.mutate()}>{t("common.save")}</Button><Button variant="outline" onClick={() => starter.mutate()}>{t("set.loadStarter")}</Button><ErrorNote error={save.error} /></div>
+          <p className="sm:col-span-2 text-xs text-muted-foreground">{t("set.noTaxNote")}</p>
+        </Card>
+      ) : null}
+      {tab === "integrations" ? (
+        <div className="space-y-4">
+          <Card>
+            <CardTitle>{t("set.flags")}</CardTitle>
+            <p className="mb-2 text-xs text-muted-foreground">{t("set.flagsNote")}</p>
+            <div className="flex flex-wrap gap-2">{Object.entries(me?.flags ?? {}).map(([k, v]) => <Badge key={k} tone={v.enabled ? "ok" : "crit"}>{k}: {v.enabled ? "ON" : `OFF (${v.scope})`}</Badge>)}</div>
+            <p className="mt-3 text-xs text-muted-foreground">{t("set.neverFlags")}</p>
+          </Card>
+          <Card>
+            <CardTitle>{t("set.clients")}</CardTitle>
+            <div className="mb-3 flex gap-2"><Button size="sm" onClick={() => newClient.mutate("KIOREX_BOOKING")}>{t("set.newKiorexClient")}</Button><Button size="sm" variant="outline" onClick={() => newClient.mutate("KIORLY_CLINIC")}>{t("set.newClinicClient")}</Button></div>
+            {secret ? <div role="alert" className="mb-3 rounded-md bg-amber-50 p-3 text-xs text-amber-900"><div className="font-semibold">{t("set.secretOnce")}</div><div className="font-mono break-all">{secret.key}</div><div className="font-mono break-all">{secret.secret}</div></div> : null}
+            <Table head={[t("set.key"), t("set.source"), t("common.status")]}>{clients.data?.map((c) => <tr key={c.id}><Td className="font-mono text-xs">{c.key}</Td><Td>{c.source}</Td><Td>{c.active ? <Badge tone="ok">{t("set.active")}</Badge> : <Badge>{t("common.inactive")}</Badge>}</Td></tr>)}</Table>
+          </Card>
+          <Card>
+            <CardTitle>{t("set.inbox")}</CardTitle>
+            <p className="mb-2 text-xs text-muted-foreground">{t("set.inboxNote")}</p>
+            {inbox.data?.length ? <Table head={[t("common.date"), t("set.purpose"), t("set.channel"), t("set.template"), t("common.status")]}>{inbox.data.map((n) => <tr key={n.id}><Td className="text-xs">{dt(n.createdAt, i18n.language)}</Td><Td>{n.purpose}</Td><Td>{n.channel}</Td><Td className="font-mono text-xs">{n.templateId}</Td><Td><Badge tone={n.status === "FAILED" ? "crit" : "ok"}>{n.status}</Badge></Td></tr>)}</Table> : <Empty>{t("common.none")}</Empty>}
+          </Card>
+        </div>
+      ) : null}
+      {tab === "audit" ? (
+        audit.data?.length ? <Table head={[t("common.date"), t("set.action"), t("set.entity"), t("set.actor")]}>{audit.data.map((a) => <tr key={a.id}><Td className="text-xs">{dt(a.at, i18n.language)}</Td><Td className="font-mono text-xs">{a.action}</Td><Td className="text-xs">{a.entityType} {a.entityId.slice(0, 8)}</Td><Td className="font-mono text-xs">{a.actorId?.slice(0, 10) ?? "system"}</Td></tr>)}</Table> : <Empty>{t("common.none")}</Empty>
+      ) : null}
+    </>
+  );
+}

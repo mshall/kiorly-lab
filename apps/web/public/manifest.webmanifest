@@ -1,0 +1,11 @@
+{
+  "name": "Kiorly Lab Collector",
+  "short_name": "Kiorly Collect",
+  "start_url": "/phleb",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F4F6FC",
+  "theme_color": "#3730A3",
+  "icons": [{ "src": "/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
