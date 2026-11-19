@@ -25,6 +25,10 @@ export class StarterCatalogueService {
         const r = a.both ?? a.male ?? a.female!;
         await db.referenceInterval.create({ data: { orgId, analyteId: row.id, sex: null, ageMinDays: 0, ageMaxDays: 6569, low: r[0], high: r[1], effectiveFrom: new Date(), source: "SYNTHETIC_DEMO (NH-LB-013)" } });
       }
+      if (a.qc && !(await db.qcMaterialLevel.findFirst({ where: { orgId, analyteId: row.id } }))) {
+        await db.qcMaterialLevel.create({ data: { orgId, analyteId: row.id, level: "LEVEL_1", materialLot: "DEMO-L1", targetMean: a.qc.mean, targetSd: a.qc.sd } });
+        await db.qcMaterialLevel.create({ data: { orgId, analyteId: row.id, level: "LEVEL_2", materialLot: "DEMO-L2", targetMean: Math.round(a.qc.mean * 1.4 * 1000) / 1000, targetSd: Math.round(a.qc.sd * 1.4 * 1000) / 1000 } });
+      }
       if (a.critical && !(await db.criticalRule.findFirst({ where: { orgId, analyteId: row.id } }))) {
         await db.criticalRule.create({ data: { orgId, analyteId: row.id, criticalLow: a.critical.low ?? null, criticalHigh: a.critical.high ?? null, ackWithinMinutes: a.critical.ack } });
       }

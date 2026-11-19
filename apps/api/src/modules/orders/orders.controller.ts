@@ -20,7 +20,7 @@ export const OrderBody = z.object({
   testCodes: z.array(z.string()).optional(), packageCodes: z.array(z.string()).optional(),
   source: z.enum(["WALK_IN", "REFERRING_DOCTOR"]).optional(), referringDoctorName: z.string().optional(), referringDoctorRef: z.string().optional(), referringDoctorPhone: z.string().optional(),
   priority: z.enum(["ROUTINE", "URGENT", "STAT"]).optional(), collectionType: z.enum(["IN_LAB", "HOME"]).optional(), b2bAccountId: z.string().optional(),
-  identifiersChecked: z.array(z.string()).optional(), consentChannels: Channels.optional(), homeCollection: HomeBody.optional(),
+  identifiersChecked: z.array(z.string()).optional(), consentChannels: Channels.optional(), homeCollection: HomeBody.optional(), accession: z.enum(["AUTO", "DEFER"]).optional(),
 }).strict();
 const Identity = z.object({ identifiersChecked: z.array(z.string()).min(2) }).strict();
 const Consent = z.object({ channels: Channels }).strict();

@@ -19,8 +19,8 @@ export type ExportKind = "invoices" | "payments" | "orders" | "qc-runs" | "tat" 
 export const EXPORT_KINDS: readonly ExportKind[] = ["invoices", "payments", "orders", "qc-runs", "tat", "results-summary"];
 
 /**
- * Accountant/lab exports (CSV). VAT appears as plain columns (rate, amount, total). There is NO tax-authority submission, e-invoice
- * format, signing or "tax compliance status" anywhere (ADR-011): businesses hand these files to their own accountant.
+ * Accountant/lab exports (CSV). VAT appears as plain columns (rate, amount, total). Businesses hand these files to their own accountant
+ * (ADR-011); nothing here talks to any government system.
  */
 @Injectable()
 export class ExportsService {

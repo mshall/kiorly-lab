@@ -43,6 +43,8 @@ export interface CreateOrderInput {
   identifiersChecked?: string[];
   consentChannels?: ReleaseChannel[];
   homeCollection?: HomeCollectionInput;
+  /** DEFER: create the order without specimens; accession later (e.g. pre-printed accession labels, KLSPC01). */
+  accession?: "AUTO" | "DEFER";
 }
 
 /** The actor on whose behalf an order is created: a staff user, or a system integration client. */
@@ -152,7 +154,7 @@ export class OrdersService {
         items: { create: items.map((i) => ({ testId: i.test.id, price: i.price, packageCode: i.packageCode })) },
       },
     });
-    await this.specimens.createForOrder(tx, { id: order.id, orgId, labId });
+    if (input.accession !== "DEFER") await this.specimens.createForOrder(tx, { id: order.id, orgId, labId });
 
     if (input.collectionType === "HOME") {
       if (!input.homeCollection) throw new BadRequestException({ code: "HOME_COLLECTION_REQUIRED" });
