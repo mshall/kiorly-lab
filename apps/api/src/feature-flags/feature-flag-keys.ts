@@ -20,3 +20,6 @@ export const FLAG_DEFINITIONS: readonly FlagDefinition[] = [
 export const FLAG_KEYS = FLAG_DEFINITIONS.map((f) => f.key);
 export type FlagKey = string;
 export const isKnownFlagKey = (key: string): boolean => FLAG_KEYS.includes(key);
+
+/** Flags the web console needs state for. */
+export const FEATURE_FLAG_KEYS_FOR_UI: readonly string[] = FLAG_KEYS;

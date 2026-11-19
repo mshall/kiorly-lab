@@ -1,8 +1,12 @@
-/** Bounded contexts from KX-07. Source of truth for placeholder modules (tested). */
+/** Bounded contexts from KX-07. Source of truth for module registration and the safety-path list (tested). */
 export const BOUNDED_CONTEXTS = [
+  { dir: "catalogue", name: "CatalogueModule", prefix: "KLORD01/KLQC03", title: "Test and analyte catalogue, reference intervals, price versions", safetyPath: false },
   { dir: "orders", name: "OrdersModule", prefix: "KLORD", title: "Test catalogue, orders and collection", safetyPath: false },
   { dir: "specimens", name: "SpecimensModule", prefix: "KLSPC", title: "Accession, specimens and chain of custody", safetyPath: true },
   { dir: "analysis-qc", name: "AnalysisQcModule", prefix: "KLQC", title: "Analysis, QC and validation", safetyPath: true },
   { dir: "release", name: "ReleaseModule", prefix: "KLCRIT", title: "Release and critical values", safetyPath: true },
+  { dir: "critical", name: "CriticalModule", prefix: "KLCRIT01", title: "Critical-value alerts, acknowledgement and escalation", safetyPath: true },
+  { dir: "analyzers", name: "AnalyzersModule", prefix: "KLQC01", title: "Analyzer bridge (ASTM E1394 / HL7 v2) and simulator", safetyPath: false },
+  { dir: "admin", name: "AdminModule", prefix: "LB-F07", title: "Auth session, onboarding, staff/RBAC, settings", safetyPath: false },
   { dir: "business", name: "BusinessModule", prefix: "KLBIZ", title: "Business: price lists, invoices, TAT", safetyPath: false },
 ] as const;

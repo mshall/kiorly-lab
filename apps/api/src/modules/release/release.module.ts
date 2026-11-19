@@ -1,9 +1,7 @@
 import { Module } from "@nestjs/common";
+import { ReleaseController } from "./release.controller";
+import { ReportsService } from "./reports.service";
 
-/**
- * PLACEHOLDER (KX-07 bounded context "Release and critical values", requirements KLCRIT*).
- * No behaviour until its build-sequence steps are scheduled; see Docs/lab-cursor-build-sequence.md.
- * SAFETY PATH (ADR-025): never gate this code behind a feature flag.
- */
-@Module({})
+/** KLCRIT02/03 + KLQC04/05 bounded context: signed report versions, consent-checked release, secure links. SAFETY PATH: never flag-gated. */
+@Module({ controllers: [ReleaseController], providers: [ReportsService], exports: [ReportsService] })
 export class ReleaseModule {}

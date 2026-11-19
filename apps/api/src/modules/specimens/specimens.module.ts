@@ -1,9 +1,8 @@
 import { Module } from "@nestjs/common";
+import { CustodyService } from "./custody.service";
+import { SpecimensController } from "./specimens.controller";
+import { SpecimensService } from "./specimens.service";
 
-/**
- * PLACEHOLDER (KX-07 bounded context "Accession, specimens and chain of custody", requirements KLSPC*).
- * No behaviour until its build-sequence steps are scheduled; see Docs/lab-cursor-build-sequence.md.
- * SAFETY PATH (ADR-025): never gate this code behind a feature flag.
- */
-@Module({})
+/** KLSPC bounded context. SAFETY PATH: never flag-gated (ADR-025). */
+@Module({ controllers: [SpecimensController], providers: [SpecimensService, CustodyService], exports: [SpecimensService, CustodyService] })
 export class SpecimensModule {}

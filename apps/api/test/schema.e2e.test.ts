@@ -8,14 +8,14 @@ import { loadEnv } from "../src/config/env";
 import { PrismaService } from "../src/prisma/prisma.service";
 import { schemaSmoke } from "./schema.lab.cases";
 
-describe("schema smoke (DRAFT schema, pending discovery)", () => {
+describe("schema smoke (FROZEN-v1)", () => {
   const prisma = new PrismaService();
   before(() => loadEnv());
   after(async () => { await prisma.$disconnect(); });
 
-  it("schema.prisma carries the DRAFT banner", () => {
+  it("schema.prisma carries the FROZEN-v1 banner", () => {
     const src = readFileSync(resolve(__dirname, "../prisma/schema.prisma"), "utf8");
-    assert.match(src.slice(0, 600), /DRAFT/);
+    assert.match(src.slice(0, 600), /FROZEN-v1/);
   });
 
   it("generated client exposes the expected core models", () => {

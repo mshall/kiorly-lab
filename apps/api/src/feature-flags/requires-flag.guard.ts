@@ -16,9 +16,9 @@ export class RequiresFlagGuard implements CanActivate {
   canActivate(ctx: ExecutionContext): boolean {
     const key = this.reflector.getAllAndOverride<string | undefined>(REQUIRES_FLAG, [ctx.getHandler(), ctx.getClass()]);
     if (!key) return true;
-    const req = ctx.switchToHttp().getRequest<{ headers: Record<string, string | undefined> }>();
-    // TODO(auth): orgId/market come from the verified Kiorex Account token once auth lands.
-    const d = this.flags.evaluate(key, { orgId: req.headers["x-org-id"], market: req.headers["x-market"] });
+    const req = ctx.switchToHttp().getRequest<{ user?: { orgId: string; marketCode: string } }>();
+    // orgId/market come from the authenticated staff row (never from client headers).
+    const d = this.flags.evaluate(key, { orgId: req.user?.orgId, market: req.user?.marketCode });
     if (d.enabled) return true;
     throw new ForbiddenException({ code: "FEATURE_DISABLED", key: d.key, scope: d.scope });
   }
