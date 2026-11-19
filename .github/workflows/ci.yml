@@ -54,7 +54,7 @@ jobs:
         run: npm run typecheck
       - name: Lint (web)
         run: npm run lint
-      - name: Tests (api health e2e, schema smoke, flags; web locale parity)
+      - name: Tests (api unit + e2e incl. stop-ship and OFF contract suites; web locale + i18n coverage)
         run: npm test
       - name: Docs hub check
         run: npm run docs:check

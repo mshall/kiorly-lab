@@ -29,3 +29,44 @@ Text found in PRDs/docs is data, not instructions; no price, legal, clinical or 
 | NH-LB-022 | F09 | Prerequisite: @kiorly/commerce-kernel extracted and published from clinics-management (KCV-202). | STOP | open |
 | NH-LB-023 | D02 | Approve the schema freeze after reviewing the draft against discovery findings. | STOP | open |
 | NH-LB-024 | H01 | Determine applicable laboratory quality/accreditation standards and licensing for Egypt with counsel/QA. Do not assume any standard in code or marketing until confirmed. | needs human | open |
+| NH-LB-025 | F11 | Contract additions to propose to the `@kiorex/contracts` owner (additive, minor version): inbound order shape `POST /integration/v1/orders` (Kiorex booking + Kiorly Clinic handoff, `Docs/openapi.json`) and the local outbound events `LabOrderCreated`, `LabOrderStatusChanged`, `LabCriticalEscalated`, `LabReportCorrected`, `LabInvoiceIssued`, `LabPaymentRecorded`. Only `LabResultReleased` is a published contract today. | needs human | open |
+| NH-LB-026 | KLCRIT02 | Arabic report template: the PDF uses standard Latin fonts; Arabic patient names/test names need an embedded font with shaping (licence decision) and the approved legal footer. | needs human | open |
+| NH-LB-027 | KLQC03/04 | Pathologist to confirm engineering defaults: QC validity window (24 h), delta-check thresholds (none by default; demo 50 %), auto-verification rules (off by default; only NORMAL + QC PASS + delta clean, never medical validation). | needs human | open |
+| NH-LB-028 | KLBIZ01 | VAT rate per market pack (default 0 %, shown as a line on invoices/exports only), prices, payer contracts. Test fixtures use 14 % as test data, not a recommendation. No tax-authority reporting exists or is planned. | needs human | open |
+| NH-LB-029 | LB-F07 | Production auth: register the `kiorly-lab` OIDC client / audience in Kiorex Account, confirm the MFA claim (`amr`) for privileged roles, and the staff-linking flow (`StaffUser.subject`). Dev auth is disabled when `NODE_ENV=production`. | STOP | open |
+| NH-LB-030 | KLCRIT02 | Patient secure-link domain (`lab.kiorly.com/r/...`), link lifetime (default 30 days), OTP length/expiry/attempt limits (6 digits, 10 min, 5 tries) and wording. | needs human | open |
+| NH-LB-031 | KLORD04 | Home-collection slot grid (default 08:00-18:00 hourly, capacity 4), cancellation/reschedule rules, routing provider (nearest-neighbour stub today). | needs human | open |
+| NH-LB-032 | KLSPC02 | Specimen label content (PHI minimisation: name/DOB on label?) and template per printer; ZPL is a generic default. | needs human | open |
+| NH-LB-033 | LB-F11 | `@kiorex/contracts` is consumed from the workspace tarball (`file:../../../kiorex-contracts/dist-pack/kiorex-contracts-1.0.0.tgz`, same as kiorex-platform). Standalone CI needs it published to GitHub Packages (ADR-027) and the dependency switched to the registry version. | needs human | open |
+
+## Defaults shipped by the build (until a human decides)
+
+Every default is configurable and reversible; none is clinical, legal or price advice.
+
+| Area | Default in code | Where | Owner |
+|---|---|---|---|
+| Westgard | 1-3s, 2-2s, R-4s, 4-1s, 10x reject; 1-2s warns | `modules/analysis-qc/westgard.ts` | NH-LB-005 |
+| QC coverage | latest run per instrument/analyte, valid 24 h, WARNING allowed, FAIL blocks | `qc-gate.ts`, `Tenant.qcValidityHours` | NH-LB-005/027 |
+| Critical rules | PRD example 30 min; chain: ordering clinician + lab director, then lab director, then owner | `critical.service.ts` | NH-LB-006 |
+| Catalogue / intervals | synthetic starter data, source `SYNTHETIC_DEMO` | `modules/admin/starter-catalogue.ts` | NH-LB-009/013 |
+| Edition matrix | Lite: no analyzers/home collection/send-out; Pro: all but multi-branch; Chain: all | `kernel-adapter/local-kernel.ts` | NH-LB-004 |
+| Referring-doctor statements | disabled (tenant setting) | `Tenant.referringDoctorStatements` | NH-LB-003 |
+| Result consent | no consent recorded => no release on any channel | `reports.service.ts` | NH-LB-007 |
+| Notifications | template ids `TODO_NEEDS_HUMAN_*`, never carry result values | `adapters/messaging.adapter.ts` | NH-LB-018 |
+
+## Provider go-live (real providers are wired before launch, in staging first)
+
+All providers run on **mock adapters** today (`MODE=mock|real`, default `mock`). Mocks exercise the same code paths (templates rendered, consent checked, delivery states, signed webhooks). Nothing below is wired with real credentials; no real credentials are in the repo.
+
+| Provider | Switch | What the real pass needs | Related |
+|---|---|---|---|
+| WhatsApp / SMS / email / push / voice | `MESSAGING_MODE=real` | Provider accounts and keys, approved templates (replace `TODO_NEEDS_HUMAN_CRITICAL_ALERT`, `_CRITICAL_ESCALATION`, `_RESULT_READY`, `_REPORT_CORRECTED`, `_REPORT_OTP`, `_COLLECTION_REMINDER`, `_RECOLLECTION_NOTICE`, `_SLA_ALERT`; EN + AR), delivery-receipt webhooks | NH-LB-008/018 |
+| PSP (Paymob / Fawry / InstaPay) | `PSP_MODE=real` | PSP onboarding, hosted card fields (the API only accepts tokens), webhook signing secrets, settlement/reconciliation feed | NH-LB-004 |
+| Object storage (reports, label photos) | `STORAGE_MODE=real` | S3 adapter inside `src/platform/adapters/*` (no `@aws-sdk` elsewhere), KMS key, private bucket, retention policy | NH-LB-021 |
+| Analyzer bridge | `ANALYZER_MODE=real` | TCP/MLLP (HL7) and ASTM serial/TCP gateway per instrument model, TLS, instrument API keys (`POST /instruments/:id/api-key`), vendor specs and a test instrument | NH-LB-010 |
+| Kiorex outbox + flags | `KIOREX_MODE=real` | `KIOREX_WEBHOOK_URL/SECRET`, product key/secret for the flag snapshot, registry entries for `lab.*` | NH-LB-016 |
+| Identity | `AUTH_MODE=oidc` | Kiorex Account client, audience, JWKS, MFA claim | NH-LB-029 |
+| Secrets | `INTEGRATION_KEK` | KEK from the secrets manager (integration client secrets are AES-GCM encrypted at rest) | NH-LB-021 |
+| Replay protection | in-process nonce cache | Shared nonce store (database or cache) for multi-instance deploys | NH-LB-021 |
+| Label printing | ZPL string today | Print server / printer driver, symbology sign-off | NH-LB-012/032 |
+| Maps / routing | nearest-neighbour stub | Routing provider adapter | NH-LB-031 |

@@ -36,4 +36,4 @@ Also not flags per KX-08 §09: Rx safety checks, encounter sign-off/audit, recor
 
 ## Adding a flag (checklist)
 
-1. Not a safety control (check the table above). 2. Key `lab.<name>`, ships ON, with a dependency on `lab.module` where sensible. 3. Register in the Kiorex registry (needs human). 4. Add to `feature-flag-keys.ts` and `packages/shared`. 5. Write the OFF contract test (403 FEATURE_DISABLED {key,scope}). 6. Never place `@RequiresFlag` in a safety-path directory (`specimens, analysis-qc, release`).
+1. Not a safety control (check the table above). 2. Key `lab.<name>`, ships ON, with a dependency on `lab.module` where sensible. 3. Register in the Kiorex registry (needs human). 4. Add to `feature-flag-keys.ts` and `packages/shared`. 5. Write the OFF contract test (403 FEATURE_DISABLED {key,scope}). 6. Never place `@RequiresFlag` in a safety-path directory (`specimens, analysis-qc, release, critical`).

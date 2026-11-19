@@ -2,7 +2,7 @@
 
 > Generated from **KX-07 (Kiorly Lab PRD, Rev 2.2)** and KX-08/KX-09/KX-22/KX-17/KX-18.
 > Repo: `mshall/kiorly-lab` · **45 steps** (19 requirement steps, one per PRD requirement ID) in dependency order.
-> **Status: skeleton phase.** Steps LB-F01…F06 are done by the scaffold. Everything else is blocked on discovery interviews (LB-D01) and the schema-freeze review (LB-D02).
+> **Status: MVP built (Nov 2026, engineering pass).** Every code step is implemented and tested; the schema is FROZEN-v1 with NEEDS_HUMAN defaults. Open: the human tasks (discovery, counsel, pathologist sign-offs, pilot) and the commerce-kernel package swap (NH-LB-022). Mock providers only (MODE=mock).
 > Each step = one branch, one PR. Do not reorder; every step only depends on earlier steps.
 
 ---
@@ -132,45 +132,45 @@ Flags that DO exist (ship ON; OFF => 403 FEATURE_DISABLED {key,scope}): `lab.mod
 - [x] **LB-F04** — DRAFT Prisma schema + initial migration 0001_draft_init (DB-level safety invariants) (scaffold commit)
 - [x] **LB-F05** — Web shell: AR/EN, RTL, Kiorly styling, coming-soon page (scaffold commit)
 - [x] **LB-F06** — Docs hub: build sequence, NEEDS_HUMAN, design notes, ADR reference (scaffold commit)
-- [ ] **LB-D01** — Discovery interviews (15 labs, 2 chains)
-- [ ] **LB-D02** — Schema freeze review: reconcile the DRAFT schema with discovery findings
-- [ ] **LB-F07** — Kiorex Account OIDC auth, tenant + staff + RBAC, tenant isolation guard
-- [ ] **LB-F08** — Audit log + transactional outbox + HMAC REST client/server (Kiorex)
-- [ ] **LB-F09** — Consume @kiorly/commerce-kernel (plans, billing, ledger, settlement)
-- [ ] **LB-F10** — Flag snapshot cache + flag.changed webhook receiver + per-flag OFF contract-test harness
-- [ ] **LB-F11** — Pin @kiorex/contracts SDK; implement consumed/produced event schemas
-- [ ] **KLORD01** — Test catalogue: code, name AR/EN, specimen type, container, volume, fasting/prep instructions, TAT, price.
-- [ ] **KLORD02** — Order sources: walk-in, Kiorly Clinic order (CL06), Kiorex booking, referring doctor.
-- [ ] **KLORD03** — Patient identification with two identifiers; consent for result sharing.
-- [ ] **KLORD04** — Home collection: slot booking, address, phlebotomist assignment, route, collection confirmation with photo...
-- [ ] **KLSPC01** — Accession number unique per lab; duplicates rejected.
-- [ ] **KLSPC02** — Barcode labels per container; aliquots linked to parent.
-- [ ] **KLSPC03** — Chain of custody append-only: collected → transported (time, temperature) → received → processed →...
-- [ ] **KLSPC04** — Rejection reasons (haemolysed, insufficient, mislabelled) trigger re-collection workflow and patient notice.
-- [ ] **KLQC01** — Analyzer connectivity via ASTM E1394 / HL7 v2; manual entry with dual control.
-- [ ] **KLQC02** — Internal QC runs per analyte/level; Levey-Jennings charts; Westgard rules (1₃s, 2₂s, R₄s, 4₁s, 10x) block...
-- [ ] **KLQC03** — Reference intervals by age/sex with versioning; delta checks against prior results.
-- [ ] **KLQC04** — Technical validation by technologist; medical validation by authorized signatory.
-- [ ] **KLQC05** — Corrected reports create a new version with reason; recipients notified.
-- [ ] **KLCRIT01** — Critical-value list per test; on result, alert ordering clinician and lab director; acknowledgement...
-- [ ] **KLCRIT02** — Release channels: printed report, patient link (OTP), Kiorly Clinic import, Kiorex vault — each by consent.
-- [ ] **KLCRIT03** — LabResultReleased event carries signed report version and secure link, never raw values in notifications.
-- [ ] **KLBIZ01** — Price lists, packages (check-ups), payer contracts, invoices, cash close (reuse commerce kernel).
-- [ ] **KLBIZ02** — TAT dashboard and SLA alerts.
-- [ ] **KLBIZ03** — Referring-doctor statements (where lawful) and send-out lab costs.
-- [ ] **LB-OFF01** — OFF contract test for lab.module
-- [ ] **LB-OFF02** — OFF contract test for lab.analyzer_interfaces
-- [ ] **LB-OFF03** — OFF contract test for lab.home_collection
-- [ ] **LB-OFF04** — OFF contract test for lab.kiorex_bookings
-- [ ] **LB-SS01** — Stop-ship: result released without QC pass or signature (QC violation injection)
-- [ ] **LB-SS02** — Stop-ship: critical value not acknowledged and not escalated (timer test)
-- [ ] **LB-SS03** — Stop-ship: mislabelled sample processed (label mismatch scan test)
-- [ ] **LB-SS04** — Stop-ship: duplicate accession accepted (replay test)
-- [ ] **LB-SS05** — Never-flag CI: QC blocks, authorized release and critical escalation cannot be switched off
-- [ ] **LB-H01** — Regulatory review: counsel memo
-- [ ] **LB-H02** — Pathologist sign-off: hazard log (KX-16)
-- [ ] **LB-H03** — Stop-ship suite green on the pilot build (evidence archived)
-- [ ] **LB-P01** — Pilot readiness review (8 labs, M19)
+- [ ] **LB-D01** — Discovery interviews (15 labs, 2 chains) — *human task: discovery interviews (NH-LB-001)*
+- [x] **LB-D02** — Schema freeze review: reconcile the DRAFT schema with discovery findings — *engineering freeze `0002_freeze_v1` done (db81c06); **human approval NH-LB-023 still open***
+- [x] **LB-F07** — Kiorex Account OIDC auth, tenant + staff + RBAC, tenant isolation guard — *OIDC/JWKS + dev auth, RBAC, tenant isolation, privileged MFA (db81c06; tests `tenancy-rbac`)*
+- [x] **LB-F08** — Audit log + transactional outbox + HMAC REST client/server (Kiorex) — *audit log + transactional outbox + HMAC (db81c06; tests `integration`, `golden-flow`)*
+- [ ] **LB-F09** — Consume @kiorly/commerce-kernel (plans, billing, ledger, settlement) — *BLOCKED on NH-LB-022 (@kiorly/commerce-kernel not published). Seam `src/kernel-adapter/*` + local implementation done; swap providers when published*
+- [x] **LB-F10** — Flag snapshot cache + flag.changed webhook receiver + per-flag OFF contract-test harness — *snapshot cache persisted, 30 s poll + ETag, flag.changed webhook, OFF harness (tests `flags-off`, `integration`)*
+- [x] **LB-F11** — Pin @kiorex/contracts SDK; implement consumed/produced event schemas — *@kiorex/contracts 1.0.0 pinned; LabResultReleased validated in-transaction + contract tests*
+- [x] **KLORD01** — Test catalogue: code, name AR/EN, specimen type, container, volume, fasting/prep instructions, TAT, price. — *catalogue + versioned price book (tests `billing`, `tenancy-rbac`)*
+- [x] **KLORD02** — Order sources: walk-in, Kiorly Clinic order (CL06), Kiorex booking, referring doctor. — *walk-in, Kiorly Clinic handoff, Kiorex booking, referring doctor; idempotent (tests `integration`)*
+- [x] **KLORD03** — Patient identification with two identifiers; consent for result sharing. — *two identifiers + per-channel consent (tests `safety-stop-ship`, `analysis`)*
+- [x] **KLORD04** — Home collection: slot booking, address, phlebotomist assignment, route, collection confirmation with photo... — *slots with capacity, assignment, route, label photo, offline PWA (tests `home-collection`)*
+- [x] **KLSPC01** — Accession number unique per lab; duplicates rejected. — *per-lab daily sequence + DB unique (LB-SS04)*
+- [x] **KLSPC02** — Barcode labels per container; aliquots linked to parent. — *Code 128 labels + ZPL, aliquots (unit + e2e)*
+- [x] **KLSPC03** — Chain of custody append-only: collected → transported (time, temperature) → received → processed →... — *append-only custody (DB trigger) with time/temperature*
+- [x] **KLSPC04** — Rejection reasons (haemolysed, insufficient, mislabelled) trigger re-collection workflow and patient notice. — *rejection reasons -> re-collection specimen + mock WhatsApp notice (template TODO_NEEDS_HUMAN)*
+- [x] **KLQC01** — Analyzer connectivity via ASTM E1394 / HL7 v2; manual entry with dual control. — *simulated ASTM E1394 / HL7 v2 analyzer bridge + parsers w/ fixtures; manual dual control; auto-verification (tests `analysis`, parsers)*
+- [x] **KLQC02** — Internal QC runs per analyte/level; Levey-Jennings charts; Westgard rules (1₃s, 2₂s, R₄s, 4₁s, 10x) block... — *Westgard 1-3s/2-2s/R-4s/4-1s/10x + LJ charts + QC blocks (property-based tests)*
+- [x] **KLQC03** — Reference intervals by age/sex with versioning; delta checks against prior results. — *versioned age/sex intervals + delta check*
+- [x] **KLQC04** — Technical validation by technologist; medical validation by authorized signatory. — *technical + medical validation; authorised signatory with licence*
+- [x] **KLQC05** — Corrected reports create a new version with reason; recipients notified. — *corrections create new signed version with reason; recipients notified*
+- [x] **KLCRIT01** — Critical-value list per test; on result, alert ordering clinician and lab director; acknowledgement... — *critical rules, alerts, ack window, escalation timer (LB-SS02)*
+- [x] **KLCRIT02** — Release channels: printed report, patient link (OTP), Kiorly Clinic import, Kiorex vault — each by consent. — *printed / patient OTP link / clinic import / Kiorex vault, each by consent*
+- [x] **KLCRIT03** — LabResultReleased event carries signed report version and secure link, never raw values in notifications. — *LabResultReleased with signed version + secure link, never raw values*
+- [x] **KLBIZ01** — Price lists, packages (check-ups), payer contracts, invoices, cash close (reuse commerce kernel). — *price lists, packages, B2B payer contracts, invoices (VAT lines only), mock-PSP payments, cash close, ledger reconciliation; kernel package swap pending (NH-LB-022)*
+- [x] **KLBIZ02** — TAT dashboard and SLA alerts. — *TAT dashboard + deduplicated SLA alerts*
+- [x] **KLBIZ03** — Referring-doctor statements (where lawful) and send-out lab costs. — *referring-doctor statements (disabled until counsel confirms, NH-LB-003) + send-out costs*
+- [x] **LB-OFF01** — OFF contract test for lab.module — *`flags-off.e2e.test.ts`*
+- [x] **LB-OFF02** — OFF contract test for lab.analyzer_interfaces — *`flags-off.e2e.test.ts`*
+- [x] **LB-OFF03** — OFF contract test for lab.home_collection — *`flags-off.e2e.test.ts`*
+- [x] **LB-OFF04** — OFF contract test for lab.kiorex_bookings — *`flags-off.e2e.test.ts`*
+- [x] **LB-SS01** — Stop-ship: result released without QC pass or signature (QC violation injection) — *`safety-stop-ship.e2e.test.ts`*
+- [x] **LB-SS02** — Stop-ship: critical value not acknowledged and not escalated (timer test) — *`safety-stop-ship.e2e.test.ts`*
+- [x] **LB-SS03** — Stop-ship: mislabelled sample processed (label mismatch scan test) — *`safety-stop-ship.e2e.test.ts`*
+- [x] **LB-SS04** — Stop-ship: duplicate accession accepted (replay test) — *`safety-stop-ship.e2e.test.ts`*
+- [x] **LB-SS05** — Never-flag CI: QC blocks, authorized release and critical escalation cannot be switched off — *`flags-off.e2e.test.ts` (all flags OFF, safety chain still works)*
+- [ ] **LB-H01** — Regulatory review: counsel memo — *human task (NH-LB-014, NH-LB-024)*
+- [ ] **LB-H02** — Pathologist sign-off: hazard log (KX-16) — *human task (NH-LB-015)*
+- [ ] **LB-H03** — Stop-ship suite green on the pilot build (evidence archived) — *stop-ship suite is green in this build; human archiving of evidence on the pilot build still open*
+- [ ] **LB-P01** — Pilot readiness review (8 labs, M19) — *human task (NH-LB-020)*
 
 ---
 
