@@ -85,8 +85,8 @@ export class CriticalService implements OnModuleInit, OnModuleDestroy {
    * Timer job body (also invoked directly by the stop-ship timer test): every OPEN/ESCALATED alert past its deadline escalates one level
    * and gets a fresh acknowledgement window of the same length.
    */
-  async sweep(now = new Date()): Promise<{ escalated: number }> {
-    const due = await this.prisma.criticalAlert.findMany({ where: { status: { in: ["OPEN", "ESCALATED"] }, ackDeadlineAt: { lte: now }, escalationLevel: { lt: MAX_LEVEL } }, include: { result: true } });
+  async sweep(now = new Date(), only: { orgId?: string } = {}): Promise<{ escalated: number }> {
+    const due = await this.prisma.criticalAlert.findMany({ where: { ...(only.orgId ? { orgId: only.orgId } : {}), status: { in: ["OPEN", "ESCALATED"] }, ackDeadlineAt: { lte: now }, escalationLevel: { lt: MAX_LEVEL } }, include: { result: true } });
     let escalated = 0;
     for (const a of due) {
       await this.prisma.$transaction(async (tx) => {

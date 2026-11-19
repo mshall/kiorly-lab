@@ -76,7 +76,7 @@ export class AnalyzerIngestService {
             continue;
           }
           try {
-            const r = await this.qc.submitRun({ orgId, staffId: `instrument:${instrumentId}` }, { instrumentId, materialId: mat.id, value: o.value, runAt: o.observedAt });
+            const r = await this.qc.submitRun({ orgId, staffId: `instrument:${instrumentId}` }, { instrumentId, materialId: mat.id, value: o.value }); // evaluated in receipt order (analyzer clocks have 1 s resolution)
             outcome.qcRuns.push({ runId: r.run.id, status: r.run.status, blockId: r.blockId });
             outcome.accepted++;
           } catch (e) {

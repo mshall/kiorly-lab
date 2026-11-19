@@ -107,7 +107,8 @@ export class SpecimensService {
     return s;
   }
 
-  custodyChain(orgId: string, id: string) {
+  async custodyChain(orgId: string, id: string) {
+    if (!(await this.prisma.specimen.findFirst({ where: { id, orgId }, select: { id: true } }))) throw new NotFoundException({ code: "SPECIMEN_NOT_FOUND" });
     return this.custody.list(orgId, id);
   }
 

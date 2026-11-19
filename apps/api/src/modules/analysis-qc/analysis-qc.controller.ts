@@ -4,7 +4,7 @@ import { CurrentUser, Perm } from "../../auth/decorators";
 import type { AuthUser } from "../../auth/auth.types";
 import { ZBody, z } from "../../common/zod";
 import { QcService } from "./qc.service";
-import { ResultsService } from "./results.service";
+import { ResultsService, normalizeResult } from "./results.service";
 
 const num = z.coerce.number();
 const Instrument = z.object({ labId: z.string().optional(), name: z.string().min(1), kind: z.enum(["ANALYZER", "MANUAL_BENCH"]), model: z.string().optional(), protocol: z.enum(["ASTM_E1394", "HL7_V2"]).optional(), interfaceRef: z.string().optional(), simulated: z.boolean().optional() }).strict();
@@ -44,12 +44,12 @@ export class AnalysisQcController {
   @Get("worklist") @Perm("results.read") worklist(@CurrentUser() u: AuthUser, @Query("status") status?: "PROCESSING" | "RECEIVED") { return this.results.worklist(u.orgId, u.labIds, status ?? "PROCESSING"); }
   @Get("validation-queue") @Perm("results.read") queue(@CurrentUser() u: AuthUser, @Query("stage") stage: "tech" | "medical" = "tech") { return this.results.validationQueue(u.orgId, stage === "medical" ? "medical" : "tech"); }
   @Get("orders/:orderId/results") @Perm("results.read") forOrder(@CurrentUser() u: AuthUser, @Param("orderId") orderId: string) { return this.results.forOrder(u.orgId, orderId); }
-  @Post("results") @Perm("results.enter") @ZBody(Enter) enter(@CurrentUser() u: AuthUser, @Body() b: z.infer<typeof Enter>) { return this.results.enterManual(u, b); }
-  @Post("results/:id/second-entry") @Perm("results.second_entry") @ZBody(Second) second(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof Second>) { return this.results.secondEntry(u, id, b); }
-  @Post("results/:id/tech-validate") @Perm("results.tech_validate") @ZBody(Tech) tech(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof Tech>) { return this.results.techValidate(u, id, b); }
-  @Post("results/:id/medical-validate") @Perm("results.medical_validate") medical(@CurrentUser() u: AuthUser, @Param("id") id: string) { return this.results.medicalValidate(u, id); }
+  @Post("results") @Perm("results.enter") @ZBody(Enter) enter(@CurrentUser() u: AuthUser, @Body() b: z.infer<typeof Enter>) { return this.results.enterManual(u, b).then(normalizeResult); }
+  @Post("results/:id/second-entry") @Perm("results.second_entry") @ZBody(Second) second(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof Second>) { return this.results.secondEntry(u, id, b).then(normalizeResult); }
+  @Post("results/:id/tech-validate") @Perm("results.tech_validate") @ZBody(Tech) tech(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof Tech>) { return this.results.techValidate(u, id, b).then(normalizeResult); }
+  @Post("results/:id/medical-validate") @Perm("results.medical_validate") medical(@CurrentUser() u: AuthUser, @Param("id") id: string) { return this.results.medicalValidate(u, id).then(normalizeResult); }
   @Post("orders/:orderId/medical-validate") @Perm("results.medical_validate") medicalOrder(@CurrentUser() u: AuthUser, @Param("orderId") orderId: string) { return this.results.medicalValidateOrder(u, orderId); }
-  @Post("results/:id/correct") @Perm("results.correct") @ZBody(Correct) correct(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof Correct>) { return this.results.correct(u, id, b); }
+  @Post("results/:id/correct") @Perm("results.correct") @ZBody(Correct) correct(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof Correct>) { return this.results.correct(u, id, b).then(normalizeResult); }
 
   @Get("auto-verification") @Perm("qc.read") avr(@CurrentUser() u: AuthUser) { return this.results.listAutoVerification(u.orgId); }
   @Put("analytes/:id/auto-verification") @Perm("instruments.manage") @ZBody(Avr) setAvr(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof Avr>) { return this.results.setAutoVerification(u, id, b); }

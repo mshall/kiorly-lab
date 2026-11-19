@@ -24,6 +24,12 @@ export interface EnterInput {
 
 type PersistInput = EnterInput & { orgId: string; actor: string; source: ResultSource; analyzerMessageId?: string; supersedes?: string; correctionReason?: string };
 
+/** Decimal columns -> JSON numbers for API responses. */
+export function normalizeResult<T extends { valueNumeric?: unknown; refLow?: unknown; refHigh?: unknown; deltaPercent?: unknown }>(r: T): T {
+  const n = (v: unknown) => (v == null ? null : Number(String(v)));
+  return { ...r, valueNumeric: n(r.valueNumeric), refLow: n(r.refLow), refHigh: n(r.refHigh), deltaPercent: n(r.deltaPercent) };
+}
+
 const CURRENT = { status: { notIn: ["CORRECTED", "REJECTED"] as ("CORRECTED" | "REJECTED")[] } };
 
 @Injectable()
@@ -247,6 +253,7 @@ export class ResultsService {
 
   // ------------------------------------------------------------- reads
   async forOrder(orgId: string, orderId: string) {
+    if (!(await this.prisma.labOrder.findFirst({ where: { id: orderId, orgId }, select: { id: true } }))) throw new NotFoundException({ code: "ORDER_NOT_FOUND" });
     const rs = await this.prisma.result.findMany({
       where: { orgId, orderItem: { orderId } }, include: { analyte: true, orderItem: { include: { test: { select: { code: true, nameEn: true, nameAr: true } } } }, specimen: { select: { accessionNumber: true } }, instrument: { select: { name: true } }, criticalAlerts: { select: { id: true, status: true } } },
       orderBy: [{ enteredAt: "asc" }],

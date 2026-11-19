@@ -127,21 +127,21 @@ describe("stop-ship: critical value not acknowledged and not escalated (timer te
     assert.ok(msgs.every((m) => !/6|value|mg|g\/dL/i.test(JSON.stringify(m.params).replace(/alertId":"[^"]+"/, "").replace(/orderNumber":"[^"]+"/, ""))));
 
     // timer: before the deadline nothing happens, after it the alert escalates once per window
-    assert.equal((await t.critical.sweep(new Date(a.notifiedAt.getTime() + 29 * 60_000))).escalated, 0);
-    assert.equal((await t.critical.sweep(new Date(a.notifiedAt.getTime() + 31 * 60_000))).escalated, 1);
+    assert.equal((await t.critical.sweep(new Date(a.notifiedAt.getTime() + 29 * 60_000), { orgId: lab.orgId })).escalated, 0);
+    assert.equal((await t.critical.sweep(new Date(a.notifiedAt.getTime() + 31 * 60_000), { orgId: lab.orgId })).escalated, 1);
     const esc = await t.prisma.criticalAlert.findUniqueOrThrow({ where: { id: a.id } });
     assert.equal(esc.status, "ESCALATED");
     assert.equal(esc.escalationLevel, 1);
     assert.ok(await t.prisma.notificationAttempt.findFirst({ where: { orgId: lab.orgId, purpose: "CRITICAL_ESCALATION" } }));
     assert.ok(await t.prisma.outboxEvent.findFirst({ where: { orgId: lab.orgId, type: "LabCriticalEscalated" } }));
-    assert.equal((await t.critical.sweep(new Date(a.notifiedAt.getTime() + 32 * 60_000))).escalated, 0, "a fresh window starts at escalation");
+    assert.equal((await t.critical.sweep(new Date(a.notifiedAt.getTime() + 32 * 60_000), { orgId: lab.orgId })).escalated, 0, "a fresh window starts at escalation");
 
     // acknowledgement closes the loop; a reception user cannot acknowledge
     assert.equal((await call(t, "POST", `/critical-alerts/${a.id}/ack`, { token: lab.tokens.RECEPTION, body: {} })).status, 403);
     const ack = await call(t, "POST", `/critical-alerts/${a.id}/ack`, { token: lab.tokens.LAB_DIRECTOR, body: { note: "clinician informed" } });
     assert.equal(ack.status, 201);
     assert.equal(ack.body.status, "ACKNOWLEDGED");
-    assert.equal((await t.critical.sweep(new Date(a.notifiedAt.getTime() + 120 * 60_000))).escalated, 0);
+    assert.equal((await t.critical.sweep(new Date(a.notifiedAt.getTime() + 120 * 60_000), { orgId: lab.orgId })).escalated, 0);
   });
 
   it("critical rule window is bounded and cannot be disabled", async () => {

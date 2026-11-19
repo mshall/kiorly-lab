@@ -50,8 +50,8 @@ export class InsightsService implements OnModuleInit, OnModuleDestroy {
   }
 
   /** Raises one deduplicated SLA alert per breached open item and notifies branch managers (mock push). */
-  async slaSweep(now = new Date()): Promise<{ raised: number }> {
-    const items = await this.prisma.orderItem.findMany({ where: { status: { in: ["PENDING", "IN_PROGRESS", "RESULTED", "VALIDATED"] }, slaAlert: null, test: { tatMinutes: { not: null } } }, include: { test: true, order: true }, take: 500 });
+  async slaSweep(now = new Date(), only: { orgId?: string } = {}): Promise<{ raised: number }> {
+    const items = await this.prisma.orderItem.findMany({ where: { ...(only.orgId ? { order: { orgId: only.orgId } } : {}), status: { in: ["PENDING", "IN_PROGRESS", "RESULTED", "VALIDATED"] }, slaAlert: null, test: { tatMinutes: { not: null } } }, include: { test: true, order: true }, take: 500 });
     let raised = 0;
     for (const i of items) {
       const sp = i.specimenId ? await this.prisma.specimen.findUnique({ where: { id: i.specimenId } }) : null;

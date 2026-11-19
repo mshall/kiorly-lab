@@ -182,7 +182,8 @@ export class ReportsService {
   }
 
   // ----------------------------------------------------------------- reads
-  listForOrder(orgId: string, orderId: string) {
+  async listForOrder(orgId: string, orderId: string) {
+    if (!(await this.prisma.labOrder.findFirst({ where: { id: orderId, orgId }, select: { id: true } }))) throw new NotFoundException({ code: "ORDER_NOT_FOUND" });
     return this.prisma.reportVersion.findMany({ where: { orgId, orderId }, include: { releases: { select: { channel: true, releasedAt: true } } }, orderBy: { version: "desc" } });
   }
 

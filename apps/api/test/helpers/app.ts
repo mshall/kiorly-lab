@@ -63,7 +63,7 @@ export async function call<T = any>(t: TestApp, method: string, path: string, op
   let body: string | undefined;
   if (opts.rawBody !== undefined) body = opts.rawBody;
   else if (opts.body !== undefined) body = JSON.stringify(opts.body);
-  if (body !== undefined) headers["content-type"] = "application/json";
+  if (body !== undefined && !Object.keys(headers).some((k) => k.toLowerCase() === "content-type")) headers["content-type"] = "application/json";
   const res = await fetch(`${t.base}/api/v1${path}`, { method, headers, body });
   const raw = Buffer.from(await res.arrayBuffer());
   let parsed: unknown = null;
