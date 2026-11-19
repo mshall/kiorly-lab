@@ -36,7 +36,7 @@ export function OrdersPage() {
         <Table head={[t("orders.number"), t("orders.patient"), t("orders.source"), t("orders.tests"), t("common.status"), t("common.created")]}>
           {q.data.rows.map((o: any) => (
             <tr key={o.id} className="hover:bg-accent/40">
-              <Td><Link to={`/orders/${o.id}`} className="font-mono font-medium text-primary underline">{o.orderNumber}</Link></Td>
+              <Td className="whitespace-nowrap"><Link to={`/orders/${o.id}`} className="font-mono font-medium text-primary underline">{o.orderNumber}</Link></Td>
               <Td>{o.patient.fullName}</Td>
               <Td><Badge tone="info">{t(`orders.sources.${o.source}`)}</Badge>{o.collectionType === "HOME" ? <Badge tone="pulse" className="ms-1">{t("orders.home")}</Badge> : null}{o.priority !== "ROUTINE" ? <Badge tone="crit" className="ms-1">{o.priority}</Badge> : null}</Td>
               <Td>{o.items.map((i: any) => i.test.code).join(", ")}</Td>

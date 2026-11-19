@@ -25,5 +25,5 @@ export class ReleaseController {
   @Public() @Get("public/reports/:token") pubInfo(@Param("token") t: string) { return this.reports.publicInfo(t); }
   @Public() @Post("public/reports/:token/otp") pubOtp(@Param("token") t: string) { return this.reports.requestOtp(t); }
   @Public() @Post("public/reports/:token/verify") @ZBody(Verify) pubVerify(@Param("token") t: string, @Body() b: z.infer<typeof Verify>) { return this.reports.verifyOtp(t, b.otp); }
-  @Public() @Get("public/reports/:token/download") @Header("Content-Type", "application/pdf") async pubPdf(@Param("token") t: string, @Query("t") dl: string) { return new StreamableFile(await this.reports.publicPdf(t, dl ?? "")); }
+  @Public() @Get("public/reports/:token/download") @Header("Content-Type", "application/pdf") @Header("Content-Disposition", 'attachment; filename="lab-report.pdf"') @Header("Cache-Control", "no-store") async pubPdf(@Param("token") t: string, @Query("t") dl: string) { return new StreamableFile(await this.reports.publicPdf(t, dl ?? "")); }
 }

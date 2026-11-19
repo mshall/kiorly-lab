@@ -26,12 +26,15 @@ const field = "w-full rounded-md border border-input bg-card px-3 text-sm placeh
 export const Input = ({ className, ...p }: InputHTMLAttributes<HTMLInputElement>) => <input className={cn(field, "h-10", className)} {...p} />;
 export const Textarea = ({ className, ...p }: TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea className={cn(field, "py-2", className)} {...p} />;
 export const Select = ({ className, ...p }: SelectHTMLAttributes<HTMLSelectElement>) => <select className={cn(field, "h-10", className)} {...p} />;
-export const Label = ({ className, ...p }: React.LabelHTMLAttributes<HTMLLabelElement>) => <label className={cn("mb-1 block text-xs font-medium text-muted-foreground", className)} {...p} />;
+export const Label = ({ className, as, ...p }: React.LabelHTMLAttributes<HTMLLabelElement> & { as?: "span" }) => (as === "span" ? <span className={cn("mb-1 block text-xs font-medium text-muted-foreground", className)}>{p.children}</span> : <label className={cn("mb-1 block text-xs font-medium text-muted-foreground", className)} {...p} />);
 export function Field({ label, children, hint, className }: { label: string; children: ReactNode; hint?: string; className?: string }) {
+  // implicit label association (control inside <label>) so screen readers and tests resolve the control by its label
   return (
     <div className={className}>
-      <Label>{label}</Label>
-      {children}
+      <label className="block">
+        <Label as="span">{label}</Label>
+        {children}
+      </label>
       {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
     </div>
   );

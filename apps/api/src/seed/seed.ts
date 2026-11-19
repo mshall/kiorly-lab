@@ -73,15 +73,18 @@ async function main() {
       const def = STARTER_ANALYTES.find((x) => x.code === a.code)!;
       if (!def.qc) continue;
       for (const m of await prisma.qcMaterialLevel.findMany({ where: { analyteId: a.id } })) {
-        const z = Math.max(-1.8, Math.min(1.8, gauss(rand) * 0.7));
+        const z = (day % 2 === 0 ? 1 : -1) * Math.min(1.1, Math.abs(gauss(rand)) * 0.6); // alternating sides: in control, no Westgard rule fires
         await qc.submitRun({ orgId: tenant.id, staffId: tech.staffId }, { instrumentId: bench.id, materialId: m.id, value: Number(m.targetMean) + z * Number(m.targetSd), runAt: new Date(Date.now() - day * 86_400_000 - Math.floor(rand() * 3600_000)) });
       }
     }
   }
   // fresh QC today so release is possible on every instrument
   for (const inst of [bench, astm, hl7]) {
-    for (const m of await prisma.qcMaterialLevel.findMany({ where: { orgId: tenant.id } })) await qc.submitRun({ orgId: tenant.id, staffId: tech.staffId }, { instrumentId: inst.id, materialId: m.id, value: Number(m.targetMean) + (rand() - 0.5) * 0.6 * Number(m.targetSd) });
+    for (const m of await prisma.qcMaterialLevel.findMany({ where: { orgId: tenant.id } })) await qc.submitRun({ orgId: tenant.id, staffId: tech.staffId }, { instrumentId: inst.id, materialId: m.id, value: Number(m.targetMean) + (rand() - 0.5) * 0.5 * Number(m.targetSd) });
   }
+  // one deliberate QC rejection on the HL7 chemistry analyzer (TSH 1_3s): demonstrates a QC block without touching the demo orders
+  const tshL1 = await prisma.qcMaterialLevel.findFirstOrThrow({ where: { orgId: tenant.id, level: "LEVEL_1", analyte: { code: "TSH" } } });
+  await qc.submitRun({ orgId: tenant.id, staffId: tech.staffId }, { instrumentId: hl7.id, materialId: tshL1.id, value: Number(tshL1.targetMean) + 3.6 * Number(tshL1.targetSd) });
   await prisma.autoVerificationRule.create({ data: { orgId: tenant.id, analyteId: analytes.find((a) => a.code === "GLU")!.id, enabled: true, maxDeltaPercent: 50 } });
 
   const patients = [
