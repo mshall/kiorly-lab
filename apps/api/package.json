@@ -15,7 +15,7 @@
     "test:e2e": "NODE_ENV=test node --import tsx --test --test-concurrency=1 \"test/**/*.e2e.test.ts\"",
     "db:test:prepare": "DATABASE_URL=\"${TEST_DATABASE_URL:-postgresql://postgres:postgres@127.0.0.1:5433/kiorly_lab_test?schema=public}\" prisma migrate deploy",
     "db:seed": "tsx src/seed/seed.ts",
-    "openapi": "tsx scripts/export-openapi.ts"
+    "openapi": "rm -rf .tmp-openapi && tsc --outDir .tmp-openapi --rootDir . --module commonjs --target ES2022 --experimentalDecorators --emitDecoratorMetadata --esModuleInterop --skipLibCheck --strict --strictPropertyInitialization false scripts/export-openapi.ts && node .tmp-openapi/scripts/export-openapi.js; rm -rf .tmp-openapi"
   },
   "dependencies": {
     "@kiorex/contracts": "file:../../../kiorex-contracts/dist-pack/kiorex-contracts-1.0.0.tgz",
