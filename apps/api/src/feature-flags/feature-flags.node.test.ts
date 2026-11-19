@@ -4,6 +4,7 @@ import { FeatureFlagsService } from "./feature-flags.service";
 import { FLAG_DEFINITIONS } from "./feature-flag-keys";
 import { SafetyControlNotAFlagError, SAFETY_CONTROL_IDS } from "./safety-controls";
 import { signControlRequest } from "./flag-snapshot";
+import { verifyControlPlaneRequest } from "@kiorex/contracts";
 
 const snap = (flags: object[]) => ({ product: "kiorly-lab", version: 1, generatedAt: new Date().toISOString(), flags: flags as never });
 
@@ -60,6 +61,22 @@ describe("feature flag evaluator (stub)", () => {
     const bad = await s.refresh((async () => { throw new Error("down"); }) as typeof fetch);
     assert.equal(bad, "failed");
     assert.equal(s.getSnapshotVersion(), 1);
+  });
+
+  it("REGRESSION: the snapshot poll is signed exactly as Kiorex's control plane verifies it (ms timestamp, query-less path; ISO timestamps were a 401)", async () => {
+    process.env.KIOREX_FLAGS_URL = "http://localhost:4000/api/v1/control/v1/flags/snapshot";
+    process.env.KIOREX_PRODUCT_KEY = "ff_kiorly-lab_dev";
+    process.env.KIOREX_PRODUCT_SECRET = "ff_dev_secret_change_me";
+    const s = new FeatureFlagsService();
+    let verified: unknown;
+    const r = await s.refresh((async (u: URL, init?: RequestInit) => {
+      verified = verifyControlPlaneRequest({ headers: init?.headers as Record<string, string>, method: "GET", path: u.pathname, body: "", secret: "ff_dev_secret_change_me" });
+      assert.equal((init?.headers as Record<string, string>)["X-Kiorex-Product-Key"], "ff_kiorly-lab_dev");
+      assert.equal(u.searchParams.get("product"), "kiorly-lab");
+      return new Response(JSON.stringify(snap([])), { status: 200, headers: { etag: '"v1"' } });
+    }) as unknown as typeof fetch);
+    assert.equal(r, "updated");
+    assert.deepEqual(verified, { ok: true });
   });
 
   it("signature is deterministic base64url", () => {

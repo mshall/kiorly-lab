@@ -1,9 +1,9 @@
 import { Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit, Optional } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
-import { randomUUID } from "node:crypto";
 import { FLAG_DEFINITIONS, isKnownFlagKey } from "./feature-flag-keys";
-import { type FlagSnapshot, type SnapshotFlag, signControlRequest } from "./flag-snapshot";
+import { signControlPlaneRequest, verifySnapshot } from "@kiorex/contracts";
+import { type FlagSnapshot, type SnapshotFlag } from "./flag-snapshot";
 import { SafetyControlNotAFlagError, isSafetyControlKey } from "./safety-controls";
 
 export interface FlagContext {
@@ -90,19 +90,15 @@ export class FeatureFlagsService implements OnModuleInit, OnModuleDestroy {
     try {
       const url = new URL(base);
       url.searchParams.set("product", "kiorly-lab");
-      const timestamp = new Date().toISOString();
-      const nonce = randomUUID();
-      const headers: Record<string, string> = {
-        "x-kiorex-product-key": key,
-        "x-kiorly-timestamp": timestamp,
-        "x-kiorly-nonce": nonce,
-        "x-kiorly-signature": signControlRequest(secret, { timestamp, nonce, method: "GET", path: url.pathname + url.search }),
-      };
+      // Contract scheme (kiorex-contracts signControlPlaneRequest): timestamp in epoch MILLISECONDS, signed path WITHOUT the query string.
+      const headers: Record<string, string> = { ...signControlPlaneRequest({ productKey: key, productSecret: secret, method: "GET", path: url.pathname }).headers };
       if (this.etag) headers["if-none-match"] = this.etag;
       const res = await fetchImpl(url, { headers });
       if (res.status === 304) return "not-modified";
       if (!res.ok) throw new Error(`snapshot HTTP ${res.status}`);
-      this.snapshot = (await res.json()) as FlagSnapshot;
+      const body = (await res.json()) as FlagSnapshot;
+      if (body.signature && !verifySnapshot(secret, body as never)) throw new Error("snapshot signature invalid");
+      this.snapshot = body;
       this.etag = res.headers.get("etag");
       await this.persist();
       return "updated";
