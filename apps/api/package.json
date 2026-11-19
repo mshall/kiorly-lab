@@ -15,6 +15,7 @@
     "test:e2e": "NODE_ENV=test node --import tsx --test --test-concurrency=1 \"test/**/*.e2e.test.ts\"",
     "db:test:prepare": "node scripts/prepare-test-db.mjs",
     "db:seed": "tsx src/seed/seed.ts",
+    "db:seed:demo": "tsx src/seed/seed-demo.ts",
     "openapi": "rm -rf .tmp-openapi && tsc --outDir .tmp-openapi --rootDir . --module commonjs --target ES2022 --experimentalDecorators --emitDecoratorMetadata --esModuleInterop --skipLibCheck --strict --strictPropertyInitialization false scripts/export-openapi.ts && node .tmp-openapi/scripts/export-openapi.js; rm -rf .tmp-openapi"
   },
   "dependencies": {

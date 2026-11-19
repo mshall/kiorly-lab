@@ -1,5 +1,7 @@
 # Kiorly Lab
 
+> **QA / demo data:** synthetic Egyptian dataset, logins, URLs and reset instructions in [Docs/TEST_DATA.md](Docs/TEST_DATA.md) (DEV ONLY).
+
 Laboratory information management for independent labs and small chains: orders, accession, chain of custody, analyzers, QC, authorised release, critical values, billing, and Kiorex test bookings with home collection (KX-07).
 
 > **Status: MVP built, mock providers only.** Schema is FROZEN-v1 (engineering freeze, human approval NH-LB-023 open). Open human items: `Docs/NEEDS_HUMAN.md`. Build tracker: `Docs/lab-cursor-build-sequence.md` §5.
