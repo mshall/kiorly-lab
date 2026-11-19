@@ -1,0 +1,49 @@
+{
+  "app": {
+    "product": "Kiorly Lab",
+    "comingSoon": "Coming soon",
+    "headline": "Laboratory management you can trust, built for Egypt",
+    "lede": "Orders, barcode accession, chain of custody, QC and authorized release for independent labs and small chains. In discovery with labs now; pilot planned for month 19.",
+    "overview": "Product overview",
+    "caps": [
+      [
+        "Orders and collection",
+        "Bilingual test catalogue, walk-in, clinic and Kiorex orders, two-identifier patient check, home collection."
+      ],
+      [
+        "Specimens and custody",
+        "Unique accession numbers, barcode labels, aliquots and an append-only chain of custody."
+      ],
+      [
+        "Analysis and QC",
+        "Analyzer interfaces, Levey-Jennings charts and Westgard rules that block release on violation."
+      ],
+      [
+        "Validation and release",
+        "Technical and medical validation, corrected report versions, release only through consented channels."
+      ],
+      [
+        "Critical values",
+        "Alert the ordering clinician and lab director; escalate if not acknowledged in time."
+      ],
+      [
+        "Business",
+        "Price lists, packages, payer contracts, invoices and turnaround dashboards."
+      ]
+    ],
+    "safetyTitle": "Quality is not a setting",
+    "safety": "QC blocks, authorized release, critical-value escalation, unique accession and chain of custody are on in every edition and cannot be switched off.",
+    "timeline": "Timeline",
+    "steps": [
+      "Discovery interviews",
+      "Build MVP (month 15)",
+      "Pilot, 8 labs (month 19)",
+      "Egypt GA (month 21)"
+    ],
+    "status": "API status",
+    "statusOk": "reachable",
+    "statusDown": "not running",
+    "lang": "العربية",
+    "footer": "Kiorly by Kiorex. Skeleton build: no patient or result data is processed."
+  }
+}

@@ -1,0 +1,734 @@
+// =============================================================================
+// DRAFT SCHEMA — pending discovery interviews (15 labs, 2 chains).
+// Designed from KX-07 (Kiorly Lab PRD) + KX-09 events. NOT frozen: do not
+// build features on it until the "schema freeze" step in
+// Docs/lab-cursor-build-sequence.md is checked. Change only via new named
+// migrations. 2025 kiorex-backend lab-service entities were used as DESIGN
+// NOTES only (Docs/DESIGN_NOTES_FROM_2025.md); no code copied (ADR-026).
+//
+// Conventions
+//  - Every business table carries orgId (Kiorly tenant) => tenant isolation
+//    (safety control, never a flag). Child tables inherit via parent FK.
+//  - Accession is unique per lab (labId + accessionNumber); duplicates rejected
+//    by a DB unique index (KLSPC01, stop-ship "duplicate accession accepted").
+//  - CustodyEvent is append-only (DB trigger forbids UPDATE/DELETE) (KLSPC03).
+//  - A ReleaseRecord must reference a signed ReportVersion (NOT NULL FKs), and a
+//    ReportVersion must carry signer + timestamp (DB CHECK) => "result released
+//    without QC pass or signature" is structurally impossible (stop-ship).
+//  - Results are only releasable when linked to a PASSING QcRun and no open
+//    QcBlock exists for the analyte/instrument (enforced in service + DB CHECK
+//    on Result.releasedAt requiring qcRunId and medical validator).
+// =============================================================================
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------------------------------------------------------- enums ----
+
+enum Edition {
+  LITE
+  PRO
+  CHAIN
+}
+
+enum StaffRole {
+  OWNER
+  LAB_DIRECTOR
+  AUTHORIZED_SIGNATORY
+  TECHNOLOGIST
+  PHLEBOTOMIST
+  RECEPTION
+  BRANCH_MANAGER
+}
+
+enum Sex {
+  M
+  F
+  OTHER
+  UNKNOWN
+}
+
+enum OrderSource {
+  WALK_IN
+  KIORLY_CLINIC
+  KIOREX_BOOKING
+  REFERRING_DOCTOR
+}
+
+enum OrderStatus {
+  DRAFT
+  AWAITING_COLLECTION
+  COLLECTED
+  IN_LAB
+  PARTIALLY_RESULTED
+  AWAITING_VALIDATION
+  VALIDATED
+  RELEASED
+  CANCELLED
+}
+
+enum OrderItemStatus {
+  PENDING
+  IN_PROGRESS
+  RESULTED
+  VALIDATED
+  RELEASED
+  CANCELLED
+}
+
+enum CollectionType {
+  IN_LAB
+  HOME
+}
+
+enum HomeCollectionStatus {
+  REQUESTED
+  SCHEDULED
+  EN_ROUTE
+  COLLECTED
+  FAILED
+  CANCELLED
+}
+
+enum SpecimenStatus {
+  PENDING_COLLECTION
+  COLLECTED
+  IN_TRANSIT
+  RECEIVED
+  PROCESSING
+  STORED
+  DISPOSED
+  REJECTED
+}
+
+/// KLSPC03: collected -> transported -> received -> processed -> stored/disposed.
+enum CustodyEventType {
+  COLLECTED
+  TRANSPORT_STARTED
+  RECEIVED
+  PROCESSING_STARTED
+  ALIQUOTED
+  STORED
+  DISPOSED
+  REJECTED
+  LABEL_MISMATCH_BLOCKED
+}
+
+enum RejectionReason {
+  HAEMOLYSED
+  INSUFFICIENT_VOLUME
+  MISLABELLED
+  WRONG_CONTAINER
+  CLOTTED
+  OTHER
+}
+
+enum InstrumentKind {
+  ANALYZER
+  MANUAL_BENCH
+}
+
+enum QcLevel {
+  LEVEL_1
+  LEVEL_2
+  LEVEL_3
+}
+
+/// KLQC02: result of evaluating a QC run against Westgard rules.
+enum QcRunStatus {
+  PASS
+  WARNING
+  FAIL
+}
+
+enum QcBlockStatus {
+  OPEN
+  CLEARED
+}
+
+enum ResultSource {
+  ANALYZER_ASTM
+  ANALYZER_HL7
+  MANUAL
+}
+
+enum ResultStatus {
+  ENTERED
+  TECH_VALIDATED
+  MEDICAL_VALIDATED
+  RELEASED
+  CORRECTED
+  REJECTED
+}
+
+enum ResultFlag {
+  NORMAL
+  LOW
+  HIGH
+  CRITICAL_LOW
+  CRITICAL_HIGH
+  ABNORMAL
+}
+
+enum ReleaseChannel {
+  PRINTED
+  PATIENT_LINK_OTP
+  KIORLY_CLINIC_IMPORT
+  KIOREX_VAULT
+}
+
+enum CriticalAlertStatus {
+  OPEN
+  ACKNOWLEDGED
+  ESCALATED
+  CLOSED
+}
+
+enum OutboxStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+// ------------------------------------------------------- tenancy / staff ----
+
+model Tenant {
+  id            String   @id @default(cuid())
+  externalOrgId String?  @unique
+  name          String
+  edition       Edition  @default(LITE)
+  marketCode    String   @default("EG")
+  createdAt     DateTime @default(now())
+
+  labs  Lab[]
+  staff StaffUser[]
+}
+
+/// A lab site (branch). Accession numbers are unique per Lab.
+model Lab {
+  id         String   @id @default(cuid())
+  orgId      String
+  name       String
+  licenceNo  String?
+  address    String?
+  createdAt  DateTime @default(now())
+
+  tenant Tenant @relation(fields: [orgId], references: [id])
+
+  specimens   Specimen[]
+  instruments Instrument[]
+
+  @@index([orgId])
+}
+
+model StaffUser {
+  id          String    @id @default(cuid())
+  orgId       String
+  subject     String?
+  displayName String
+  role        StaffRole
+  /// AUTHORIZED_SIGNATORY / LAB_DIRECTOR: medical validation credentials.
+  signatoryLicenceNo String?
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+
+  tenant Tenant @relation(fields: [orgId], references: [id])
+
+  @@unique([orgId, subject])
+  @@index([orgId, role])
+}
+
+// ------------------------------------------------------------- catalogue ----
+
+/// KLQC03 reportable analyte (e.g. Hb, WBC, ALT).
+model Analyte {
+  id      String  @id @default(cuid())
+  orgId   String
+  code    String
+  nameEn  String
+  nameAr  String?
+  unit    String?
+  /// Decimal places for reporting.
+  precision Int    @default(1)
+  active  Boolean @default(true)
+
+  testAnalytes      TestAnalyte[]
+  referenceIntervals ReferenceInterval[]
+  criticalRules     CriticalRule[]
+  qcMaterials       QcMaterialLevel[]
+  results           Result[]
+
+  @@unique([orgId, code])
+}
+
+/// KLORD01: code, name AR/EN, specimen type, container, volume, prep, TAT, price.
+model TestDefinition {
+  id            String   @id @default(cuid())
+  orgId         String
+  code          String
+  nameEn        String
+  nameAr        String?
+  specimenType  String
+  container     String?
+  volumeMl      Decimal? @db.Decimal(6, 2)
+  fastingRequired Boolean @default(false)
+  prepInstructionsEn String?
+  prepInstructionsAr String?
+  /// Turnaround time target in minutes (KLBIZ02 SLA alerts).
+  tatMinutes    Int?
+  price         Decimal  @default(0) @db.Decimal(14, 2)
+  /// Sent to a referral lab (send-out) instead of run in-house.
+  sendOut       Boolean  @default(false)
+  active        Boolean  @default(true)
+
+  analytes   TestAnalyte[]
+  orderItems OrderItem[]
+  packageItems TestPackageItem[]
+
+  @@unique([orgId, code])
+}
+
+model TestAnalyte {
+  testId    String
+  analyteId String
+  position  Int    @default(0)
+
+  test    TestDefinition @relation(fields: [testId], references: [id], onDelete: Cascade)
+  analyte Analyte        @relation(fields: [analyteId], references: [id])
+
+  @@id([testId, analyteId])
+}
+
+/// KLBIZ01: check-up packages.
+model TestPackage {
+  id     String  @id @default(cuid())
+  orgId  String
+  code   String
+  nameEn String
+  nameAr String?
+  price  Decimal @db.Decimal(14, 2)
+
+  items TestPackageItem[]
+
+  @@unique([orgId, code])
+}
+
+model TestPackageItem {
+  packageId String
+  testId    String
+
+  package TestPackage    @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  test    TestDefinition @relation(fields: [testId], references: [id])
+
+  @@id([packageId, testId])
+}
+
+/// KLQC03: reference intervals by age/sex with versioning (never edited in place).
+model ReferenceInterval {
+  id          String   @id @default(cuid())
+  orgId       String
+  analyteId   String
+  sex         Sex?
+  ageMinDays  Int      @default(0)
+  ageMaxDays  Int?
+  low         Decimal? @db.Decimal(12, 4)
+  high        Decimal? @db.Decimal(12, 4)
+  version     Int      @default(1)
+  effectiveFrom DateTime
+  effectiveTo DateTime?
+
+  analyte Analyte @relation(fields: [analyteId], references: [id])
+
+  @@unique([analyteId, sex, ageMinDays, version])
+  @@index([orgId, analyteId])
+}
+
+/// KLCRIT01: critical-value list per test/analyte with acknowledgement window.
+model CriticalRule {
+  id          String   @id @default(cuid())
+  orgId       String
+  analyteId   String
+  criticalLow  Decimal? @db.Decimal(12, 4)
+  criticalHigh Decimal? @db.Decimal(12, 4)
+  /// Acknowledge within N minutes or escalate (PRD example: 30).
+  ackWithinMinutes Int  @default(30)
+  active      Boolean  @default(true)
+
+  analyte Analyte @relation(fields: [analyteId], references: [id])
+
+  @@index([orgId, analyteId])
+}
+
+// ---------------------------------------------------------------- orders ----
+
+/// Minimal patient reference (KLORD03: two identifiers). No clinical record is kept here beyond the order.
+model PatientRef {
+  id          String   @id @default(cuid())
+  orgId       String
+  externalId  String?
+  fullName    String
+  dateOfBirth DateTime? @db.Date
+  sex         Sex      @default(UNKNOWN)
+  phone       String?
+  nationalIdHash  String?
+  nationalIdLast4 String?
+  createdAt   DateTime @default(now())
+
+  orders LabOrder[]
+
+  @@index([orgId, phone])
+  @@index([orgId, externalId])
+}
+
+model LabOrder {
+  id         String      @id @default(cuid())
+  orgId      String
+  labId      String
+  patientId  String
+  source     OrderSource
+  status     OrderStatus @default(DRAFT)
+  /// Idempotency for external orders (Kiorly Clinic CL06 order id / Kiorex booking id).
+  sourceRef  String?
+  /// KLORD03: two identifiers verified at registration.
+  identityVerified Boolean @default(false)
+  identifiersChecked String[]
+  referringDoctorName String?
+  referringDoctorRef  String?
+  /// KLORD03/KLCRIT02: consent for result sharing, per channel. Release channels check this.
+  consentShareChannels ReleaseChannel[]
+  consentCapturedAt DateTime?
+  priority   String      @default("ROUTINE")
+  createdBy  String
+  createdAt  DateTime    @default(now())
+
+  patient  PatientRef  @relation(fields: [patientId], references: [id])
+  items    OrderItem[]
+  homeCollection HomeCollection?
+  specimens Specimen[]
+  reports  ReportVersion[]
+
+  @@unique([orgId, source, sourceRef])
+  @@index([orgId, labId, status])
+}
+
+model OrderItem {
+  id       String          @id @default(cuid())
+  orderId  String
+  testId   String
+  status   OrderItemStatus @default(PENDING)
+  price    Decimal         @db.Decimal(14, 2)
+
+  order   LabOrder       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  test    TestDefinition @relation(fields: [testId], references: [id])
+  results Result[]
+
+  @@index([orderId])
+}
+
+/// KLORD04: slot, address, phlebotomist, route, confirmation with photo of labels.
+model HomeCollection {
+  id              String               @id @default(cuid())
+  orgId           String
+  orderId         String               @unique
+  status          HomeCollectionStatus @default(REQUESTED)
+  slotStart       DateTime
+  slotEnd         DateTime
+  address         String
+  geo             Json?
+  phlebotomistId  String?
+  routeSequence   Int?
+  confirmedAt     DateTime?
+  labelPhotoKey   String?
+
+  order LabOrder @relation(fields: [orderId], references: [id])
+
+  @@index([orgId, slotStart])
+  @@index([phlebotomistId, slotStart])
+}
+
+// -------------------------------------------------------------- specimens ---
+
+/// KLSPC01/02: unique accession per lab; aliquots link to parent.
+model Specimen {
+  id              String         @id @default(cuid())
+  orgId           String
+  labId           String
+  orderId         String
+  accessionNumber String
+  /// Barcode payload printed on the label; scan must match on receipt/processing.
+  barcode         String
+  specimenType    String
+  container       String?
+  parentSpecimenId String?
+  status          SpecimenStatus @default(PENDING_COLLECTION)
+  rejectionReason RejectionReason?
+  rejectionNote   String?
+  createdAt       DateTime       @default(now())
+
+  lab      Lab        @relation(fields: [labId], references: [id])
+  order    LabOrder   @relation(fields: [orderId], references: [id])
+  parent   Specimen?  @relation("Aliquots", fields: [parentSpecimenId], references: [id])
+  aliquots Specimen[] @relation("Aliquots")
+  custody  CustodyEvent[]
+  results  Result[]
+
+  /// Stop-ship: duplicate accession accepted.
+  @@unique([labId, accessionNumber])
+  @@unique([labId, barcode])
+  @@index([orgId, orderId])
+}
+
+/// KLSPC03: append-only chain of custody (DB trigger forbids UPDATE/DELETE).
+model CustodyEvent {
+  id          String           @id @default(cuid())
+  orgId       String
+  specimenId  String
+  type        CustodyEventType
+  actorId     String
+  location    String?
+  /// Transport temperature (KLSPC03 "time, temperature").
+  temperatureC Decimal?        @db.Decimal(5, 2)
+  note        String?
+  occurredAt  DateTime         @default(now())
+
+  specimen Specimen @relation(fields: [specimenId], references: [id])
+
+  @@index([specimenId, occurredAt])
+  @@index([orgId, occurredAt])
+}
+
+// ----------------------------------------------------------------- QC -------
+
+model Instrument {
+  id         String         @id @default(cuid())
+  orgId      String
+  labId      String
+  name       String
+  kind       InstrumentKind
+  /// ASTM E1394 / HL7 v2 interface identifier (lab.analyzer_interfaces).
+  interfaceRef String?
+  active     Boolean        @default(true)
+
+  lab     Lab          @relation(fields: [labId], references: [id])
+  qcRuns  QcRun[]
+  qcBlocks QcBlock[]
+  results Result[]
+
+  @@index([orgId, labId])
+}
+
+/// Control material per analyte/level with target mean/SD (basis for Westgard evaluation).
+model QcMaterialLevel {
+  id        String  @id @default(cuid())
+  orgId     String
+  analyteId String
+  level     QcLevel
+  materialLot String
+  targetMean Decimal @db.Decimal(14, 5)
+  targetSd   Decimal @db.Decimal(14, 5)
+  expiresAt  DateTime? @db.Date
+
+  analyte Analyte @relation(fields: [analyteId], references: [id])
+  runs    QcRun[]
+
+  @@unique([analyteId, level, materialLot])
+}
+
+/// KLQC02: internal QC run per analyte/level; Levey-Jennings plots zScore over time.
+model QcRun {
+  id           String      @id @default(cuid())
+  orgId        String
+  instrumentId String
+  materialId   String
+  value        Decimal     @db.Decimal(14, 5)
+  zScore       Decimal     @db.Decimal(8, 4)
+  status       QcRunStatus
+  /// Westgard rules violated, e.g. ["1_3s","2_2s","R_4s","4_1s","10x"].
+  violatedRules String[]
+  runBy        String
+  runAt        DateTime    @default(now())
+
+  instrument Instrument      @relation(fields: [instrumentId], references: [id])
+  material   QcMaterialLevel @relation(fields: [materialId], references: [id])
+  openedBlocks QcBlock[]     @relation("OpenedBy")
+  clearedBlocks QcBlock[]    @relation("ClearedBy")
+  results    Result[]
+
+  @@index([instrumentId, materialId, runAt])
+}
+
+/// A FAIL (rule violation) opens a block: patient release for that analyte/instrument is refused until cleared by a documented passing run.
+model QcBlock {
+  id           String        @id @default(cuid())
+  orgId        String
+  instrumentId String
+  analyteId    String
+  status       QcBlockStatus @default(OPEN)
+  openedByRunId String
+  rule         String
+  clearedByRunId String?
+  clearedBy    String?
+  clearNote    String?
+  openedAt     DateTime      @default(now())
+  clearedAt    DateTime?
+
+  instrument Instrument @relation(fields: [instrumentId], references: [id])
+  openedByRun QcRun     @relation("OpenedBy", fields: [openedByRunId], references: [id])
+  clearedByRun QcRun?   @relation("ClearedBy", fields: [clearedByRunId], references: [id])
+
+  @@index([orgId, instrumentId, analyteId, status])
+}
+
+// ---------------------------------------------------------------- results ---
+
+/// KLQC01/03/04: result with source, dual control for manual entry, delta check, tech + medical validation.
+model Result {
+  id           String       @id @default(cuid())
+  orgId        String
+  orderItemId  String
+  specimenId   String
+  analyteId    String
+  instrumentId String?
+  /// QC run that covers this result's analytical batch; required before release.
+  qcRunId      String?
+  source       ResultSource
+  status       ResultStatus @default(ENTERED)
+  valueNumeric Decimal?     @db.Decimal(14, 5)
+  valueText    String?
+  unit         String?
+  flag         ResultFlag   @default(NORMAL)
+  /// Reference interval version used at the time (KLQC03).
+  referenceIntervalId String?
+  deltaCheckFailed Boolean  @default(false)
+  enteredBy    String
+  /// KLQC01: manual entry with dual control => second person re-keys/confirms.
+  secondEntryBy String?
+  techValidatedBy String?
+  techValidatedAt DateTime?
+  medicalValidatedBy String?
+  medicalValidatedAt DateTime?
+  releasedAt   DateTime?
+  enteredAt    DateTime     @default(now())
+
+  orderItem  OrderItem   @relation(fields: [orderItemId], references: [id])
+  specimen   Specimen    @relation(fields: [specimenId], references: [id])
+  analyte    Analyte     @relation(fields: [analyteId], references: [id])
+  instrument Instrument? @relation(fields: [instrumentId], references: [id])
+  qcRun      QcRun?      @relation(fields: [qcRunId], references: [id])
+  criticalAlerts CriticalAlert[]
+
+  @@index([orgId, orderItemId])
+  @@index([specimenId])
+  @@index([analyteId, instrumentId, enteredAt])
+}
+
+/// KLQC05: corrected reports create a new version with reason; recipients notified.
+/// A report version is signed by an authorized signatory (DB CHECK: signer + timestamp present).
+model ReportVersion {
+  id           String   @id @default(cuid())
+  orgId        String
+  orderId      String
+  version      Int
+  /// Required when version > 1.
+  correctionReason String?
+  supersedesId String?
+  signedBy     String
+  signedAt     DateTime
+  /// Integrity: SHA-256 of the rendered report document.
+  contentHash  String
+  storageKey   String
+  createdAt    DateTime @default(now())
+
+  order    LabOrder        @relation(fields: [orderId], references: [id])
+  releases ReleaseRecord[]
+
+  @@unique([orderId, version])
+  @@index([orgId, orderId])
+}
+
+/// KLCRIT02/03: each release channel is consent-checked; event carries signed version + secure link, never raw values.
+model ReleaseRecord {
+  id              String         @id @default(cuid())
+  orgId           String
+  reportVersionId String
+  channel         ReleaseChannel
+  /// Consent reference (order.consentCapturedAt snapshot / external token).
+  consentRef      String
+  /// Opaque id for the patient secure link (OTP-gated). Not the link itself.
+  secureLinkId    String?
+  releasedBy      String
+  releasedAt      DateTime       @default(now())
+
+  reportVersion ReportVersion @relation(fields: [reportVersionId], references: [id])
+
+  @@index([orgId, reportVersionId])
+}
+
+/// KLCRIT01: ack within configured minutes or escalate to lab director.
+model CriticalAlert {
+  id           String              @id @default(cuid())
+  orgId        String
+  resultId     String
+  status       CriticalAlertStatus @default(OPEN)
+  notifiedUserRef String
+  notifiedAt   DateTime            @default(now())
+  /// notifiedAt + rule.ackWithinMinutes; a timer job escalates when passed and not acknowledged.
+  ackDeadlineAt DateTime
+  acknowledgedBy String?
+  acknowledgedAt DateTime?
+  escalatedToUserId String?
+  escalatedAt  DateTime?
+
+  result Result @relation(fields: [resultId], references: [id])
+
+  @@index([orgId, status, ackDeadlineAt])
+}
+
+// ------------------------------------------------------ platform plumbing ---
+
+/// Transactional outbox (ADR-006): LabResultReleased carries signed version + secure link only.
+model OutboxEvent {
+  id            String       @id @default(cuid())
+  orgId         String
+  type          String
+  aggregateType String
+  aggregateId   String
+  payload       Json
+  status        OutboxStatus @default(PENDING)
+  attempts      Int          @default(0)
+  occurredAt    DateTime     @default(now())
+  sentAt        DateTime?
+
+  @@index([status, occurredAt])
+  @@index([orgId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  orgId      String
+  actorId    String?
+  action     String
+  entityType String
+  entityId   String
+  /// No PHI here: ids and field names only.
+  meta       Json?
+  at         DateTime @default(now())
+
+  @@index([orgId, at])
+  @@index([entityType, entityId])
+}
+
+model FlagSnapshotCache {
+  product   String   @id
+  version   String
+  etag      String?
+  body      Json
+  fetchedAt DateTime @default(now())
+}
