@@ -79,7 +79,7 @@ async function main() {
     const COMBOS = [["CBC"], ["GLU"], ["KFT"], ["LFT"], ["TSH"], ["CBC", "GLU"], ["LFT", "TSH"], ["KFT", "GLU"]];
     let k = 0; const done: Record<string, number> = {};
     const bump = (s: string) => { done[s] = (done[s] ?? 0) + 1; };
-    const safe = async (label: string, f: () => Promise<void>) => { try { await f(); bump(label); } catch (e: any) { console.warn(`${label}:`, String(e.message ?? e).slice(0, 140)); } };
+    const safe = async (label: string, f: () => Promise<void>) => { try { await f(); bump(label); } catch (e: any) { console.warn(`${label}:`, String(e.message ?? e).slice(0, 140), e.response ? JSON.stringify(e.response).slice(0, 200) : ""); } };
 
     // ── KNLAB01: samples collected by a Kiorly Nurse at a home visit and handed to this lab (source KIORLY_NURSE, sourceRef = the clinic order id) ──
     // The clinic seed created the matching ClinicalOrder + LabSampleCollection (same ids); the Kiorex seed relays and pushes this lab's status back.
@@ -132,7 +132,7 @@ async function main() {
       const o = await mkOrder(k++, COMBOS[i % COMBOS.length]); await advance(o, "processing"); await enter(o, i % 3 === 0 ? HIGH : NORMAL, "medical");
       const rep = await reports.sign(users.AUTHORIZED_SIGNATORY, o.id); await reports.release(users.RECEPTION, rep.id, ["PATIENT_LINK_OTP", "PRINTED"]);
       const inv = await billing.invoiceOrder(users.RECEPTION, o.id);
-      if (i % 4 !== 3) await billing.pay(users.RECEPTION, inv.id, { method: i % 2 ? "CARD" : "CASH", amount: inv.total }, `demo-pay-${o.id}`);
+      if (i % 4 !== 3) await billing.pay(users.RECEPTION, inv.id, { method: i % 2 ? "CARD" : "CASH", amount: inv.total, ...(i % 2 ? { cardToken: "tok_visa" } : {}) }, `demo-pay-${o.id}`);
       await spread(o, 4 + i * 2);
     });
     await safe("critical-alert", async () => { const o = await mkOrder(k++, ["CBC"]); await advance(o, "processing"); const it = (await orders.get(org, o.id)).items[0]; await results.enterManual(tech, { orderItemId: it.id, analyteId: analytes.find((a) => a.code === "HB")!.id, instrumentId: bench.id, value: 5.9 }); await spread(o, 0); });
