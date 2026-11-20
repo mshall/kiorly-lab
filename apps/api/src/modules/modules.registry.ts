@@ -6,6 +6,7 @@ export const BOUNDED_CONTEXTS = [
   { dir: "analysis-qc", name: "AnalysisQcModule", prefix: "KLQC", title: "Analysis, QC and validation", safetyPath: true },
   { dir: "release", name: "ReleaseModule", prefix: "KLCRIT", title: "Release and critical values", safetyPath: true },
   { dir: "critical", name: "CriticalModule", prefix: "KLCRIT01", title: "Critical-value alerts, acknowledgement and escalation", safetyPath: true },
+  { dir: "field-safety", name: "FieldSafetyModule", prefix: "KLORD04/HVSAF", title: "Phlebotomist field lifecycle, safety timer, SOS and unsafe-abort (@kiorly/field-visit)", safetyPath: true },
   { dir: "analyzers", name: "AnalyzersModule", prefix: "KLQC01", title: "Analyzer bridge (ASTM E1394 / HL7 v2) and simulator", safetyPath: false },
   { dir: "admin", name: "AdminModule", prefix: "LB-F07", title: "Auth session, onboarding, staff/RBAC, settings", safetyPath: false },
   { dir: "business", name: "BusinessModule", prefix: "KLBIZ", title: "Business: price lists, invoices, TAT", safetyPath: false },

@@ -9,6 +9,7 @@ import { SAFETY_PATH_DIRS, SafetyControlNotAFlagError } from "../src/feature-fla
 import { BOUNDED_CONTEXTS } from "../src/modules/modules.registry";
 import { AnalysisQcController } from "../src/modules/analysis-qc/analysis-qc.controller";
 import { CriticalController } from "../src/modules/critical/critical.controller";
+import { FieldSafetyController } from "../src/modules/field-safety/field-safety.controller";
 import { ReleaseController } from "../src/modules/release/release.controller";
 import { SpecimensController } from "../src/modules/specimens/specimens.controller";
 import { type Lab, type TestApp, NORMAL, bootApp, call, enterAndTechValidate, makeLab, makeOrder, qcPass, toProcessing } from "./helpers/app";
@@ -159,7 +160,7 @@ describe("LB-SS05 never-flag CI: QC blocks, authorized release and critical esca
   });
 
   it("no route of a safety-path controller carries @RequiresFlag metadata", () => {
-    for (const C of [SpecimensController, AnalysisQcController, ReleaseController, CriticalController]) {
+    for (const C of [SpecimensController, AnalysisQcController, ReleaseController, CriticalController, FieldSafetyController]) {
       assert.equal(Reflect.getMetadata(REQUIRES_FLAG, C), undefined, `${C.name} (class)`);
       for (const name of Object.getOwnPropertyNames(C.prototype).filter((n) => n !== "constructor")) {
         assert.equal(Reflect.getMetadata(REQUIRES_FLAG, (C.prototype as never)[name]), undefined, `${C.name}.${name}`);

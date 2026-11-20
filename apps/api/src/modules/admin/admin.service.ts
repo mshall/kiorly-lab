@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, ForbiddenException, HttpException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { randomBytes } from "node:crypto";
-import type { Edition, StaffRole } from "@prisma/client";
+import type { Edition, Prisma, StaffRole } from "@prisma/client";
+import { normalizeDistrictId } from "@kiorly/field-visit";
 import type { AuthUser } from "../../auth/auth.types";
 import { PERMISSIONS, ROLE_PERMISSIONS } from "../../auth/rbac";
 import { TokenService } from "../../auth/token.service";
@@ -140,12 +141,26 @@ export class AdminService {
   // -------------------------------------------------------------- settings
   async getSettings(orgId: string) {
     const t = await this.prisma.tenant.findUniqueOrThrow({ where: { id: orgId } });
-    return { name: t.name, edition: t.edition, marketCode: t.marketCode, currency: t.currency, vatRatePercent: Number(t.vatRatePercent), referringDoctorStatements: t.referringDoctorStatements, qcValidityHours: t.qcValidityHours };
+    return { name: t.name, edition: t.edition, marketCode: t.marketCode, currency: t.currency, vatRatePercent: Number(t.vatRatePercent), referringDoctorStatements: t.referringDoctorStatements, qcValidityHours: t.qcValidityHours, safetyContactName: t.safetyContactName, safetyContactPhone: t.safetyContactPhone, homeBufferBeforeMin: t.homeBufferBeforeMin, homeBufferAfterMin: t.homeBufferAfterMin, homeDailyCap: t.homeDailyCap };
   }
-  async updateSettings(u: AuthUser, b: { name?: string; vatRatePercent?: number; referringDoctorStatements?: boolean; qcValidityHours?: number }) {
+  async updateSettings(u: AuthUser, b: { name?: string; vatRatePercent?: number; referringDoctorStatements?: boolean; qcValidityHours?: number; safetyContactName?: string | null; safetyContactPhone?: string | null; homeBufferBeforeMin?: number; homeBufferAfterMin?: number; homeDailyCap?: number | null }) {
     const t = await this.prisma.tenant.update({ where: { id: u.orgId }, data: b });
     await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "settings.update", entityType: "Tenant", entityId: u.orgId, meta: { fields: Object.keys(b) } });
     return this.getSettings(t.id);
+  }
+
+  /** HVCFG02 / HVBK01: the districts a lab collects in (+ optional max travel time from a start district and a travel matrix). */
+  async setCoverage(u: AuthUser, labId: string, b: { districtIds: string[]; maxTravelMinutes?: number | null; startDistrictId?: string | null; travelMatrix?: Record<string, Record<string, number>> | null }) {
+    const lab = await this.prisma.lab.findFirst({ where: { id: labId, orgId: u.orgId } });
+    if (!lab) throw new NotFoundException({ code: "LAB_NOT_FOUND" });
+    const ids = [...new Set(b.districtIds.map(normalizeDistrictId))];
+    if (ids.some((i) => !i)) throw new BadRequestException({ code: "DISTRICT_INVALID" });
+    const updated = await this.prisma.lab.update({
+      where: { id: labId },
+      data: { coverageDistricts: ids, maxTravelMinutes: b.maxTravelMinutes ?? null, startDistrictId: b.startDistrictId ? normalizeDistrictId(b.startDistrictId) : null, travelMatrix: (b.travelMatrix ?? undefined) as Prisma.InputJsonValue | undefined },
+    });
+    await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "lab.coverage", entityType: "Lab", entityId: labId, meta: { districts: ids.length } });
+    return updated;
   }
 
   // ----------------------------------------------------------------- audit
@@ -163,7 +178,7 @@ export class AdminService {
     return this.prisma.integrationClient.findMany({ where: { orgId }, select: { id: true, key: true, source: true, kiorexBaseUrl: true, active: true, createdAt: true } });
   }
   /** Issues an HMAC client (key + secret). The secret is returned ONCE and stored encrypted. */
-  async createClient(u: AuthUser, source: "KIOREX_BOOKING" | "KIORLY_CLINIC", kiorexBaseUrl?: string) {
+  async createClient(u: AuthUser, source: "KIOREX_BOOKING" | "KIORLY_CLINIC" | "KIORLY_NURSE", kiorexBaseUrl?: string) {
     const key = `kl_${randomBytes(9).toString("hex")}`;
     const secret = randomBytes(32).toString("base64url");
     const webhookSecret = randomBytes(32).toString("base64url");

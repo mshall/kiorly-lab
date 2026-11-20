@@ -1,3 +1,4 @@
+import { eventSource, isExternalSource } from "./order-source";
 import { Inject, Injectable } from "@nestjs/common";
 import type { OrderItemStatus } from "@prisma/client";
 import { OutboxService } from "../outbox/outbox.service";
@@ -42,11 +43,11 @@ export class OrderStatusService {
     const next = deriveOrderStatus({ cancelled: order.status === "CANCELLED", items: order.items.map((i) => i.status), specimens: order.specimens.map((s) => s.status), current: order.status });
     if (next !== order.status) {
       await db.labOrder.update({ where: { id: orderId }, data: { status: next } });
-      if (order.source === "KIOREX_BOOKING" || order.source === "KIORLY_CLINIC") {
+      if (isExternalSource(order.source)) {
         await this.outbox.enqueue(
           {
             orgId: order.orgId, type: "LabOrderStatusChanged", aggregateType: "LabOrder", aggregateId: order.id,
-            data: { orderId: order.id, orderNumber: order.orderNumber, source: order.source, sourceRef: order.sourceRef, previousStatus: order.status, nextStatus: next },
+            data: { orderId: order.id, orderNumber: order.orderNumber, ...eventSource(order.source), sourceRef: order.sourceRef, previousStatus: order.status, nextStatus: next },
             eventId: `evt_ordst_${order.id}_${next}`,
           },
           db,

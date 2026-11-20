@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
 import { Prisma, type RejectionReason, type Specimen } from "@prisma/client";
 import type { AuthUser } from "../../auth/auth.types";
 import { AuditService } from "../../audit/audit.service";
@@ -54,6 +54,45 @@ export class SpecimensService {
       const accession = opts.accessionNumber ?? (await this.nextAccession(db, order.orgId, order.labId));
       const sp = await this.insertSpecimen(db, { orgId: order.orgId, labId: order.labId, orderId: order.id, accessionNumber: accession, barcode: accession, specimenType, container: container || null });
       await db.orderItem.updateMany({ where: { id: { in: group.map((g) => g.id) } }, data: { specimenId: sp.id } });
+      out.push(sp);
+    }
+    return out;
+  }
+
+  /**
+   * KLORD05: specimens a nurse already collected. One specimen per (type, container) group, each carrying the nurse's tube label as its
+   * barcode (so the physical label is what gets scanned at receipt) and a lab-generated accession. The chain of custody STARTS at the
+   * nurse's collection time (COLLECTED, then TRANSPORT_STARTED at hand-over), not at ingest.
+   */
+  async createCollectedForOrder(db: Db, order: { id: string; orgId: string; labId: string }, n: { visitRef: string; collectorRef: string; collectedAt: string; handedOverAt?: string; temperatureC?: number; samples: { label: string; specimenType: string; container?: string }[] }) {
+    const norm = (t: string, c?: string | null) => `${t.trim().toLowerCase()}|${(c ?? "").trim().toLowerCase()}`;
+    const items = await db.orderItem.findMany({ where: { orderId: order.id, specimenId: null, status: { not: "CANCELLED" } }, include: { test: true } });
+    const groups = new Map<string, typeof items>();
+    for (const it of items) groups.set(norm(it.test.specimenType, it.test.container), [...(groups.get(norm(it.test.specimenType, it.test.container)) ?? []), it]);
+    const samples = new Map<string, (typeof n.samples)[number]>();
+    for (const s of n.samples) {
+      const k = norm(s.specimenType, s.container);
+      if (samples.has(k)) throw new UnprocessableEntityException({ code: "SAMPLE_DUPLICATE_GROUP", specimenType: s.specimenType });
+      samples.set(k, s);
+    }
+    const unmatched = [...samples.keys()].filter((k) => !groups.has(k));
+    if (unmatched.length) throw new UnprocessableEntityException({ code: "SAMPLE_UNMATCHED", samples: unmatched.map((k) => samples.get(k)!.label) });
+    const missing = [...groups.entries()].filter(([k]) => !samples.has(k));
+    if (missing.length) throw new UnprocessableEntityException({ code: "SAMPLE_MISSING_FOR_TEST", testCodes: missing.flatMap(([, g]) => g.map((i) => i.test.code)) });
+    const collectedAt = new Date(n.collectedAt);
+    const handedOverAt = n.handedOverAt ? new Date(n.handedOverAt) : null;
+    const actorId = `nurse:${n.collectorRef}`;
+    const out: Specimen[] = [];
+    for (const [k, group] of groups) {
+      const sample = samples.get(k)!;
+      const accession = await this.nextAccession(db, order.orgId, order.labId);
+      const sp = await this.insertSpecimen(db, {
+        orgId: order.orgId, labId: order.labId, orderId: order.id, accessionNumber: accession, barcode: sample.label, specimenType: group[0].test.specimenType, container: group[0].test.container,
+        status: handedOverAt ? "IN_TRANSIT" : "COLLECTED", collectedAt, collectedByRef: n.collectorRef,
+      });
+      await db.orderItem.updateMany({ where: { id: { in: group.map((g) => g.id) } }, data: { specimenId: sp.id } });
+      await this.custody.append(db, { orgId: order.orgId, specimenId: sp.id, type: "COLLECTED", actorId, location: "nurse home visit", temperatureC: n.temperatureC, note: `collected by nurse visit ${n.visitRef}`, at: collectedAt });
+      if (handedOverAt) await this.custody.append(db, { orgId: order.orgId, specimenId: sp.id, type: "TRANSPORT_STARTED", actorId, location: "nurse hand-over to lab", temperatureC: n.temperatureC, note: "handed over for transport to the lab", at: handedOverAt });
       out.push(sp);
     }
     return out;
@@ -148,7 +187,17 @@ export class SpecimensService {
       if (!next) throw new ConflictException({ code: "ILLEGAL_SPECIMEN_TRANSITION", from: sp.status, action });
       if (SCAN_REQUIRED.includes(action)) await this.assertLabelMatch(tx, u, sp, input.scannedBarcode);
       await tx.specimen.update({ where: { id }, data: { status: next, ...(action === "collect" ? { collectedAt: new Date() } : {}) } });
-      await this.custody.append(tx, { orgId: u.orgId, specimenId: id, type: ACTION_EVENT[action], actorId: u.staffId, location: input.location, temperatureC: input.temperatureC, note: input.note });
+      let note = input.note;
+      if (action === "receive") {
+        // KLORD05: transit time from the nurse's collection to receipt is part of the chain (viability judgement stays with the lab, NH-LB-034).
+        const nc = await tx.nurseCollection.findUnique({ where: { orderId: sp.orderId } });
+        if (nc) {
+          const minutes = Math.max(0, Math.round((Date.now() - (sp.collectedAt ?? nc.collectedAt).getTime()) / 60_000));
+          note = [note, `received from nurse collection, ${minutes} min after collection`].filter(Boolean).join("; ");
+          await tx.nurseCollection.updateMany({ where: { orderId: sp.orderId, receivedAt: null }, data: { receivedAt: new Date() } });
+        }
+      }
+      await this.custody.append(tx, { orgId: u.orgId, specimenId: id, type: ACTION_EVENT[action], actorId: u.staffId, location: input.location, temperatureC: input.temperatureC, note });
       await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: `specimen.${action}`, entityType: "Specimen", entityId: id, meta: { from: sp.status, to: next } }, tx);
       if (action === "process") {
         await tx.orderItem.updateMany({ where: { specimenId: id, status: "PENDING" }, data: { status: "IN_PROGRESS" } });

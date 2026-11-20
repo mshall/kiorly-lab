@@ -89,7 +89,7 @@ export const ALL_ROLES: StaffRole[] = ["OWNER", "LAB_DIRECTOR", "AUTHORIZED_SIGN
 /** Creates an isolated tenant (PRO edition by default) with one lab, one staff member per role, the synthetic starter catalogue, QC materials and three instruments. */
 export async function makeLab(t: TestApp, opts: { edition?: "LITE" | "PRO" | "CHAIN"; vat?: number; market?: string } = {}): Promise<Lab> {
   const slug = `t${randomBytes(5).toString("hex")}`;
-  const tenant = await t.prisma.tenant.create({ data: { name: `Test ${slug}`, slug, edition: opts.edition ?? "PRO", vatRatePercent: opts.vat ?? 14, marketCode: opts.market ?? "EG" } });
+  const tenant = await t.prisma.tenant.create({ data: { name: `Test ${slug}`, slug, edition: opts.edition ?? "PRO", vatRatePercent: opts.vat ?? 14, marketCode: opts.market ?? "EG", safetyContactName: "Safety Contact", safetyContactPhone: "+201000000999" } });
   const lab = await t.prisma.lab.create({ data: { orgId: tenant.id, name: "Test Lab", code: "TL" } });
   const staff = {} as Lab["staff"];
   const tokens = {} as Lab["tokens"];

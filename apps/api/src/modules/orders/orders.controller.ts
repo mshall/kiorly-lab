@@ -9,12 +9,15 @@ import { HomeCollectionService } from "./home-collection.service";
 import { OrdersService } from "./orders.service";
 import { PatientsService } from "./patients.service";
 
-const Channels = z.array(z.enum(["PRINTED", "PATIENT_LINK_OTP", "KIORLY_CLINIC_IMPORT", "KIOREX_VAULT"]));
+const Channels = z.array(z.enum(["PRINTED", "PATIENT_LINK_OTP", "KIORLY_CLINIC_IMPORT", "KIORLY_NURSE_IMPORT", "KIOREX_VAULT"]));
 const PatientBody = z.object({
   fullName: z.string().min(2).max(160), dateOfBirth: z.string().optional(), sex: z.enum(["M", "F", "OTHER", "UNKNOWN"]).optional(), phone: z.string().min(6).max(24).optional(),
   nationalId: z.string().min(5).max(32).optional(), externalId: z.string().optional(), preferredLocale: z.enum(["ar", "en"]).optional(),
 }).strict();
-const HomeBody = z.object({ slotId: z.string().optional(), address: z.string().min(5), contactPhone: z.string().optional(), geo: z.object({ lat: z.number(), lng: z.number() }).optional() }).strict();
+const HomeBody = z.object({ slotId: z.string().optional(), address: z.string().min(5), districtId: z.string().min(2).max(80).optional(), contactPhone: z.string().optional(), geo: z.object({ lat: z.number(), lng: z.number() }).optional() }).strict();
+const Geo = z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180), districtId: z.string().optional() }).strict();
+const Depart = z.object({ geostamp: Geo.optional() }).strict();
+const Arrive = z.object({ geostamp: Geo }).strict();
 export const OrderBody = z.object({
   labId: z.string().optional(), patientId: z.string().optional(), patient: PatientBody.optional(),
   testCodes: z.array(z.string()).optional(), packageCodes: z.array(z.string()).optional(),
@@ -47,8 +50,8 @@ export class OrdersController {
 
   @Get("orders") @Perm("orders.read") @ApiOperation({ summary: "Orders worklist" }) list(@CurrentUser() u: AuthUser, @Query() q: Record<string, string>) { return this.orders.list(u, q); }
   @Post("orders") @Perm("orders.create") @RequiresFlag("lab.module") @ApiOperation({ summary: "KLORD02 create an order (walk-in / referring doctor; home collection needs lab.home_collection)" })
-  @ZBody(OrderBody) async create(@CurrentUser() u: AuthUser, @Body() b: z.infer<typeof OrderBody>) { return (await this.orders.create(u, b)).order; }
-  @Get("orders/:id") @Perm("orders.read") get(@CurrentUser() u: AuthUser, @Param("id") id: string) { return this.orders.get(u.orgId, id); }
+  @ZBody(OrderBody) async create(@CurrentUser() u: AuthUser, @Body() b: z.infer<typeof OrderBody>) { const { order } = await this.orders.create(u, b); return this.orders.get(u.orgId, order.id, u); }
+  @Get("orders/:id") @Perm("orders.read") get(@CurrentUser() u: AuthUser, @Param("id") id: string) { return this.orders.get(u.orgId, id, u); }
   @Post("orders/:id/verify-identity") @Perm("orders.create") @ZBody(Identity) verify(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof Identity>) { return this.orders.verifyIdentity(u, id, b.identifiersChecked); }
   @Put("orders/:id/consent") @Perm("orders.create") @ZBody(Consent) consent(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof Consent>) { return this.orders.setConsent(u, id, b.channels); }
   @Post("orders/:id/cancel") @Perm("orders.cancel") @ZBody(Cancel) cancel(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof Cancel>) { return this.orders.cancel(u, id, b.reason); }
@@ -59,7 +62,8 @@ export class OrdersController {
   @Get("home-collections/my-route") @Perm("collection.perform") @RequiresFlag("lab.home_collection") @RequiresEntitlement("home_collection") myRoute(@CurrentUser() u: AuthUser, @Query() q: { date: string }) { return this.home.myRoute(u, q.date); }
   @Post("home-collections/route/optimise") @Perm("collection.manage") @RequiresFlag("lab.home_collection") @RequiresEntitlement("home_collection") @ZBody(Route) route(@CurrentUser() u: AuthUser, @Body() b: z.infer<typeof Route>) { return this.home.optimiseRoute(u, b.date, b.phlebotomistId, b.start); }
   @Post("home-collections/:id/assign") @Perm("collection.manage") @RequiresFlag("lab.home_collection") @RequiresEntitlement("home_collection") @ZBody(Assign) assign(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof Assign>) { return this.home.assign(u, id, b.phlebotomistId, b.routeSequence); }
-  @Post("home-collections/:id/start") @Perm("collection.perform") @RequiresFlag("lab.home_collection") @RequiresEntitlement("home_collection") start(@CurrentUser() u: AuthUser, @Param("id") id: string) { return this.home.start(u, id); }
+  @Post("home-collections/:id/start") @Perm("collection.perform") @RequiresFlag("lab.home_collection") @RequiresEntitlement("home_collection") @ZBody(Depart) start(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof Depart>) { return this.home.start(u, id, b.geostamp); }
+  @Post("home-collections/:id/arrive") @Perm("collection.perform") @RequiresFlag("lab.home_collection") @RequiresEntitlement("home_collection") @ZBody(Arrive) arrive(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof Arrive>) { return this.home.arrive(u, id, b.geostamp); }
   @Post("home-collections/:id/fail") @Perm("collection.perform") @RequiresFlag("lab.home_collection") @RequiresEntitlement("home_collection") @ZBody(Fail) fail(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof Fail>) { return this.home.fail(u, id, b.reason); }
   @Post("home-collections/:id/label-photo") @Perm("collection.perform") @RequiresFlag("lab.home_collection") @RequiresEntitlement("home_collection") @ZBody(Photo) photo(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof Photo>) { return this.home.uploadLabelPhoto(u, id, b.imageBase64, b.contentType); }
   @Post("home-collections/:id/confirm") @Perm("collection.perform") @RequiresFlag("lab.home_collection") @RequiresEntitlement("home_collection") @ZBody(Confirm)

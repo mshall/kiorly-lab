@@ -19,8 +19,21 @@ export const InboundOrder = z.object({
   packageCodes: z.array(z.string()).optional(),
   priority: z.enum(["ROUTINE", "URGENT", "STAT"]).optional(),
   referringDoctor: z.object({ name: z.string().optional(), ref: z.string().optional(), phone: z.string().optional() }).strict().optional(),
-  collection: z.object({ type: z.enum(["IN_LAB", "HOME"]), address: z.string().optional(), windowStart: z.string().optional(), windowEnd: z.string().optional(), geo: z.object({ lat: z.number(), lng: z.number() }).optional(), contactPhone: z.string().optional() }).strict().optional(),
-  consentChannels: z.array(z.enum(["PRINTED", "PATIENT_LINK_OTP", "KIORLY_CLINIC_IMPORT", "KIOREX_VAULT"])).optional(),
+  collection: z.object({ type: z.enum(["IN_LAB", "HOME"]), address: z.string().optional(), districtId: z.string().optional(), windowStart: z.string().optional(), windowEnd: z.string().optional(), geo: z.object({ lat: z.number(), lng: z.number() }).optional(), contactPhone: z.string().optional() }).strict().optional(),
+  consentChannels: z.array(z.enum(["PRINTED", "PATIENT_LINK_OTP", "KIORLY_CLINIC_IMPORT", "KIORLY_NURSE_IMPORT", "KIOREX_VAULT"])).optional(),
+  /** KLORD05: two identifiers the nurse verified at collection (kinds, e.g. dateOfBirth + phone). Required with `nurseCollection`. */
+  identifiersChecked: z.array(z.string()).optional(),
+  /** KLORD05 / KNLAB01 (PROPOSED additive, NH-LB-034): a sample the nurse already collected. Accepted only from a KIORLY_NURSE client. */
+  nurseCollection: z.object({
+    visitRef: z.string().min(1).max(120),
+    collectorRef: z.string().min(1).max(120),
+    collectorName: z.string().max(160).optional(),
+    collectedAt: z.string().datetime(),
+    handedOverAt: z.string().datetime().optional(),
+    temperatureC: z.number().min(-40).max(60).optional(),
+    consentToken: z.string().min(8).max(512),
+    samples: z.array(z.object({ label: z.string().regex(/^[\x21-\x7e]{3,40}$/), specimenType: z.string().min(2).max(60), container: z.string().max(60).optional() }).strict()).min(1).max(20),
+  }).strict().optional(),
 }).strict();
 
 const Quote = z.object({ labId: z.string().optional(), testCodes: z.array(z.string().min(1)).min(1).max(30), collectionType: z.enum(["HOME", "WALK_IN"]).optional() }).strict();
@@ -76,13 +89,16 @@ export class IntegrationController {
     const tenant = await this.prisma.tenant.findUniqueOrThrow({ where: { id: client.orgId } });
     const actor: Actor = { orgId: client.orgId, staffId: `system:${client.source.toLowerCase()}`, labIds: [], marketCode: tenant.marketCode, system: true };
     const home = b.collection?.type === "HOME";
+    // a KIORLY_NURSE client submits only nurse-collected orders (and vice versa): the sample provenance is part of the contract
+    if (client.source === "KIORLY_NURSE" && !b.nurseCollection) throw new BadRequestException({ code: "NURSE_COLLECTION_REQUIRED" });
+    if (client.source === "KIORLY_NURSE" && home) throw new BadRequestException({ code: "NURSE_ORDER_CANNOT_BE_HOME_COLLECTION" });
     // HOME bookings made on a slot the lab offered consume that slot's capacity atomically (SLOT_FULL => 409); other windows are stored as given.
     const slot = home && b.collection?.windowStart ? await this.prisma.collectionSlot.findFirst({ where: { orgId: client.orgId, startsAt: new Date(b.collection.windowStart), ...(b.labId ? { labId: b.labId } : {}) } }) : null;
     const { order, created } = await this.orders.create(actor, {
       labId: b.labId, source: client.source as OrderSource, sourceRef: b.sourceRef, patient: b.patient, testCodes: b.testCodes, packageCodes: b.packageCodes, priority: b.priority,
       referringDoctorName: b.referringDoctor?.name, referringDoctorRef: b.referringDoctor?.ref, referringDoctorPhone: b.referringDoctor?.phone, consentChannels: b.consentChannels,
-      collectionType: home ? "HOME" : "IN_LAB",
-      homeCollection: home ? { address: b.collection?.address ?? "", contactPhone: b.collection?.contactPhone, geo: b.collection?.geo, ...(slot ? { slotId: slot.id } : { slotStart: b.collection?.windowStart, slotEnd: b.collection?.windowEnd }) } : undefined,
+      collectionType: home ? "HOME" : "IN_LAB", identifiersChecked: b.identifiersChecked, nurseCollection: b.nurseCollection,
+      homeCollection: home ? { address: b.collection?.address ?? "", districtId: b.collection?.districtId, contactPhone: b.collection?.contactPhone, geo: b.collection?.geo, ...(slot ? { slotId: slot.id } : { slotStart: b.collection?.windowStart, slotEnd: b.collection?.windowEnd }) } : undefined,
     });
     return { orderId: order.id, orderNumber: order.orderNumber, status: order.status, created };
   }
@@ -108,13 +124,33 @@ export class IntegrationController {
     return { orderId: r.id, status: r.status };
   }
 
+  /**
+   * KNLAB01: chain of custody for an order the caller placed, as the nurse sees it: event type, time, temperature and who (NURSE / LAB),
+   * never staff names, never PHI. Available to Kiorly Nurse / Kiorly Clinic clients for their own orders.
+   */
+  @Public()
+  @Get("orders/:sourceRef/custody")
+  async custody(@Req() req: AuthedRequest, @Param("sourceRef") sourceRef: string) {
+    const client = await this.auth.authenticate(req);
+    if (client.source !== "KIORLY_NURSE" && client.source !== "KIORLY_CLINIC") throw new NotFoundException({ code: "NOT_AVAILABLE_FOR_CLIENT" });
+    const o = await this.prisma.labOrder.findFirst({ where: { orgId: client.orgId, source: client.source as OrderSource, sourceRef }, include: { specimens: { orderBy: { createdAt: "asc" }, include: { custody: { orderBy: { occurredAt: "asc" } } } }, nurseCollection: true } });
+    if (!o) throw new NotFoundException({ code: "ORDER_NOT_FOUND" });
+    return {
+      sourceRef, orderNumber: o.orderNumber, status: o.status, collectedAt: o.nurseCollection?.collectedAt ?? null, receivedAt: o.nurseCollection?.receivedAt ?? null,
+      specimens: o.specimens.map((s) => ({
+        label: s.barcode, accessionNumber: s.accessionNumber, status: s.status,
+        custody: s.custody.map((c) => ({ type: c.type, occurredAt: c.occurredAt, by: c.actorId.startsWith("nurse:") ? "NURSE" : "LAB", temperatureC: c.temperatureC == null ? null : Number(c.temperatureC), location: c.location })),
+      })),
+    };
+  }
+
   /** Vault / clinic import fetch: allowed only for a report released on that client's channel (consent recorded). */
   @Public()
   @Get("reports/:reportId/pdf")
   @Header("Content-Type", "application/pdf")
   async pdf(@Req() req: AuthedRequest, @Param("reportId") reportId: string) {
     const client = await this.auth.authenticate(req);
-    const channel = client.source === "KIORLY_CLINIC" ? "KIORLY_CLINIC_IMPORT" : "KIOREX_VAULT";
+    const channel = client.source === "KIORLY_CLINIC" ? "KIORLY_CLINIC_IMPORT" : client.source === "KIORLY_NURSE" ? "KIORLY_NURSE_IMPORT" : "KIOREX_VAULT";
     return new StreamableFile(await this.reports.integrationPdf(client.orgId, reportId, channel));
   }
 }

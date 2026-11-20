@@ -20,7 +20,7 @@ describe("home collection: slots with capacity, phlebotomist assignment, route, 
     assert.equal(slots.length, 10);
     assert.equal(slots[0].available, 4);
     const o1 = await order(slots[0].id, "Far Patient", { lat: 30.3, lng: 31.6 });
-    const o2 = await order(slots[1].id, "Near Patient", { lat: 30.05, lng: 31.24 });
+    const o2 = await order(slots[3].id, "Near Patient", { lat: 30.05, lng: 31.24 });
     assert.equal(o1.status, 201, JSON.stringify(o1.body));
     // capacity: a slot with 4 seats takes exactly 4 concurrent bookings
     const races = await Promise.all(Array.from({ length: 7 }, (_, i) => order(slots[2].id, `Race ${i}`, { lat: 30.1, lng: 31.3 })));
@@ -52,6 +52,12 @@ describe("home collection: slots with capacity, phlebotomist assignment, route, 
     assert.notEqual((await call(t, "POST", `/home-collections/${near.id}/start`, { token: otherTok })).status, 201);
 
     assert.equal((await call(t, "POST", `/home-collections/${near.id}/start`, { token: lab.tokens.PHLEBOTOMIST })).status, 201);
+    // finishing needs the check-in first (Arrived, geostamped)
+    const early = await call(t, "POST", `/home-collections/${near.id}/confirm`, { token: lab.tokens.PHLEBOTOMIST, headers: { "idempotency-key": "c-early" }, body: { scannedBarcodes: ["X"] } });
+    assert.equal(early.status, 409);
+    assert.equal(early.body.code, "ILLEGAL_HOME_COLLECTION_TRANSITION");
+    assert.equal((await call(t, "POST", `/home-collections/${near.id}/arrive`, { token: lab.tokens.PHLEBOTOMIST, body: {} })).status, 400);
+    assert.equal((await call(t, "POST", `/home-collections/${near.id}/arrive`, { token: lab.tokens.PHLEBOTOMIST, body: { geostamp: { lat: 30.05, lng: 31.24 } } })).status, 201);
     const detail = (await call(t, "GET", `/home-collections?date=${DAY}`, { token: lab.tokens.RECEPTION })).body.find((h: any) => h.id === near.id);
     const spec = detail.order.specimens[0];
     // wrong label => blocked; no identity => blocked; then correct

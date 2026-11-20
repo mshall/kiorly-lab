@@ -17,7 +17,9 @@ import { renderReportPdf, type ReportModel } from "./report-pdf";
 
 /** Contract enum (kiorex-contracts LabResultReleased.channels) for each internal release channel. */
 export const CONTRACT_CHANNEL: Record<ReleaseChannel, "PATIENT_LINK" | "KIOREX_VAULT" | "KIORLY_CLINIC" | "PRINTED"> = {
-  PRINTED: "PRINTED", PATIENT_LINK_OTP: "PATIENT_LINK", KIORLY_CLINIC_IMPORT: "KIORLY_CLINIC", KIOREX_VAULT: "KIOREX_VAULT",
+  PRINTED: "PRINTED", PATIENT_LINK_OTP: "PATIENT_LINK", KIORLY_CLINIC_IMPORT: "KIORLY_CLINIC",
+  /** Kiorly Nurse is an edition of Kiorly Clinic (ADR-031): the contract channel stays KIORLY_CLINIC. */
+  KIORLY_NURSE_IMPORT: "KIORLY_CLINIC", KIOREX_VAULT: "KIOREX_VAULT",
 };
 
 const sha256 = (b: string | Buffer) => createHash("sha256").update(b).digest("hex");
@@ -266,7 +268,7 @@ export class ReportsService {
   }
 
   /** HMAC-authenticated Kiorex vault / Clinic import fetch (consent: a release record for that channel must exist). */
-  async integrationPdf(orgId: string, reportId: string, channel: "KIOREX_VAULT" | "KIORLY_CLINIC_IMPORT", db: Db = this.prisma): Promise<Buffer> {
+  async integrationPdf(orgId: string, reportId: string, channel: "KIOREX_VAULT" | "KIORLY_CLINIC_IMPORT" | "KIORLY_NURSE_IMPORT", db: Db = this.prisma): Promise<Buffer> {
     const rv = await db.reportVersion.findFirst({ where: { id: reportId, orgId } });
     if (!rv) throw new NotFoundException({ code: "REPORT_NOT_FOUND" });
     if (!(await db.releaseRecord.findFirst({ where: { reportVersionId: reportId, channel } }))) throw new ForbiddenException({ code: "CONSENT_REQUIRED" });

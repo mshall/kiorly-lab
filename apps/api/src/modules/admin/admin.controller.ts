@@ -14,8 +14,9 @@ const Role = z.enum(["OWNER", "LAB_DIRECTOR", "AUTHORIZED_SIGNATORY", "TECHNOLOG
 const Staff = z.object({ email: z.string().email(), displayName: z.string().min(2), role: Role, labIds: z.array(z.string()).optional(), signatoryLicenceNo: z.string().optional(), subject: z.string().optional() }).strict();
 const StaffPatch = z.object({ displayName: z.string().min(2).optional(), role: Role.optional(), labIds: z.array(z.string()).optional(), signatoryLicenceNo: z.string().nullable().optional(), active: z.boolean().optional() }).strict();
 const Lab = z.object({ name: z.string().min(2), code: z.string().regex(/^[A-Za-z0-9]{2,6}$/), address: z.string().optional(), licenceNo: z.string().optional() }).strict();
-const Settings = z.object({ name: z.string().min(2).optional(), vatRatePercent: z.coerce.number().min(0).max(100).optional(), referringDoctorStatements: z.boolean().optional(), qcValidityHours: z.number().int().min(1).max(168).optional() }).strict();
-const Client = z.object({ source: z.enum(["KIOREX_BOOKING", "KIORLY_CLINIC"]), kiorexBaseUrl: z.string().url().optional() }).strict();
+const Settings = z.object({ name: z.string().min(2).optional(), vatRatePercent: z.coerce.number().min(0).max(100).optional(), referringDoctorStatements: z.boolean().optional(), qcValidityHours: z.number().int().min(1).max(168).optional(), safetyContactName: z.string().min(2).max(120).nullable().optional(), safetyContactPhone: z.string().min(6).max(24).nullable().optional(), homeBufferBeforeMin: z.number().int().min(0).max(180).optional(), homeBufferAfterMin: z.number().int().min(0).max(180).optional(), homeDailyCap: z.number().int().min(1).max(50).nullable().optional() }).strict();
+const Coverage = z.object({ districtIds: z.array(z.string().min(2).max(80)).min(1).max(200), maxTravelMinutes: z.number().int().min(1).max(600).nullable().optional(), startDistrictId: z.string().min(2).max(80).nullable().optional(), travelMatrix: z.record(z.string(), z.record(z.string(), z.number().int().min(0).max(600))).nullable().optional() }).strict();
+const Client = z.object({ source: z.enum(["KIOREX_BOOKING", "KIORLY_CLINIC", "KIORLY_NURSE"]), kiorexBaseUrl: z.string().url().optional() }).strict();
 
 @ApiTags("admin")
 @Controller()
@@ -37,6 +38,7 @@ export class AdminController {
 
   @ApiBearerAuth() @Get("labs") labs(@CurrentUser() u: AuthUser) { return this.svc.listLabs(u.orgId); }
   @ApiBearerAuth() @Post("labs") @Perm("settings.manage") @ZBody(Lab) createLab(@CurrentUser() u: AuthUser, @Body() b: z.infer<typeof Lab>) { return this.svc.createLab(u, b); }
+  @ApiBearerAuth() @Put("labs/:id/coverage") @Perm("settings.manage") @ZBody(Coverage) coverage(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof Coverage>) { return this.svc.setCoverage(u, id, b); }
   @ApiBearerAuth() @Get("settings") @Perm("dashboard.read") settings(@CurrentUser() u: AuthUser) { return this.svc.getSettings(u.orgId); }
   @ApiBearerAuth() @Put("settings") @Perm("settings.manage") @ZBody(Settings) updateSettings(@CurrentUser() u: AuthUser, @Body() b: z.infer<typeof Settings>) { return this.svc.updateSettings(u, b); }
   @ApiBearerAuth() @Get("audit-logs") @Perm("audit.read") audit(@CurrentUser() u: AuthUser, @Query() q: Record<string, string>) { return this.svc.auditLogs(u.orgId, q); }

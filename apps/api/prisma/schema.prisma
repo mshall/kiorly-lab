@@ -59,6 +59,8 @@ enum OrderSource {
   KIORLY_CLINIC
   KIOREX_BOOKING
   REFERRING_DOCTOR
+  /// KLORD02/KLORD05: sample collected by a Kiorly Nurse visit (Nurse is an edition of Kiorly Clinic, ADR-031).
+  KIORLY_NURSE
 }
 
 enum OrderStatus {
@@ -85,15 +87,21 @@ enum OrderItemStatus {
 enum CollectionType {
   IN_LAB
   HOME
+  /// KLORD05: collected by a nurse at the patient's home; custody starts at the nurse's collection time.
+  NURSE_VISIT
 }
 
 enum HomeCollectionStatus {
   REQUESTED
   SCHEDULED
   EN_ROUTE
+  /// @kiorly/field-visit ARRIVED (geostamp = check-in).
+  ARRIVED
   COLLECTED
   FAILED
   CANCELLED
+  /// BR61: "Leave visit - unsafe"; never a no-show.
+  ABORTED_UNSAFE
 }
 
 enum SpecimenStatus {
@@ -180,6 +188,8 @@ enum ReleaseChannel {
   PRINTED
   PATIENT_LINK_OTP
   KIORLY_CLINIC_IMPORT
+  /// KLCRIT02: Kiorly Nurse import (for nurse-ordered samples).
+  KIORLY_NURSE_IMPORT
   KIOREX_VAULT
 }
 
@@ -218,6 +228,14 @@ enum NotificationPurpose {
   RECOLLECTION
   REPORT_OTP
   SLA_ALERT
+  /// HVSAF (phlebotomist safety): ids only, no PHI.
+  SAFETY_ALERT
+}
+
+enum SafetyAlertKind {
+  NO_ANSWER
+  SOS
+  UNSAFE_ABORT
 }
 
 enum NotificationStatus {
@@ -278,6 +296,13 @@ model Tenant {
   referringDoctorStatements Boolean  @default(false)
   /// QC coverage window for a result (hours). NEEDS_HUMAN (NH-LB-005): pathologist to confirm.
   qcValidityHours           Int      @default(24)
+  /// HVSAF: organisation safety contact for phlebotomist alerts (safety control, never a flag). Required before a collector can leave.
+  safetyContactName         String?
+  safetyContactPhone        String?
+  /// HVCFG01/03: travel buffers around a home collection (minutes, default 30/30) and the optional daily cap per phlebotomist.
+  homeBufferBeforeMin       Int      @default(30)
+  homeBufferAfterMin        Int      @default(30)
+  homeDailyCap              Int?
   createdAt                 DateTime @default(now())
 
   labs  Lab[]
@@ -286,14 +311,20 @@ model Tenant {
 
 /// A lab site (branch). Accession numbers are unique per Lab.
 model Lab {
-  id        String   @id @default(cuid())
-  orgId     String
-  name      String
-  licenceNo String?
-  address   String?
+  id                String   @id @default(cuid())
+  orgId             String
+  name              String
+  licenceNo         String?
+  address           String?
   /// Prefix of accession numbers for this lab.
-  code      String   @default("LAB")
-  createdAt DateTime @default(now())
+  code              String   @default("LAB")
+  createdAt         DateTime @default(now())
+  /// HVBK01 (@kiorly/field-visit zones): districts this lab collects in. Empty = no restriction configured yet (NH-LB-034).
+  coverageDistricts String[] @default([])
+  maxTravelMinutes  Int?
+  startDistrictId   String?
+  /// Nested { fromDistrict: { toDistrict: minutes } } travel matrix.
+  travelMatrix      Json?
 
   tenant Tenant @relation(fields: [orgId], references: [id])
 
@@ -502,13 +533,14 @@ model LabOrder {
   createdBy            String
   createdAt            DateTime         @default(now())
 
-  patient        PatientRef      @relation(fields: [patientId], references: [id])
-  items          OrderItem[]
-  homeCollection HomeCollection?
-  specimens      Specimen[]
-  reports        ReportVersion[]
-  invoices       Invoice[]
-  b2bAccount     B2bAccount?     @relation(fields: [b2bAccountId], references: [id])
+  patient         PatientRef       @relation(fields: [patientId], references: [id])
+  items           OrderItem[]
+  homeCollection  HomeCollection?
+  nurseCollection NurseCollection?
+  specimens       Specimen[]
+  reports         ReportVersion[]
+  invoices        Invoice[]
+  b2bAccount      B2bAccount?      @relation(fields: [b2bAccountId], references: [id])
 
   @@unique([orgId, orderNumber])
   @@unique([orgId, source, sourceRef])
@@ -554,11 +586,68 @@ model HomeCollection {
   failureReason  String?
   slotId         String?
   routeDate      DateTime?            @db.Date
+  /// Market-pack district id of the address (coverage check, coarse reporting).
+  districtId     String?
+  onMyWayAt      DateTime?
+  arrivedAt      DateTime?
+  /// Set at any terminal state; address and phone are masked 24 h after it (BR52).
+  endedAt        DateTime?
+  abortReason    String?
+  /// @kiorly/field-visit HistoryEntry[] (coarse geostamps only).
+  history        Json                 @default("[]")
+  /// @kiorly/field-visit SafetyState (prompt / answer / alert timestamps).
+  safetyState    Json                 @default("{}")
 
-  order LabOrder @relation(fields: [orderId], references: [id])
+  order  LabOrder      @relation(fields: [orderId], references: [id])
+  alerts SafetyAlert[]
 
   @@index([orgId, slotStart])
   @@index([phlebotomistId, slotStart])
+}
+
+/// KLORD05: a sample collected by a Kiorly Nurse visit and handed to this lab. No home address is kept (the visit stays in Kiorly Nurse).
+model NurseCollection {
+  id               String    @id @default(cuid())
+  orgId            String
+  orderId          String    @unique
+  /// Nurse-side visit / appointment id (provenance).
+  nurseVisitRef    String
+  /// Nurse (clinician) reference, never a phone or national id.
+  collectorRef     String
+  collectorName    String?
+  /// Custody starts here (the nurse's clock), not at ingest.
+  collectedAt      DateTime
+  handedOverAt     DateTime?
+  temperatureC     Decimal?  @db.Decimal(5, 2)
+  /// sha256 of the LAB_RESULTS record-share consent token; the plaintext is never stored.
+  consentTokenHash String
+  receivedAt       DateTime?
+  createdAt        DateTime  @default(now())
+
+  order LabOrder @relation(fields: [orderId], references: [id])
+
+  @@index([orgId, collectedAt])
+}
+
+/// HVSAF01/02 + BR61 for phlebotomists. Ids and coarse position only; precise SOS location is delivered, never stored.
+model SafetyAlert {
+  id               String          @id @default(cuid())
+  orgId            String
+  homeCollectionId String
+  kind             SafetyAlertKind
+  raisedAt         DateTime        @default(now())
+  dueAt            DateTime
+  delivered        Boolean         @default(false)
+  deliveredAt      DateTime?
+  latencyMs        Int?
+  withinSla        Boolean?
+  attempts         Json            @default("[]")
+  lastGeostamp     Json?
+
+  homeCollection HomeCollection @relation(fields: [homeCollectionId], references: [id])
+
+  @@index([orgId, raisedAt])
+  @@index([homeCollectionId])
 }
 
 // -------------------------------------------------------------- specimens ---
@@ -580,6 +669,8 @@ model Specimen {
   rejectionNote    String?
   recollectOfId    String?
   collectedAt      DateTime?
+  /// KLORD05: collector (nurse) reference when the sample arrived pre-collected.
+  collectedByRef   String?
   labelsPrinted    Int              @default(0)
   createdAt        DateTime         @default(now())
 
@@ -1157,14 +1248,14 @@ model IdempotencyRecord {
 
 /// Inbound HMAC clients (Kiorex bookings, Kiorly Clinic handoff). secretEnc = AES-GCM(secret) with the platform KEK.
 model IntegrationClient {
-  id        String   @id @default(cuid())
-  orgId     String
-  key       String   @unique
-  secretEnc String
+  id               String   @id @default(cuid())
+  orgId            String
+  key              String   @unique
+  secretEnc        String
   /// KIOREX_BOOKING | KIORLY_CLINIC
-  source    String
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
+  source           String
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
   /// KIOREX_BOOKING only: Kiorex API base (e.g. http://localhost:4000); outbox events go to `${base}/api/v1/webhooks/lab`.
   kiorexBaseUrl    String?
   /// Per-partner webhook signing secret (AES-GCM sealed). Kiorex verifies it via X-Kiorly-Client-Key.

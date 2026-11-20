@@ -9,6 +9,10 @@ import { OrderStatusService } from "../../common/order-status.service";
 import { resolveLabId } from "../../common/lab-scope";
 import { PrismaService } from "../../prisma/prisma.service";
 import { SpecimensService } from "../specimens/specimens.service";
+import { type PlannedVisit, DEFAULT_TRAVEL_BUFFERS, buildTravelMatrix, canBook } from "@kiorly/field-visit";
+import { type Geo, FieldLifecycleService } from "../field-safety/field-lifecycle.service";
+import { FieldSafetyService } from "../field-safety/field-safety.service";
+import { presentHomeCollection } from "../field-safety/field-visit-map";
 import { type GeoPoint, defaultSlotsFor, nearestNeighbourRoute } from "./home-routing";
 
 const day = (s: string) => new Date(`${s}T00:00:00.000Z`);
@@ -22,6 +26,8 @@ export class HomeCollectionService {
     @Inject(OrderStatusService) private readonly orderStatus: OrderStatusService,
     @Inject(StorageAdapter) private readonly storage: StorageAdapter,
     @Inject(IdempotencyService) private readonly idem: IdempotencyService,
+    @Inject(FieldLifecycleService) private readonly lifecycle: FieldLifecycleService,
+    @Inject(FieldSafetyService) private readonly safety: FieldSafetyService,
   ) {}
 
   /** Slots for a day; the default grid is generated on first read (NH-LB-011: operating hours/capacity policy). */
@@ -37,7 +43,17 @@ export class HomeCollectionService {
     return rows.map((r) => ({ ...r, available: Math.max(r.capacity - r.booked, 0) }));
   }
 
-  list(u: AuthUser, q: { date?: string; status?: string; phlebotomistId?: string }) {
+  /** HVPRV01/BR52: address, phone and coordinates only for the assigned phlebotomist and admins, after confirmation, never 24 h after the visit. */
+  private present<T extends Parameters<typeof presentHomeCollection>[1]>(u: AuthUser, rows: T[]) {
+    const now = Date.now();
+    return rows.map((r) => presentHomeCollection(u, r, now));
+  }
+
+  async list(u: AuthUser, q: { date?: string; status?: string; phlebotomistId?: string }) {
+    return this.present(u, await this.rawList(u, q));
+  }
+
+  private rawList(u: AuthUser, q: { date?: string; status?: string; phlebotomistId?: string }) {
     return this.prisma.homeCollection.findMany({
       where: { orgId: u.orgId, ...(q.status ? { status: q.status as never } : {}), ...(q.phlebotomistId ? { phlebotomistId: q.phlebotomistId } : {}), ...(q.date ? { routeDate: day(q.date) } : {}) },
       include: { order: { include: { patient: { select: { fullName: true, phone: true } }, specimens: { select: { id: true, accessionNumber: true, barcode: true, status: true } }, items: { include: { test: { select: { code: true, fastingRequired: true } } } } } } },
@@ -51,16 +67,36 @@ export class HomeCollectionService {
   }
 
   async assign(u: AuthUser, id: string, phlebotomistId: string, routeSequence?: number) {
-    const hc = await this.prisma.homeCollection.findFirst({ where: { id, orgId: u.orgId } });
+    const hc = await this.prisma.homeCollection.findFirst({ where: { id, orgId: u.orgId }, include: { order: { select: { labId: true } } } });
     if (!hc) throw new NotFoundException({ code: "HOME_COLLECTION_NOT_FOUND" });
     const ph = await this.prisma.staffUser.findFirst({ where: { id: phlebotomistId, orgId: u.orgId, role: "PHLEBOTOMIST", active: true } });
     if (!ph) throw new BadRequestException({ code: "PHLEBOTOMIST_NOT_FOUND" });
-    if (["COLLECTED", "CANCELLED"].includes(hc.status)) throw new ConflictException({ code: "HOME_COLLECTION_CLOSED" });
+    if (["COLLECTED", "CANCELLED", "FAILED", "ABORTED_UNSAFE"].includes(hc.status)) throw new ConflictException({ code: "HOME_COLLECTION_CLOSED" });
+    if (hc.phlebotomistId !== phlebotomistId) await this.assertBookable(u.orgId, hc, phlebotomistId);
     await this.prisma.$transaction(async (tx) => {
       await tx.homeCollection.update({ where: { id }, data: { phlebotomistId, routeSequence: routeSequence ?? null, status: hc.status === "REQUESTED" ? "SCHEDULED" : hc.status } });
       await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "home_collection.assign", entityType: "HomeCollection", entityId: id, meta: { phlebotomistId } }, tx);
     });
     return this.prisma.homeCollection.findUniqueOrThrow({ where: { id } });
+  }
+
+  /**
+   * HVBK01/HVCFG01/HVCFG03 via @kiorly/field-visit `canBook`: the phlebotomist's other stops that day (with 30/30 travel buffers, an optional
+   * daily cap and, when the lab configured a travel matrix, real district-to-district travel time) must leave room for this one.
+   */
+  private async assertBookable(orgId: string, hc: { id: string; slotStart: Date; slotEnd: Date; districtId: string | null; order: { labId: string } }, phlebotomistId: string) {
+    const [tenant, lab] = await Promise.all([this.prisma.tenant.findUniqueOrThrow({ where: { id: orgId } }), this.prisma.lab.findUnique({ where: { id: hc.order.labId } })]);
+    const dayStart = new Date(Date.UTC(hc.slotStart.getUTCFullYear(), hc.slotStart.getUTCMonth(), hc.slotStart.getUTCDate()));
+    const others = await this.prisma.homeCollection.findMany({
+      where: { orgId, phlebotomistId, id: { not: hc.id }, status: { in: ["SCHEDULED", "EN_ROUTE", "ARRIVED"] }, slotStart: { gte: dayStart, lt: new Date(dayStart.getTime() + 86_400_000) } },
+    });
+    const planned = (r: { id: string; slotStart: Date; slotEnd: Date; districtId: string | null }): PlannedVisit => ({ id: r.id, clinicianId: phlebotomistId, startMs: r.slotStart.getTime(), endMs: r.slotEnd.getTime(), districtId: r.districtId ?? undefined });
+    const matrix = lab?.travelMatrix ? buildTravelMatrix(lab.travelMatrix as Record<string, Record<string, number>>) : undefined;
+    const r = canBook(planned(hc), others.map(planned), {
+      defaultBuffers: { beforeMinutes: tenant.homeBufferBeforeMin ?? DEFAULT_TRAVEL_BUFFERS.beforeMinutes, afterMinutes: tenant.homeBufferAfterMin ?? DEFAULT_TRAVEL_BUFFERS.afterMinutes },
+      dailyCap: tenant.homeDailyCap, matrix,
+    });
+    if (!r.ok) throw new ConflictException({ code: "PHLEBOTOMIST_UNAVAILABLE", reason: r.reason });
   }
 
   /** Orders a phlebotomist's stops for a day by nearest neighbour from the lab (stored as routeSequence). */
@@ -83,19 +119,41 @@ export class HomeCollectionService {
     return hc;
   }
 
-  async start(u: AuthUser, id: string) {
-    const hc = await this.owned(u, id);
-    if (hc.status !== "SCHEDULED") throw new ConflictException({ code: "ILLEGAL_HOME_COLLECTION_TRANSITION", from: hc.status });
-    await this.prisma.homeCollection.update({ where: { id }, data: { status: "EN_ROUTE" } });
-    await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "home_collection.en_route", entityType: "HomeCollection", entityId: id });
+  /** KLORD04 "on my way": needs the organisation safety contact (fails closed); optional coarse geostamp. */
+  async start(u: AuthUser, id: string, geostamp?: Geo) {
+    await this.safety.requireContact(u.orgId);
+    await this.prisma.$transaction(async (tx) => {
+      const hc = await this.lifecycle.lock(tx, u.orgId, id);
+      this.lifecycle.assertAssignedCollector(u, hc);
+      const { data } = this.lifecycle.step(hc, { type: "DEPART", geostamp }, new Date());
+      await tx.homeCollection.update({ where: { id }, data });
+      await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "home_collection.en_route", entityType: "HomeCollection", entityId: id }, tx);
+    });
     return this.prisma.homeCollection.findUniqueOrThrow({ where: { id } });
   }
 
+  /** "Arrived" is the check-in: it needs a (coarse) location stamp. */
+  async arrive(u: AuthUser, id: string, geostamp: Geo) {
+    await this.prisma.$transaction(async (tx) => {
+      const hc = await this.lifecycle.lock(tx, u.orgId, id);
+      this.lifecycle.assertAssignedCollector(u, hc);
+      const { data } = this.lifecycle.step(hc, { type: "ARRIVE", geostamp }, new Date());
+      await tx.homeCollection.update({ where: { id }, data });
+      await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "home_collection.arrived", entityType: "HomeCollection", entityId: id }, tx);
+    });
+    return this.prisma.homeCollection.findUniqueOrThrow({ where: { id } });
+  }
+
+  /** Visit did not result in a collection: a no-show before arrival, or "could not collect" once on site (never after an unsafe abort, BR61). */
   async fail(u: AuthUser, id: string, reason: string) {
-    const hc = await this.owned(u, id);
-    if (!["SCHEDULED", "EN_ROUTE"].includes(hc.status)) throw new ConflictException({ code: "ILLEGAL_HOME_COLLECTION_TRANSITION", from: hc.status });
-    await this.prisma.homeCollection.update({ where: { id }, data: { status: "FAILED", failureReason: reason } });
-    await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "home_collection.failed", entityType: "HomeCollection", entityId: id });
+    await this.prisma.$transaction(async (tx) => {
+      const hc = await this.lifecycle.lock(tx, u.orgId, id);
+      if (u.role === "PHLEBOTOMIST" && hc.phlebotomistId !== u.staffId) throw new ConflictException({ code: "NOT_YOUR_COLLECTION" });
+      const onSite = hc.status === "ARRIVED";
+      const { data } = this.lifecycle.step(hc, onSite ? { type: "FINISH" } : { type: "MARK_NO_SHOW" }, new Date());
+      await tx.homeCollection.update({ where: { id }, data: { ...data, status: "FAILED", failureReason: reason } });
+      await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "home_collection.failed", entityType: "HomeCollection", entityId: id, meta: { onSite } }, tx);
+    });
     return this.prisma.homeCollection.findUniqueOrThrow({ where: { id } });
   }
 
@@ -119,7 +177,8 @@ export class HomeCollectionService {
     return this.idem.run(u.orgId, "home.confirm", idemKey, async () => {
       const hc = await this.owned(u, id);
       if (hc.status === "COLLECTED") return { id, status: "COLLECTED" };
-      if (!["SCHEDULED", "EN_ROUTE"].includes(hc.status)) throw new ConflictException({ code: "ILLEGAL_HOME_COLLECTION_TRANSITION", from: hc.status });
+      // KLORD04: finishing needs the check-in (Arrived, geostamped) first.
+      if (hc.status !== "ARRIVED") throw new ConflictException({ code: "ILLEGAL_HOME_COLLECTION_TRANSITION", from: hc.status });
       if (!hc.order.identityVerified) {
         const checked = b.identifiersChecked ?? [];
         if (!twoIdentifiersOk(checked, presentIdentifiers(hc.order.patient))) throw new ConflictException({ code: "TWO_IDENTIFIERS_REQUIRED", allowed: IDENTIFIER_KINDS });
@@ -132,7 +191,9 @@ export class HomeCollectionService {
         await this.specimens.transition(u, sp.id, "collect", { scannedBarcode: b.scannedBarcodes.includes(sp.barcode) ? sp.barcode : scanned, temperatureC: b.temperatureC, location: "home collection" });
       }
       await this.prisma.$transaction(async (tx) => {
-        await tx.homeCollection.update({ where: { id }, data: { status: "COLLECTED", confirmedAt: new Date(), labelPhotoKey: b.labelPhotoKey ?? hc.labelPhotoKey } as Prisma.HomeCollectionUncheckedUpdateInput });
+        const fresh = await this.lifecycle.lock(tx, u.orgId, id);
+        const { data } = this.lifecycle.step(fresh, { type: "FINISH" }, new Date());
+        await tx.homeCollection.update({ where: { id }, data: { ...data, confirmedAt: new Date(), labelPhotoKey: b.labelPhotoKey ?? hc.labelPhotoKey } as Prisma.HomeCollectionUncheckedUpdateInput });
         await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "home_collection.collected", entityType: "HomeCollection", entityId: id, meta: { photo: Boolean(b.labelPhotoKey ?? hc.labelPhotoKey) } }, tx);
         await this.orderStatus.refreshOrder(tx, hc.orderId);
       });

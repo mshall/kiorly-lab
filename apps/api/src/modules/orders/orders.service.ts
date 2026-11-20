@@ -1,10 +1,13 @@
 import { BadRequestException, ConflictException, HttpException, Inject, Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
+import { createHash } from "node:crypto";
 import { Prisma, type OrderSource, type ReleaseChannel, type TestDefinition } from "@prisma/client";
+import { buildTravelMatrix, isInCoverage } from "@kiorly/field-visit";
 import type { AuthUser } from "../../auth/auth.types";
 import { AuditService } from "../../audit/audit.service";
 import { D, type Db, nextSequence, pad, round2 } from "../../common/db";
 import { IDENTIFIER_KINDS, presentIdentifiers, twoIdentifiersOk } from "../../common/identity";
 import { OrderStatusService } from "../../common/order-status.service";
+import { eventSource, isExternalSource } from "../../common/order-source";
 import { page } from "../../common/pagination";
 import { assertFlagOn } from "../../feature-flags/flag-gate";
 import { FeatureFlagsService } from "../../feature-flags/feature-flags.service";
@@ -13,6 +16,7 @@ import { MessagingAdapter } from "../../adapters/messaging.adapter";
 import { OutboxService } from "../../outbox/outbox.service";
 import { PrismaService } from "../../prisma/prisma.service";
 import { resolveLabId } from "../../common/lab-scope";
+import { presentHomeCollection } from "../field-safety/field-visit-map";
 import { SpecimensService } from "../specimens/specimens.service";
 import { type PatientInput, PatientsService } from "./patients.service";
 
@@ -24,6 +28,22 @@ export interface HomeCollectionInput {
   /** For external bookings that carry their own window instead of a lab slot. */
   slotStart?: string;
   slotEnd?: string;
+  /** Market-pack district id of the address; required when the lab has coverage districts configured (HVBK01). */
+  districtId?: string;
+}
+
+/** KLORD05 / KNLAB01: a sample the nurse already collected (custody starts at `collectedAt`, the nurse's clock). */
+export interface NurseCollectionInput {
+  visitRef: string;
+  collectorRef: string;
+  collectorName?: string;
+  collectedAt: string;
+  handedOverAt?: string;
+  temperatureC?: number;
+  /** LAB_RESULTS record-share consent token (patient consent); required. Only its hash is stored. */
+  consentToken: string;
+  /** One entry per specimen group (type + container): `label` is the tube label the nurse applied and becomes the barcode to scan at receipt. */
+  samples: { label: string; specimenType: string; container?: string }[];
 }
 
 export interface CreateOrderInput {
@@ -43,6 +63,7 @@ export interface CreateOrderInput {
   identifiersChecked?: string[];
   consentChannels?: ReleaseChannel[];
   homeCollection?: HomeCollectionInput;
+  nurseCollection?: NurseCollectionInput;
   /** DEFER: create the order without specimens; accession later (e.g. pre-printed accession labels, KLSPC01). */
   accession?: "AUTO" | "DEFER";
 }
@@ -71,8 +92,14 @@ export class OrdersService {
     if (input.sourceRef) {
       const existing = await this.prisma.labOrder.findUnique({ where: { orgId_source_sourceRef: { orgId: actor.orgId, source, sourceRef: input.sourceRef } } });
       if (existing) return { order: await this.get(actor.orgId, existing.id), created: false };
-    } else if (source === "KIOREX_BOOKING" || source === "KIORLY_CLINIC") {
+    } else if (isExternalSource(source)) {
       throw new BadRequestException({ code: "SOURCE_REF_REQUIRED" });
+    }
+    if (source === "KIORLY_NURSE") {
+      this.assertNurseInput(input);
+      input = { ...input, collectionType: "IN_LAB", accession: "DEFER" };
+    } else if (input.nurseCollection) {
+      throw new UnprocessableEntityException({ code: "NURSE_COLLECTION_NOT_ALLOWED", message: "nurseCollection is only accepted from a Kiorly Nurse client" });
     }
     if (input.collectionType === "HOME") {
       assertFlagOn(this.flags, "lab.home_collection", { orgId: actor.orgId, market: actor.marketCode });
@@ -91,6 +118,23 @@ export class OrdersService {
       }
       throw e;
     }
+  }
+
+  /** KLORD05: consent + two verified identifiers + sane custody clock are preconditions of accepting a pre-collected sample. */
+  private assertNurseInput(input: CreateOrderInput) {
+    const n = input.nurseCollection;
+    if (!n) throw new BadRequestException({ code: "NURSE_COLLECTION_REQUIRED" });
+    if (!n.consentToken?.trim()) throw new UnprocessableEntityException({ code: "CONSENT_REQUIRED", message: "a patient consent token is required for nurse-collected samples" });
+    if (!input.identifiersChecked?.length) throw new UnprocessableEntityException({ code: "TWO_IDENTIFIERS_REQUIRED", allowed: IDENTIFIER_KINDS });
+    const skew = Date.now() + 5 * 60_000;
+    const collected = Date.parse(n.collectedAt);
+    if (Number.isNaN(collected)) throw new BadRequestException({ code: "COLLECTED_AT_INVALID" });
+    if (collected > skew) throw new UnprocessableEntityException({ code: "COLLECTED_IN_FUTURE" });
+    if (n.handedOverAt) {
+      const h = Date.parse(n.handedOverAt);
+      if (Number.isNaN(h) || h < collected || h > skew) throw new UnprocessableEntityException({ code: "HANDOVER_TIME_INVALID", message: "hand-over must be between collection and now" });
+    }
+    if (!n.samples?.length) throw new UnprocessableEntityException({ code: "SAMPLES_REQUIRED" });
   }
 
   private async createInTx(tx: Prisma.TransactionClient, actor: Actor, input: CreateOrderInput, source: OrderSource): Promise<string> {
@@ -141,7 +185,9 @@ export class OrdersService {
       if (!twoIdentifiersOk(checked, presentIdentifiers(patient))) throw new UnprocessableEntityException({ code: "TWO_IDENTIFIERS_REQUIRED", allowed: IDENTIFIER_KINDS });
       identityVerified = true;
     }
-    const consent = input.consentChannels ?? [];
+    let consent = input.consentChannels ?? [];
+    // a nurse-collected sample is shared under the patient's consent token: results go back to the nurse by default (KLCRIT02)
+    if (source === "KIORLY_NURSE") consent = [...new Set<ReleaseChannel>([...consent, "KIORLY_NURSE_IMPORT"])];
 
     const orderNumber = `ORD-${new Date().getUTCFullYear()}-${pad(await nextSequence(tx, orgId, `ord:${new Date().getUTCFullYear()}`), 6)}`;
     const order = await tx.labOrder.create({
@@ -150,11 +196,24 @@ export class OrdersService {
         identityVerified, identifiersChecked: identityVerified ? [...new Set(checked)] : [],
         referringDoctorName: input.referringDoctorName, referringDoctorRef: input.referringDoctorRef, referringDoctorPhone: input.referringDoctorPhone,
         consentShareChannels: consent, consentCapturedAt: consent.length ? new Date() : null,
-        priority: input.priority ?? "ROUTINE", collectionType: input.collectionType ?? "IN_LAB", b2bAccountId: input.b2bAccountId, createdBy: actor.staffId,
+        priority: input.priority ?? "ROUTINE", collectionType: source === "KIORLY_NURSE" ? "NURSE_VISIT" : (input.collectionType ?? "IN_LAB"), b2bAccountId: input.b2bAccountId, createdBy: actor.staffId,
         items: { create: items.map((i) => ({ testId: i.test.id, price: i.price, packageCode: i.packageCode })) },
       },
     });
     if (input.accession !== "DEFER") await this.specimens.createForOrder(tx, { id: order.id, orgId, labId });
+
+    if (source === "KIORLY_NURSE") {
+      const n = input.nurseCollection!;
+      await tx.nurseCollection.create({
+        data: {
+          orgId, orderId: order.id, nurseVisitRef: n.visitRef, collectorRef: n.collectorRef, collectorName: n.collectorName, collectedAt: new Date(n.collectedAt),
+          handedOverAt: n.handedOverAt ? new Date(n.handedOverAt) : null, temperatureC: n.temperatureC, consentTokenHash: createHash("sha256").update(n.consentToken).digest("hex"),
+        },
+      });
+      await this.specimens.createCollectedForOrder(tx, { id: order.id, orgId, labId }, n);
+      await this.orderStatus.refreshOrder(tx, order.id);
+      await this.audit.record({ orgId, actorId: actor.staffId, action: "order.nurse_collected", entityType: "LabOrder", entityId: order.id, meta: { samples: n.samples.length, handedOver: Boolean(n.handedOverAt) } }, tx);
+    }
 
     if (input.collectionType === "HOME") {
       if (!input.homeCollection) throw new BadRequestException({ code: "HOME_COLLECTION_REQUIRED" });
@@ -163,8 +222,8 @@ export class OrdersService {
 
     await this.audit.record({ orgId, actorId: actor.staffId, action: "order.create", entityType: "LabOrder", entityId: order.id, meta: { source, tests: items.length, consent, home: input.collectionType === "HOME" } }, tx);
     if (consent.length) await this.audit.record({ orgId, actorId: actor.staffId, action: "order.consent", entityType: "LabOrder", entityId: order.id, meta: { channels: consent } }, tx);
-    if (source === "KIOREX_BOOKING" || source === "KIORLY_CLINIC") {
-      await this.outbox.enqueue({ orgId, type: "LabOrderCreated", aggregateType: "LabOrder", aggregateId: order.id, data: { orderId: order.id, orderNumber, source, sourceRef: input.sourceRef, labId }, eventId: `evt_ordcr_${order.id}` }, tx);
+    if (isExternalSource(source)) {
+      await this.outbox.enqueue({ orgId, type: "LabOrderCreated", aggregateType: "LabOrder", aggregateId: order.id, data: { orderId: order.id, orderNumber, ...eventSource(source), sourceRef: input.sourceRef, labId }, eventId: `evt_ordcr_${order.id}` }, tx);
     }
     return order.id;
   }
@@ -187,7 +246,8 @@ export class OrdersService {
     return { total, rows: rows.map((r) => ({ ...r, items: r.items.map((i) => ({ ...i, price: D(i.price) })) })) };
   }
 
-  async get(orgId: string, id: string) {
+  /** `viewer` decides address visibility on the home collection (HVPRV01); without one (system callers) the address is always masked. */
+  async get(orgId: string, id: string, viewer?: Pick<AuthUser, "staffId" | "role">) {
     const o = await this.prisma.labOrder.findFirst({
       where: { id, orgId },
       include: {
@@ -195,12 +255,14 @@ export class OrdersService {
         items: { include: { test: true }, orderBy: { createdAt: "asc" } },
         specimens: { orderBy: { createdAt: "asc" } },
         homeCollection: true,
+        nurseCollection: { select: { id: true, nurseVisitRef: true, collectorRef: true, collectorName: true, collectedAt: true, handedOverAt: true, temperatureC: true, receivedAt: true } },
         reports: { orderBy: { version: "desc" }, select: { id: true, version: true, signedAt: true, correctionReason: true } },
         invoices: { select: { id: true, number: true, status: true, total: true, paidTotal: true } },
       },
     });
     if (!o) throw new NotFoundException({ code: "ORDER_NOT_FOUND" });
-    return { ...o, items: o.items.map((i) => ({ ...i, price: D(i.price), test: { ...i.test, price: D(i.test.price), volumeMl: i.test.volumeMl == null ? null : D(i.test.volumeMl) } })), invoices: o.invoices.map((i) => ({ ...i, total: D(i.total), paidTotal: D(i.paidTotal) })) };
+    const homeCollection = o.homeCollection ? presentHomeCollection(viewer ?? { staffId: "", role: "RECEPTION" }, o.homeCollection) : o.homeCollection;
+    return { ...o, homeCollection, nurseCollection: o.nurseCollection ? { ...o.nurseCollection, temperatureC: o.nurseCollection.temperatureC == null ? null : D(o.nurseCollection.temperatureC) } : null, items: o.items.map((i) => ({ ...i, price: D(i.price), test: { ...i.test, price: D(i.test.price), volumeMl: i.test.volumeMl == null ? null : D(i.test.volumeMl) } })), invoices: o.invoices.map((i) => ({ ...i, total: D(i.total), paidTotal: D(i.paidTotal) })) };
   }
 
   // ----------------------------------------------- identity & consent
@@ -213,7 +275,7 @@ export class OrdersService {
       await tx.labOrder.update({ where: { id: orderId }, data: { identityVerified: true, identifiersChecked: [...new Set(checked)] } });
       await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "order.identity_verified", entityType: "LabOrder", entityId: orderId, meta: { kinds: [...new Set(checked)] } }, tx);
     });
-    return this.get(u.orgId, orderId);
+    return this.get(u.orgId, orderId, u);
   }
 
   /** KLORD03 / safety.lab.consent_enforcement: result-sharing consent per release channel (wording is NEEDS_HUMAN NH-LB-007). */
@@ -224,7 +286,7 @@ export class OrdersService {
       await tx.labOrder.update({ where: { id: orderId }, data: { consentShareChannels: [...new Set(channels)], consentCapturedAt: new Date() } });
       await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "order.consent", entityType: "LabOrder", entityId: orderId, meta: { channels } }, tx);
     });
-    return this.get(u.orgId, orderId);
+    return this.get(u.orgId, orderId, u);
   }
 
   async cancel(u: AuthUser, orderId: string, reason?: string) {
@@ -232,23 +294,33 @@ export class OrdersService {
       const o = await tx.labOrder.findFirst({ where: { id: orderId, orgId: u.orgId }, include: { specimens: true, homeCollection: true, items: true } });
       if (!o) throw new NotFoundException({ code: "ORDER_NOT_FOUND" });
       if (o.status === "CANCELLED") return;
+      if (o.homeCollection && ["EN_ROUTE", "ARRIVED"].includes(o.homeCollection.status)) {
+        throw new ConflictException({ code: "ORDER_NOT_CANCELLABLE", message: "the collector is in the field; finish or abort the visit first" });
+      }
       if (o.specimens.some((s) => ["RECEIVED", "PROCESSING", "STORED"].includes(s.status)) || o.items.some((i) => ["RESULTED", "VALIDATED", "RELEASED"].includes(i.status))) {
         throw new ConflictException({ code: "ORDER_NOT_CANCELLABLE", message: "work has started on this order" });
       }
       await tx.orderItem.updateMany({ where: { orderId }, data: { status: "CANCELLED" } });
-      if (o.homeCollection && !["COLLECTED", "CANCELLED"].includes(o.homeCollection.status)) {
+      if (o.homeCollection && ["REQUESTED", "SCHEDULED"].includes(o.homeCollection.status)) {
         await tx.homeCollection.update({ where: { id: o.homeCollection.id }, data: { status: "CANCELLED" } });
         if (o.homeCollection.slotId) await tx.$executeRaw`UPDATE "CollectionSlot" SET booked = GREATEST(booked - 1, 0) WHERE id = ${o.homeCollection.slotId}`;
       }
       await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "order.cancel", entityType: "LabOrder", entityId: orderId, meta: { reason: reason ? "provided" : "none" } }, tx);
       await this.orderStatus.refreshOrder(tx, orderId);
     });
-    return this.get(u.orgId, orderId);
+    return this.get(u.orgId, orderId, u);
   }
 
   // -------------------------------------------------- home collection
   /** Books a slot (atomic capacity check) and creates the HomeCollection row. */
   async bookHome(tx: Prisma.TransactionClient, actor: Actor, orderId: string, labId: string, h: HomeCollectionInput, contact: string | undefined, locale: string) {
+    // HVBK01: a home collection is booked only for an address inside the lab's coverage zone (when one is configured).
+    const lab = await tx.lab.findUnique({ where: { id: labId } });
+    if (lab && lab.coverageDistricts.length) {
+      const matrix = lab.travelMatrix ? buildTravelMatrix(lab.travelMatrix as Record<string, Record<string, number>>) : undefined;
+      const cov = isInCoverage({ districtIds: lab.coverageDistricts, maxTravelMinutes: lab.maxTravelMinutes, startDistrictId: lab.startDistrictId }, h.districtId ? { districtId: h.districtId } : null, matrix);
+      if (!cov.inZone) throw new UnprocessableEntityException({ code: "OUT_OF_COVERAGE", reason: cov.reason, ...(h.districtId ? { districtId: h.districtId } : {}) });
+    }
     let slotStart: Date;
     let slotEnd: Date;
     let slotId: string | null = null;
@@ -267,7 +339,7 @@ export class OrdersService {
     } else throw new BadRequestException({ code: "SLOT_REQUIRED" });
     const hc = await tx.homeCollection.create({
       data: {
-        orgId: actor.orgId, orderId, status: "SCHEDULED", slotStart, slotEnd, address: h.address, geo: (h.geo ?? undefined) as Prisma.InputJsonValue | undefined,
+        orgId: actor.orgId, orderId, status: "SCHEDULED", slotStart, slotEnd, address: h.address, districtId: h.districtId ? h.districtId.trim().toLowerCase() : null, history: [{ state: "REQUESTED", atMs: Date.now() }, { state: "CONFIRMED", atMs: Date.now() }] as Prisma.InputJsonValue, geo: (h.geo ?? undefined) as Prisma.InputJsonValue | undefined,
         contactPhone: h.contactPhone ?? contact, slotId, routeDate: new Date(Date.UTC(slotStart.getUTCFullYear(), slotStart.getUTCMonth(), slotStart.getUTCDate())),
       },
     });
