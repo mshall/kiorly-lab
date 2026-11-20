@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { KiorlyBrand, Pulse, ThemeToggle, Surface, Skeleton, kcn } from "@/brand/ui-kit";
+import { KiorlyBrand, KiorlyFootText, Pulse, ThemeToggle, Surface, Skeleton, kcn } from "@/brand/ui-kit";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -35,14 +35,14 @@ export function LoginPage() {
       <aside className="relative hidden overflow-hidden p-12 text-white lg:flex lg:flex-col lg:justify-between" style={{ background: "linear-gradient(145deg,#3730A3 0%,#2B2680 55%,#0A4F7A 100%)" }}>
         <div aria-hidden className="pointer-events-none absolute -end-24 -top-24 size-96 rounded-full bg-white/5" />
         <div aria-hidden className="pointer-events-none absolute -bottom-32 -start-20 size-[28rem] rounded-full bg-white/5" />
-        <div className="relative w-fit"><KiorexLogo variant="lockup" product="kiorly" tone="inverse" height={48} /></div>
+        <div className="relative w-fit"><KiorexLogo variant="lockup" product="lab" tone="inverse" height={48} /></div>
         <div className="relative max-w-md space-y-6">
           <h2 className="text-balance text-3xl font-semibold leading-tight">{t("ux.login.headline")}</h2>
           <ul className="space-y-4">
             {points.map((p) => <li key={p.k} className="flex items-start gap-3 text-sm text-white/90"><span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-white/12"><p.i aria-hidden className="size-4" /></span>{t(`ux.login.${p.k}`)}</li>)}
           </ul>
         </div>
-        <div className="relative text-xs text-white/75"><Pulse size={16} loop /> <span className="ms-2">{t("ux.login.foot")}</span></div>
+        <div className="relative text-xs text-white/75"><Pulse size={16} loop /> <span className="ms-2"><KiorlyFootText text={t("ux.login.foot")} word={t("ux.login.footWord")} /></span></div>
       </aside>
       <main id="main" className="flex flex-col justify-center gap-6 px-4 py-10 sm:px-10">
         <div className="mx-auto w-full max-w-md">

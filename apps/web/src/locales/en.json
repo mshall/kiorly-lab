@@ -977,7 +977,8 @@
       "p1": "Dual-control entry, QC gating and delta checks built in.",
       "p2": "Authorised sign-off with consented release channels only.",
       "p3": "Collector app for home visits with label-matched custody.",
-      "foot": "Kiorly by Kiorex"
+      "foot": "Kiorly Lab by Kiorex",
+      "footWord": "Lab"
     },
     "onboarding": {
       "company": "Company",
