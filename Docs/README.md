@@ -38,3 +38,5 @@ Patients and referrers (`/patient-registry`, `/patients/:id/profile|history|tren
 
 ## No tax authority
 Nothing in this repo talks to any tax authority (ADR-011). VAT is a display/export line only; `no-tax-authority.node.test.ts` enforces it.
+
+- [UPGRADE_NOTES.md](UPGRADE_NOTES.md): dependency and toolchain upgrade log (Nov 2026), pins and what unblocks them

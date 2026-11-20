@@ -7,11 +7,13 @@
 **A complete laboratory information system (LIS) for independent labs and small chains.**
 Orders, accessioning, chain of custody, analyzers, Westgard QC, authorised release, critical values, billing and 22 reports. It runs fully on its own; connecting it to Kiorex, Kiorly Clinic and Kiorly Nurse is one optional setting.
 
-![NestJS](https://img.shields.io/badge/NestJS-10-7C3AED?logo=nestjs&logoColor=white)
-![Prisma](https://img.shields.io/badge/Prisma-6-3730A3?logo=prisma&logoColor=white)
+![NestJS](https://img.shields.io/badge/NestJS-12-7C3AED?logo=nestjs&logoColor=white)
+![Prisma](https://img.shields.io/badge/Prisma-7-3730A3?logo=prisma&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%2B-0369A1?logo=postgresql&logoColor=white)
-![React](https://img.shields.io/badge/React-18%20%2B%20Vite-7C3AED?logo=react&logoColor=white)
-![Node](https://img.shields.io/badge/node-%3E%3D22-3730A3?logo=node.js&logoColor=white)
+![React](https://img.shields.io/badge/React-19%20%2B%20Vite%208-7C3AED?logo=react&logoColor=white)
+![Node](https://img.shields.io/badge/node-26%20LTS-3730A3?logo=node.js&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3730A3?logo=typescript&logoColor=white)
+![Tailwind](https://img.shields.io/badge/Tailwind-4-0369A1?logo=tailwindcss&logoColor=white)
 ![Languages](https://img.shields.io/badge/AR%20%7C%20EN-RTL-0369A1)
 ![Unit tests](https://img.shields.io/badge/unit%20tests-109%20passing-7C3AED)
 ![Mode](https://img.shields.io/badge/mode-standalone%20or%20integrated-3730A3)
@@ -40,8 +42,8 @@ Kiorly Lab runs the whole path of a sample: an order is entered, the specimen is
 | | |
 |---|---|
 | **Product** | Kiorly Lab by Kiorex (accent Lab Violet `#7C3AED`); part of the Kiorly provider suite next to Kiorly Clinic and Kiorly Pharmacy |
-| **API** | NestJS 10 + Prisma 6 + PostgreSQL 16, `:3200`, prefix `/api/v1`, Swagger at `/docs`, 98 Prisma models, 69 enums, 16 migrations |
-| **Web** | React 18 + Vite + Tailwind + TanStack Query + i18next (Arabic and English, RTL), Vite `:5191`; lab console, collector PWA `/phleb`, patient secure link `/r/:token`, doctor portal `/portal/:token`, queue board `/queue-board`, report verify `/verify/:id` |
+| **API** | NestJS 12 + Prisma 7 + PostgreSQL 16, `:3200`, prefix `/api/v1`, Swagger at `/docs`, 98 Prisma models, 69 enums, 16 migrations |
+| **Web** | React 19 + Vite 8 + Tailwind 4 + TanStack Query + i18next (Arabic and English, RTL), Vite `:5191`; lab console, collector PWA `/phleb`, patient secure link `/r/:token`, doctor portal `/portal/:token`, queue board `/queue-board`, report verify `/verify/:id` |
 | **Roles** | `OWNER`, `LAB_DIRECTOR`, `AUTHORIZED_SIGNATORY`, `TECHNOLOGIST`, `PHLEBOTOMIST`, `RECEPTION`, `BRANCH_MANAGER`, `SUPERVISOR`, `FINANCE` |
 | **Editions** | Lite, Pro, Chain (see [Plans](#plans-and-entitlements)) |
 | **Mode** | `STANDALONE` (new self-serve labs) or `INTEGRATED` (existing tenants) |
@@ -234,13 +236,27 @@ Flags `lab.module`, `lab.analyzer_interfaces`, `lab.home_collection`, `lab.kiore
 **Safety controls are never flags** (ADR-025): QC blocks, authorised release, critical-value escalation, accession uniqueness, chain of custody, label match, consent, audit, tenant isolation, privileged MFA. See [Docs/ADR_REFERENCE.md](Docs/ADR_REFERENCE.md); `flags-off.e2e.test.ts` proves all four flags and the never-flag rule.
 </details>
 
+### Stack versions (upgraded 20 Nov 2026)
+
+| Layer | Version |
+|---|---|
+| Runtime | Node.js 26 LTS (`.nvmrc`), npm 11+, Lambda `nodejs26.x` |
+| Language | TypeScript 6.0 |
+| API | NestJS 12, `@nestjs/swagger` 12, Express 5, class-validator 0.15, jose 6, pdfkit 0.21 |
+| Data | Prisma 7 (`prisma-client` generator, `@prisma/adapter-pg`), PostgreSQL 16 |
+| Web | React 19, Vite 8, Tailwind CSS 4, TanStack Query 5, i18next 27, react-i18next 18 |
+| Tooling | ESLint 10.15, typescript-eslint 8, Playwright 1.65, tsx, swc (test runner) |
+
+Upgrade log, pinned items and what unblocks them: [Docs/UPGRADE_NOTES.md](Docs/UPGRADE_NOTES.md).
+
 ## Quick start
 
-Prerequisites: Node 22+, the workspace Postgres on `:5433` (see the workspace [README](https://github.com/mshall/kiorex-workspace)).
+Prerequisites: Node 26 LTS (`nvm use`, see `.nvmrc`) and npm 11+, the workspace Postgres on `:5433` (see the workspace [README](https://github.com/mshall/kiorex-workspace)).
 
 ```bash
 npm install
 cp .env.example apps/api/.env       # DATABASE_URL points to kiorly_lab on :5433; never commit .env
+npm run prisma:generate -w api      # Prisma 7 client -> apps/api/src/generated (gitignored)
 npm run db:setup                    # creates kiorly_lab + kiorly_lab_test, applies migrations
 npm run db:seed -w api              # synthetic demo tenant "demo-lab" plus the LIS dataset (idempotent, guarded)
 npm run dev                         # API :3200 + web :5191
