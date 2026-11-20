@@ -156,9 +156,9 @@ async function main() {
   const today = new Date().toISOString().slice(0, 10);
   const slots = await home.slots(users.RECEPTION, today);
   const stops: [number, string, { lat: number; lng: number }][] = [[0, "12 Tahrir St, Dokki", { lat: 30.038, lng: 31.211 }], [1, "5 Road 9, Maadi", { lat: 29.96, lng: 31.257 }], [2, "30 Abbas El-Akkad, Nasr City", { lat: 30.056, lng: 31.33 }]];
-  let n = 0;
+  let n = 0; // every 2nd hourly slot: the same phlebotomist's consecutive stops need the 30/30 min travel buffers (canBook), adjacent slots are rejected as OVERLAP
   for (const [pi, address, geo] of stops) {
-    const r = await orders.create(users.RECEPTION, { patient: { ...patients[pi], fullName: `${patients[pi].fullName} (home)`, phone: `+2010000002${pi}0` }, testCodes: ["GLU"], collectionType: "HOME", homeCollection: { slotId: slots[n++].id, address, geo }, consentChannels: [...consent] });
+    const r = await orders.create(users.RECEPTION, { patient: { ...patients[pi], fullName: `${patients[pi].fullName} (home)`, phone: `+2010000002${pi}0` }, testCodes: ["GLU"], collectionType: "HOME", homeCollection: { slotId: slots[2 * n++].id, address, geo }, consentChannels: [...consent] });
     const hc = await prisma.homeCollection.findFirstOrThrow({ where: { orderId: r.order.id } });
     await home.assign(users.RECEPTION, hc.id, users.PHLEBOTOMIST.staffId);
   }
