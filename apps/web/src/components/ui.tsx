@@ -48,8 +48,8 @@ export const CardTitle = ({ className, ...p }: React.HTMLAttributes<HTMLHeadingE
 const tones = {
   ok: "bg-[hsl(var(--success)/0.12)] text-[hsl(var(--success))] ring-1 ring-inset ring-[hsl(var(--success)/0.25)]",
   warn: "bg-[hsl(var(--warning)/0.14)] text-[hsl(var(--warning))] ring-1 ring-inset ring-[hsl(var(--warning)/0.3)]",
-  crit: "bg-[hsl(var(--danger-text)/0.12)] text-[hsl(var(--danger-text))] ring-1 ring-inset ring-[hsl(var(--danger-text)/0.28)]",
-  info: "bg-[hsl(var(--info)/0.12)] text-[hsl(var(--info))] ring-1 ring-inset ring-[hsl(var(--info)/0.25)]",
+  crit: "bg-[hsl(var(--danger-text)/0.1)] text-[color-mix(in_srgb,hsl(var(--danger-text))_82%,black)] dark:text-[hsl(var(--danger-text))] ring-1 ring-inset ring-[hsl(var(--danger-text)/0.28)]",
+  info: "bg-[hsl(var(--info)/0.1)] text-[color-mix(in_srgb,hsl(var(--info))_80%,black)] dark:text-[hsl(var(--info))] ring-1 ring-inset ring-[hsl(var(--info)/0.25)]",
   muted: "bg-muted text-muted-foreground ring-1 ring-inset ring-border",
   pulse: "bg-accent text-accent-foreground ring-1 ring-inset ring-primary/25",
 } as const;
@@ -96,10 +96,10 @@ export function Tabs({ tabs, value, onChange }: { tabs: { id: string; label: str
 
 export function Table({ head, children, className }: { head: ReactNode[]; children: ReactNode; className?: string }) {
   return (
-    <div className={cn("kx-sticky-head overflow-x-auto rounded-xl border border-border/80 shadow-[var(--kx-shadow-1)]", className)}>
-      <table className="w-full text-sm">
+    <div tabIndex={0} role="region" aria-label={head.filter((h) => typeof h === "string" && h).slice(0, 2).join(" / ") || "table"} className={cn("kx-sticky-head kx-table-wrap overflow-auto rounded-xl border border-border/80 shadow-[var(--kx-shadow-1)]", className)}>
+      <table className="kx-table w-full text-sm">
         <thead className="bg-muted/60 text-xs uppercase tracking-wide text-muted-foreground rtl:normal-case rtl:tracking-normal">
-          <tr>{head.map((h, i) => <th key={i} className="px-3 py-2.5 text-start font-semibold">{h}</th>)}</tr>
+          <tr>{head.map((h, i) => <th key={i} className="whitespace-nowrap px-3 py-2.5 text-start text-[11px] font-semibold">{h}</th>)}</tr>
         </thead>
         <tbody className="divide-y divide-border bg-card">{children}</tbody>
       </table>

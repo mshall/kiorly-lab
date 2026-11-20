@@ -22,6 +22,26 @@
 dialog::backdrop { background: var(--kx-overlay); backdrop-filter: blur(2px); }
 .skip-link { position: absolute; inset-inline-start: -999px; top: 0; z-index: 100; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); padding: .5rem 1rem; border-radius: 0 0 .5rem .5rem; }
 .skip-link:focus { inset-inline-start: 0; }
+.kx-table-wrap { max-height: min(72vh, 760px); }
+.kx-table-wrap:focus-visible { outline-offset: -2px; border-radius: .75rem; }
+.kx-table tbody tr { transition: background-color 150ms ease; }
+.kx-table tbody tr:hover { background: hsl(var(--muted) / .55); }
+.kx-table td, .kx-table th { font-variant-numeric: tabular-nums; }
+.kx-table thead th { box-shadow: inset 0 -1px 0 hsl(var(--border)); }
+.kx-table tr.kx-row-crit { background: hsl(var(--danger-text) / .09); }
+.kx-table tr.kx-row-crit:hover { background: hsl(var(--danger-text) / .14); }
+.kx-table tr.kx-row-crit > td:first-child, .kx-table tr.kx-row-warn > td:first-child { box-shadow: inset 4px 0 0 hsl(var(--danger-text)); }
+.kx-table tr.kx-row-warn > td:first-child { box-shadow: inset 3px 0 0 hsl(var(--warning)); }
+[dir="rtl"] .kx-table tr.kx-row-crit > td:first-child { box-shadow: inset -4px 0 0 hsl(var(--danger-text)); }
+[dir="rtl"] .kx-table tr.kx-row-warn > td:first-child { box-shadow: inset -3px 0 0 hsl(var(--warning)); }
+/* critical values: unmissable but never the only cue (icon + text + colour) */
+.kx-critical { background: hsl(var(--danger-text)); color: #fff; font-weight: 700; letter-spacing: .02em; }
+.dark .kx-critical { background: #c92a2a; }
+.kx-pulse-dot { position: relative; display: inline-block; width: 8px; height: 8px; border-radius: 9999px; background: currentColor; }
+@media (prefers-reduced-motion: no-preference) {
+  .kx-pulse-dot::after { content: ""; position: absolute; inset: -4px; border-radius: 9999px; border: 2px solid currentColor; opacity: .6; animation: kx-ping 1.6s cubic-bezier(0, 0, .2, 1) infinite; }
+}
+@keyframes kx-ping { 0% { transform: scale(.6); opacity: .7; } 80%, 100% { transform: scale(1.6); opacity: 0; } }
 .kx-sticky-head thead th { position: sticky; top: 0; z-index: 1; background: hsl(var(--card)); }
 @media (prefers-reduced-motion: no-preference) {
   main > * { animation: kx-page-in var(--kx-dur-slow) var(--kx-ease-decelerate) both; }

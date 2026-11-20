@@ -71,7 +71,7 @@ export function SettingsPage() {
           </Card>
           <Table head={[t("common.name"), t("auth.email"), t("set.role"), t("set.licence"), t("common.status")]}>
             {staff.data?.map((x) => (
-              <tr key={x.id}><Td>{x.displayName}</Td><Td className="text-xs">{x.email}</Td><Td><Select className="h-8 text-xs" value={x.role} onChange={(e) => patchStaff.mutate({ id: x.id, body: { role: e.target.value } })}>{ROLES.map((r) => <option key={r} value={r}>{t(`role.${r}`)}</option>)}</Select></Td><Td className="text-xs">{x.signatoryLicenceNo ?? "-"}</Td><Td><Button size="sm" variant={x.active ? "outline" : "secondary"} onClick={() => patchStaff.mutate({ id: x.id, body: { active: !x.active } })}>{x.active ? t("set.active") : t("common.inactive")}</Button></Td></tr>
+              <tr key={x.id}><Td>{x.displayName}</Td><Td className="text-xs">{x.email}</Td><Td><Select className="h-8 text-xs" aria-label={`${x.displayName} · ${t("set.role")}`} value={x.role} onChange={(e) => patchStaff.mutate({ id: x.id, body: { role: e.target.value } })}>{ROLES.map((r) => <option key={r} value={r}>{t(`role.${r}`)}</option>)}</Select></Td><Td className="text-xs">{x.signatoryLicenceNo ?? "-"}</Td><Td><Button size="sm" variant={x.active ? "outline" : "secondary"} onClick={() => patchStaff.mutate({ id: x.id, body: { active: !x.active } })}>{x.active ? t("set.active") : t("common.inactive")}</Button></Td></tr>
             ))}
           </Table>
         </div>

@@ -83,13 +83,18 @@ export function SpecimenPanel({ specimenId, onChanged }: { specimenId: string; o
       <ErrorNote error={reject.error ?? aliq.error ?? print.error} />
       <div>
         <h4 className="mb-2 text-sm font-semibold">{t("spec.custody")}</h4>
-        <ol className="space-y-1 border-s-2 border-border ps-4 text-sm">
-          {s.custody.map((c: any) => (
-            <li key={c.id} className={c.type === "LABEL_MISMATCH_BLOCKED" ? "text-[hsl(var(--danger-text))]" : ""}>
-              <span className="font-medium">{t(`spec.event.${c.type}`)}</span>
-              <span className="text-muted-foreground"> · {dt(c.occurredAt, i18n.language)}{c.temperatureC != null ? ` · ${c.temperatureC}°C` : ""}{c.note ? ` · ${c.note}` : ""}</span>
-            </li>
-          ))}
+        <ol className="relative ms-2 space-y-4 border-s-2 border-border ps-5 text-sm" aria-label={t("spec.custody")}>
+          {s.custody.map((c: any, i: number) => {
+            const bad = c.type === "LABEL_MISMATCH_BLOCKED";
+            const latest = i === s.custody.length - 1;
+            return (
+              <li key={c.id} className="relative">
+                <span aria-hidden="true" className={`absolute -start-[1.72rem] top-1 grid size-3.5 place-items-center rounded-full ring-4 ring-card ${bad ? "bg-[hsl(var(--danger-text))]" : latest ? "bg-primary" : "bg-[hsl(var(--success))]"}`} />
+                <div className={`font-semibold ${bad ? "text-[hsl(var(--danger-text))]" : ""}`}>{t(`spec.event.${c.type}`)}{bad ? <span className="ms-2 rounded-full bg-[hsl(var(--danger-text)/0.12)] px-2 py-0.5 text-xs">{t("spec.blocked")}</span> : null}</div>
+                <div className="text-xs tabular-nums text-muted-foreground">{dt(c.occurredAt, i18n.language)}{c.temperatureC != null ? ` · ${c.temperatureC}°C` : ""}{c.note ? ` · ${c.note}` : ""}</div>
+              </li>
+            );
+          })}
         </ol>
         <p className="mt-2 text-xs text-muted-foreground">{t("spec.appendOnly")}</p>
       </div>

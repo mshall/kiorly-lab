@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ApiError } from "@/lib/api";
+import { ArrowDown, ArrowUp, ShieldAlert } from "lucide-react";
 import { Badge, type Tone } from "@/components/ui";
 import { PageHeader as KitPageHeader } from "@/brand/ui-kit";
 
@@ -28,7 +29,26 @@ export function StatusBadge({ value }: { value: string | undefined | null }) {
 export function FlagBadge({ flag }: { flag: string | undefined }) {
   const { t } = useTranslation();
   if (!flag || flag === "NORMAL") return <Badge tone="ok">{t("flag.NORMAL")}</Badge>;
-  return <Badge tone={flag.startsWith("CRITICAL") ? "crit" : "warn"}>{t(`flag.${flag}`, { defaultValue: flag })}</Badge>;
+  const label = t(`flag.${flag}`, { defaultValue: flag });
+  if (flag.startsWith("CRITICAL")) {
+    const Arrow = flag.includes("LOW") ? ArrowDown : ArrowUp;
+    return <span className="kx-critical inline-flex min-h-6 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs" role="status"><ShieldAlert aria-hidden="true" className="size-3.5" /><Arrow aria-hidden="true" className="size-3.5" />{label}</span>;
+  }
+  const Arrow = /LOW|^L/.test(flag) ? ArrowDown : ArrowUp;
+  return <Badge tone="warn" className="gap-1"><Arrow aria-hidden="true" className="size-3" />{label}</Badge>;
+}
+
+/** Result value with its flag: abnormal values are bold and coloured, criticals loud. Values are always tabular. */
+export function ResultValue({ value, unit, flag }: { value: ReactNode; unit?: string | null; flag?: string }) {
+  const crit = !!flag?.startsWith("CRITICAL");
+  const abn = !!flag && flag !== "NORMAL";
+  return (
+    <span className="inline-flex flex-wrap items-baseline gap-x-1.5 gap-y-1">
+      <span className={crit ? "text-lg font-extrabold tabular-nums text-[hsl(var(--danger-text))]" : abn ? "text-base font-bold tabular-nums text-[hsl(var(--warning))]" : "text-base font-semibold tabular-nums"}>{value}</span>
+      {unit ? <span className="text-xs text-muted-foreground">{unit}</span> : null}
+      <FlagBadge flag={flag} />
+    </span>
+  );
 }
 
 /** Shows an API error as a localised message (errors.<code>) with the server code as fallback. */

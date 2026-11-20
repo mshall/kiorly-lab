@@ -77,7 +77,10 @@
     "sub": "Overview for {{name}}",
     "tatAtRisk": "TAT at risk",
     "tatBreached": "TAT breached",
-    "title": "Dashboard"
+    "title": "Dashboard",
+    "attention": "Needs attention",
+    "grpResults": "Results pipeline",
+    "grpOps": "Quality and turnaround"
   },
   "orders": {
     "address": "Address",
@@ -227,7 +230,8 @@
       "DISPOSED": "Disposed",
       "REJECTED": "Rejected",
       "LABEL_MISMATCH_BLOCKED": "Label mismatch blocked"
-    }
+    },
+    "blocked": "Blocked"
   },
   "work": {
     "confirm": "Confirm",
@@ -270,7 +274,9 @@
     "tech": "Technical validation",
     "title": "Validation",
     "validateMedical": "Medically validate ({{n}})",
-    "validateTech": "Technically validate ({{n}})"
+    "validateTech": "Technically validate ({{n}})",
+    "selected": "{{n}} of {{total}} selected",
+    "criticalIn": "{{n}} critical value(s) in this queue"
   },
   "qc": {
     "blockOpened": "QC block opened. {{n}} unreleased result(s) sent back for re-run.",
@@ -319,7 +325,8 @@
       "R_4s": "Range between controls exceeds 4 SD in one run: reject.",
       "4_1s": "Four consecutive controls beyond 1 SD on the same side: reject.",
       "10x": "Ten consecutive controls on the same side of the mean: reject."
-    }
+    },
+    "chartSummary": "{{n}} runs, {{bad}} outside acceptance."
   },
   "release": {
     "guardNote": "A report can only be signed when every result is validated, covered by passing QC and signed by an authorised signatory. Each channel needs patient consent.",
@@ -349,7 +356,9 @@
     "signoffNote": "Limits and acknowledgement windows need pathologist sign-off. Escalation cannot be switched off.",
     "sub": "Critical results must be acknowledged within the configured window or they escalate.",
     "title": "Critical values",
-    "window": "Window (min)"
+    "window": "Window (min)",
+    "banner": "{{n}} critical value(s) need acknowledgement now",
+    "hasEscalated": "Escalated"
   },
   "bill": {
     "amount": "Amount",

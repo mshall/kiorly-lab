@@ -14,7 +14,7 @@ function Countdown({ to }: { to: string }) {
   const ms = new Date(to).getTime() - now;
   const m = Math.floor(Math.abs(ms) / 60000);
   const s = Math.floor((Math.abs(ms) % 60000) / 1000);
-  return <span className={ms < 0 ? "font-semibold text-[hsl(var(--danger-text))]" : "font-mono"}>{ms < 0 ? t("crit.overdue", { m, s }) : `${m}:${String(s).padStart(2, "0")}`}</span>;
+  return <span className={ms < 0 ? "font-semibold text-[hsl(var(--danger-text))]" : "font-mono text-base font-semibold tabular-nums"}>{ms < 0 ? t("crit.overdue", { m, s }) : `${m}:${String(s).padStart(2, "0")}`}</span>;
 }
 
 /** KLCRIT01: critical-value alerts with acknowledgement window and escalation. There is no switch to disable any of this (ADR-025). */
@@ -35,11 +35,12 @@ export function CriticalPage() {
   return (
     <>
       <PageHeader title={t("crit.title")} sub={t("crit.sub")} />
+      {!!q.data?.length && <div role="alert" className="mb-4 flex items-center gap-3 rounded-xl border-2 border-[hsl(var(--danger-text))] bg-[hsl(var(--danger-text)/0.08)] px-4 py-3 text-[hsl(var(--danger-text))]"><span className="kx-pulse-dot" aria-hidden="true" /><span className="text-base font-bold">{t("crit.banner", { n: q.data.length })}</span>{q.data.some((a) => a.status === "ESCALATED") && <Badge tone="crit">{t("crit.hasEscalated")}</Badge>}</div>}
       {q.isLoading ? <Spinner /> : !q.data?.length ? <Empty>{t("crit.none")}</Empty> : (
         <Table head={[t("order.analyte"), t("common.status"), t("crit.deadline"), t("crit.level"), ""]}>
           {q.data.map((a) => (
-            <tr key={a.id} className={a.status === "ESCALATED" ? "bg-[hsl(var(--danger-text)/0.12)] " : ""}>
-              <Td>{a.result.analyte.nameEn} <FlagBadge flag={a.result.flag} /> {a.orderId ? <Link className="ms-2 text-xs text-primary underline" to={`/orders/${a.orderId}`}>{t("spec.order")}</Link> : null}</Td>
+            <tr key={a.id} className="kx-row-crit">
+              <Td><span className="font-semibold">{a.result.analyte.nameEn}</span> <FlagBadge flag={a.result.flag} /> {a.orderId ? <Link className="ms-2 text-xs text-primary underline" to={`/orders/${a.orderId}`}>{t("spec.order")}</Link> : null}</Td>
               <Td><StatusBadge value={a.status} /></Td>
               <Td><Countdown to={a.ackDeadlineAt} /></Td>
               <Td>{a.escalationLevel > 0 ? <Badge tone="crit">{t("crit.escalatedTo", { n: a.escalationLevel })}</Badge> : "-"}</Td>

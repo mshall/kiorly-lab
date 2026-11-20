@@ -6,7 +6,7 @@ import { api, download } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { dt, money, num } from "@/lib/format";
 import { Badge, Button, Card, CardTitle, Modal, Spinner, Table, Td, useToast } from "@/components/ui";
-import { ErrorNote, FlagBadge, PageHeader, StatusBadge } from "@/components/common";
+import { ErrorNote, PageHeader, ResultValue, StatusBadge } from "@/components/common";
 import { SpecimenPanel } from "@/features/specimens/SpecimenPanel";
 
 const CHANNELS = ["PRINTED", "PATIENT_LINK_OTP", "KIORLY_CLINIC_IMPORT", "KIOREX_VAULT"];
@@ -99,11 +99,11 @@ export function OrderDetailPage() {
             const rs = (results.data ?? []).filter((r) => r.orderItemId === it.id && !["CORRECTED", "REJECTED"].includes(r.status));
             if (rs.length === 0) return <tr key={it.id}><Td>{it.test.code} — {it.test.nameEn}</Td><Td>-</Td><Td>-</Td><Td>-</Td><Td><StatusBadge value={it.status} /></Td><Td>{num(it.price)}</Td></tr>;
             return rs.map((r, idx) => (
-              <tr key={r.id}>
+              <tr key={r.id} className={r.flag?.startsWith("CRITICAL") ? "kx-row-crit" : r.flag && r.flag !== "NORMAL" ? "kx-row-warn" : undefined}>
                 <Td>{idx === 0 ? `${it.test.code} — ${it.test.nameEn}` : ""}</Td>
                 <Td>{r.analyte.nameEn}</Td>
-                <Td className="font-mono">{r.valueNumeric ?? r.valueText} <span className="text-xs text-muted-foreground">{r.unit}</span> <FlagBadge flag={r.flag} />{r.deltaCheckFailed ? <Badge tone="warn" className="ms-1">Δ</Badge> : null}</Td>
-                <Td className="text-xs text-muted-foreground">{r.refLow ?? ""} – {r.refHigh ?? ""}</Td>
+                <Td><ResultValue value={r.valueNumeric ?? r.valueText} unit={r.unit} flag={r.flag} />{r.deltaCheckFailed ? <Badge tone="warn" className="ms-1">Δ</Badge> : null}</Td>
+                <Td className="text-xs text-muted-foreground"><bdi dir="ltr">{r.refLow ?? ""} – {r.refHigh ?? ""}</bdi></Td>
                 <Td><StatusBadge value={r.status} />{r.autoVerified ? <Badge tone="info" className="ms-1">{t("order.auto")}</Badge> : null}</Td>
                 <Td>{idx === 0 ? num(it.price) : ""}</Td>
               </tr>

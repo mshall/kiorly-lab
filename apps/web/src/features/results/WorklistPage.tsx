@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Badge, Button, Card, Empty, Input, Select, Spinner, useToast } from "@/components/ui";
-import { ErrorNote, FlagBadge, PageHeader, StatusBadge } from "@/components/common";
+import { ErrorNote, PageHeader, ResultValue, StatusBadge } from "@/components/common";
 
 function ResultCell({ item, analyte, result, instrumentId, canEnter, canSecond, canTech }: { item: any; analyte: any; result: any; instrumentId: string; canEnter: boolean; canSecond: boolean; canTech: boolean }) {
   const { t } = useTranslation();
@@ -25,7 +25,7 @@ function ResultCell({ item, analyte, result, instrumentId, canEnter, canSecond, 
         canEnter ? <div className="flex gap-2"><Input type="number" step="any" inputMode="decimal" value={v} onChange={(e) => setV(e.target.value)} aria-label={`${analyte.code} ${t("work.value")}`} disabled={!instrumentId} /><Button size="sm" disabled={!v || !instrumentId || enter.isPending} onClick={() => enter.mutate()}>{t("work.enter")}</Button></div> : <span className="text-xs text-muted-foreground">-</span>
       ) : (
         <div className="space-y-1">
-          <div className="flex flex-wrap items-center gap-2 text-sm"><span className="font-mono text-base font-semibold">{result.valueNumeric ?? result.valueText}</span><FlagBadge flag={result.flag} /><StatusBadge value={result.status} />{result.autoVerified ? <Badge tone="info">{t("order.auto")}</Badge> : null}{result.deltaCheckFailed ? <Badge tone="warn">Δ {result.deltaPercent}%</Badge> : null}<span className="text-xs text-muted-foreground">{result.refLow ?? ""}–{result.refHigh ?? ""}</span></div>
+          <div className="flex flex-wrap items-center gap-2 text-sm"><ResultValue value={result.valueNumeric ?? result.valueText} flag={result.flag} /><StatusBadge value={result.status} />{result.autoVerified ? <Badge tone="info">{t("order.auto")}</Badge> : null}{result.deltaCheckFailed ? <Badge tone="warn">Δ {result.deltaPercent}%</Badge> : null}<span className="text-xs text-muted-foreground"><bdi dir="ltr">{result.refLow ?? ""}–{result.refHigh ?? ""}</bdi></span></div>
           {result.status === "ENTERED" && result.source === "MANUAL" && !result.secondEntryBy && canSecond ? (
             <div className="flex gap-2"><Input type="number" step="any" value={v2} onChange={(e) => setV2(e.target.value)} placeholder={t("work.rekey")} aria-label={t("work.rekey")} /><Button size="sm" variant="secondary" disabled={!v2} onClick={() => second.mutate()}>{t("work.confirm")}</Button></div>
           ) : null}

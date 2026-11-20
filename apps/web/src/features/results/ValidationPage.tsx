@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Badge, Button, Empty, Input, Modal, Spinner, Table, Tabs, Td, useToast } from "@/components/ui";
-import { ErrorNote, FlagBadge, PageHeader } from "@/components/common";
+import { ErrorNote, PageHeader, ResultValue } from "@/components/common";
 
 /** KLQC04: technical validation (technologist) and medical validation (authorised signatory). Critical and delta-flagged rows stand out. */
 export function ValidationPage() {
@@ -47,13 +47,13 @@ export function ValidationPage() {
             {rows.map((r) => {
               const blocked = stage === "tech" && ((r.source === "MANUAL" && !r.secondEntryBy));
               return (
-                <tr key={r.id} className={r.flag.startsWith("CRITICAL") ? "bg-[hsl(var(--danger-text)/0.12)] " : ""}>
+                <tr key={r.id} className={r.flag.startsWith("CRITICAL") ? "kx-row-crit" : r.flag !== "NORMAL" || r.deltaCheckFailed ? "kx-row-warn" : undefined}>
                   <Td>{allowed ? <input type="checkbox" checked={sel.includes(r.id)} disabled={blocked} onChange={() => toggle(r.id)} aria-label={`select ${r.analyte.code}`} /> : null}</Td>
-                  <Td><Link className="font-mono text-primary underline" to={`/orders/${r.orderItem.order.id}`}>{r.orderItem.order.orderNumber}</Link></Td>
+                  <Td><Link className="whitespace-nowrap font-mono text-primary underline underline-offset-2" to={`/orders/${r.orderItem.order.id}`}>{r.orderItem.order.orderNumber}</Link></Td>
                   <Td>{r.orderItem.order.patient.fullName}</Td>
                   <Td>{r.analyte.nameEn}</Td>
-                  <Td className="font-mono">{r.valueNumeric ?? r.valueText} <span className="text-xs text-muted-foreground">{r.unit}</span> <FlagBadge flag={r.flag} /></Td>
-                  <Td className="text-xs text-muted-foreground">{r.refLow ?? ""}–{r.refHigh ?? ""}</Td>
+                  <Td><ResultValue value={r.valueNumeric ?? r.valueText} unit={r.unit} flag={r.flag} /></Td>
+                  <Td className="whitespace-nowrap text-xs text-muted-foreground"><bdi dir="ltr">{r.refLow ?? ""}–{r.refHigh ?? ""}</bdi></Td>
                   <Td className="space-x-1 rtl:space-x-reverse">
                     {r.source === "MANUAL" ? <Badge tone={r.secondEntryBy ? "ok" : "warn"}>{r.secondEntryBy ? t("valid.dualOk") : t("work.dualPending")}</Badge> : <Badge tone="info">{t("valid.analyzer")}</Badge>}
                     {r.deltaCheckFailed ? <Badge tone="warn">Δ {r.deltaPercent}%</Badge> : null}
@@ -63,7 +63,7 @@ export function ValidationPage() {
               );
             })}
           </Table>
-          {allowed ? <div className="mt-3 flex items-center gap-3"><Button disabled={!sel.length || validate.isPending} onClick={() => validate.mutate(sel)}>{stage === "tech" ? t("valid.validateTech", { n: sel.length }) : t("valid.validateMedical", { n: sel.length })}</Button></div> : null}
+          {allowed ? <div className="sticky bottom-3 z-10 mt-3 flex items-center justify-between gap-3 rounded-xl border border-border bg-card/95 px-4 py-3 shadow-[var(--kx-shadow-3)] backdrop-blur"><div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground" aria-live="polite"><span>{t("valid.selected", { n: sel.length, total: rows.length })}</span>{rows.some((r) => r.flag.startsWith("CRITICAL")) ? <span className="font-semibold text-[hsl(var(--danger-text))]">{t("valid.criticalIn", { n: rows.filter((r) => r.flag.startsWith("CRITICAL")).length })}</span> : null}</div><Button disabled={!sel.length || validate.isPending} onClick={() => validate.mutate(sel)}>{stage === "tech" ? t("valid.validateTech", { n: sel.length }) : t("valid.validateMedical", { n: sel.length })}</Button></div> : null}
         </>
       )}
       <Modal open={Boolean(delta)} onClose={() => setDelta(null)} title={t("valid.deltaTitle")}>
