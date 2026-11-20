@@ -58,6 +58,8 @@ async function main() {
   if (existing) {
     await ensureDevKiorexClient(prisma, existing.id);
     await ensureDevNurseClient(prisma, existing.id);
+    // Tenants seeded before field safety (KLORD04) have no safety contact, which blocks starting any home collection (SAFETY_CONTACT_REQUIRED): backfill the synthetic dev one, never overwrite a real one.
+    if (!existing.safetyContactPhone) await prisma.tenant.update({ where: { id: existing.id }, data: { safetyContactName: "Demo safety contact (synthetic)", safetyContactPhone: "+201000000900" } });
     console.log(`demo tenant "${SLUG}" already exists: dev Kiorex client ${PARTNER_DEV_DEFAULTS.lab.clientKey} ensured`);
     await app.close();
     return;
