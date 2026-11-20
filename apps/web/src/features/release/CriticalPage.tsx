@@ -37,6 +37,8 @@ export function CriticalPage() {
       <PageHeader title={t("crit.title")} sub={t("crit.sub")} />
       {!!q.data?.length && <div role="alert" className="mb-4 flex items-center gap-3 rounded-xl border-2 border-[hsl(var(--danger-text))] bg-[hsl(var(--danger-text)/0.08)] px-4 py-3 text-[hsl(var(--danger-text))]"><span className="kx-pulse-dot" aria-hidden="true" /><span className="text-base font-bold">{t("crit.banner", { n: q.data.length })}</span>{q.data.some((a) => a.status === "ESCALATED") && <Badge tone="crit">{t("crit.hasEscalated")}</Badge>}</div>}
       {q.isLoading ? <Spinner /> : !q.data?.length ? <Empty>{t("crit.none")}</Empty> : (
+        <>
+        <div className="hidden md:block">
         <Table head={[t("order.analyte"), t("common.status"), t("crit.deadline"), t("crit.level"), ""]}>
           {q.data.map((a) => (
             <tr key={a.id} className="kx-row-crit">
@@ -48,6 +50,18 @@ export function CriticalPage() {
             </tr>
           ))}
         </Table>
+        </div>
+        <ul className="space-y-3 md:hidden">
+          {q.data.map((a) => (
+            <li key={a.id} className="kx-stat-card space-y-3 rounded-xl border border-[hsl(var(--danger-text)/0.35)] bg-[hsl(var(--danger-text)/0.06)] p-4">
+              <div className="flex items-start justify-between gap-2"><span className="text-base font-semibold">{a.result.analyte.nameEn}</span><StatusBadge value={a.status} /></div>
+              <div className="flex flex-wrap items-center gap-2"><FlagBadge flag={a.result.flag} />{a.escalationLevel > 0 ? <Badge tone="crit">{t("crit.escalatedTo", { n: a.escalationLevel })}</Badge> : null}</div>
+              <div className="flex items-center justify-between gap-2 text-sm"><span className="text-muted-foreground">{t("crit.deadline")}</span><Countdown to={a.ackDeadlineAt} /></div>
+              <div className="flex items-center gap-3">{can("critical.ack") ? <Button className="h-12 flex-1" onClick={() => setAck(a)}>{t("crit.ack")}</Button> : null}{a.orderId ? <Link className="text-sm font-medium text-primary underline" to={`/orders/${a.orderId}`}>{t("spec.order")}</Link> : null}</div>
+            </li>
+          ))}
+        </ul>
+        </>
       )}
       <p className="mt-2 text-xs text-muted-foreground">{t("crit.noRawValues")}</p>
       {can("critical.read") ? (

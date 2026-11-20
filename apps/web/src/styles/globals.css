@@ -48,3 +48,21 @@ dialog::backdrop { background: var(--kx-overlay); backdrop-filter: blur(2px); }
 }
 @keyframes kx-page-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 @media print { .no-print { display: none !important; } }
+/* lab console: STAT affordances, bulk bar, row priority accent */
+.kx-table tr.kx-row-stat > td:first-child { box-shadow: inset 4px 0 0 hsl(var(--danger-text)); }
+[dir="rtl"] .kx-table tr.kx-row-stat > td:first-child { box-shadow: inset -4px 0 0 hsl(var(--danger-text)); }
+.kx-stat-card { box-shadow: inset 4px 0 0 hsl(var(--danger-text)), var(--kx-shadow-1); }
+[dir="rtl"] .kx-stat-card { box-shadow: inset -4px 0 0 hsl(var(--danger-text)), var(--kx-shadow-1); }
+.kx-bulk { animation: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .kx-siren { animation: kx-siren 1.4s ease-in-out infinite; }
+  .kx-bulk { animation: kx-rise var(--kx-dur-base, 200ms) var(--kx-ease-decelerate) both; }
+}
+@keyframes kx-siren { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+@keyframes kx-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.kx-label-sheet { background-image: radial-gradient(hsl(var(--border)) 1px, transparent 1px); background-size: 12px 12px; }
+@media (prefers-reduced-motion: no-preference) {
+  .kx-modal-backdrop { animation: kx-fade var(--kx-dur-base) var(--kx-ease-standard) both; }
+  .kx-modal { animation: kx-rise var(--kx-dur-slow) var(--kx-ease-decelerate) both; }
+}
+@keyframes kx-fade { from { opacity: 0; } to { opacity: 1; } }

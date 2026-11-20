@@ -29,7 +29,8 @@ export function LeveyJenningsChart({ data }: { data: LjData }) {
   const fails = data.points.filter((p) => p.status !== "PASS").length;
   return (
     <figure>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={`${t("qc.chartLabel", { analyte: data.analyte.code, level: data.level })}. ${t("qc.chartSummary", { n: data.points.length, bad: fails })}`}>
+      <div tabIndex={0} role="region" aria-label={t("qc.chartLabel", { analyte: data.analyte.code, level: data.level })} className="overflow-x-auto rounded-md focus-visible:outline-offset-2">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[40rem]" style={{ direction: "ltr" }} role="img" aria-label={`${t("qc.chartLabel", { analyte: data.analyte.code, level: data.level })}. ${t("qc.chartSummary", { n: data.points.length, bad: fails })}`}>
         {band(1, -1, C.pass, 0.07)}{band(2, 1, C.warn, 0.08)}{band(-1, -2, C.warn, 0.08)}{band(3, 2, C.fail, 0.08)}{band(-2, -3, C.fail, 0.08)}
         {lines.map((z) => (
           <g key={z}>
@@ -53,6 +54,7 @@ export function LeveyJenningsChart({ data }: { data: LjData }) {
         })}
         {last && <text x={x(data.points.length - 1)} y={H - 8} textAnchor={rtl ? "start" : "end"} fontSize="10" fill={C.text}>{new Date(last.runAt).toLocaleDateString(i18n.language)}</text>}
       </svg>
+      </div>
       <figcaption className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
         {[["PASS", C.pass, t("status.PASS")], ["WARNING", C.warn, t("status.WARNING")], ["FAIL", C.fail, t("status.FAIL")]].map(([k, c, l]) => <span key={k} className="inline-flex items-center gap-1.5"><span aria-hidden="true" className="size-2.5 rounded-full" style={{ background: c }} />{l}</span>)}
         <span className="ms-auto tabular-nums">{data.analyte.unit ? `${data.analyte.code} · ${data.analyte.unit} · ` : ""}{data.lot}</span>

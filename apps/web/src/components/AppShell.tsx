@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Activity, AlertTriangle, BarChart3, BookOpen, ClipboardList, CreditCard, FileCheck2, FlaskConical, LayoutDashboard, Menu, Microscope, ScanBarcode, Settings, ShieldCheck, Smartphone } from "lucide-react";
+import { Activity, AlertTriangle, BarChart3, BookOpen, ClipboardList, CreditCard, FileCheck2, FlaskConical, LayoutDashboard, LogOut, Menu, Microscope, ScanBarcode, Settings, ShieldCheck, Smartphone } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -51,7 +51,7 @@ export function AppShell() {
             </NavLink>
           ))}
           {can("collection.perform") ? (
-            <NavLink to="/phleb" className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent/60"><Smartphone className="h-4 w-4" />{t("nav.phleb")}</NavLink>
+            <NavLink to="/phleb" className="flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><Smartphone className="h-4 w-4" />{t("nav.phleb")}</NavLink>
           ) : null}
         </nav>
         <p className="mt-6 text-xs text-muted-foreground">{t("shell.safetyNote")}</p>
@@ -64,12 +64,12 @@ export function AppShell() {
           {!flagOn("lab.module") ? <Badge tone="warn">{t("shell.moduleOff")}</Badge> : null}
           <Badge tone="info"><Microscope className="me-1 h-3 w-3" />{me?.tenant.edition}</Badge>
           <ThemeToggle labels={{ theme: t("theme.label"), light: t("theme.light"), dark: t("theme.dark"), system: t("theme.system") }} />
-          <Button variant="outline" size="sm" onClick={() => setLang(next)}>{t("app.lang")}</Button>
+          <Button variant="outline" size="sm" className="h-10 shrink-0" onClick={() => setLang(next)}>{t("app.lang")}</Button>
           <div className="hidden text-end text-xs sm:block">
             <div className="font-medium">{me?.user.displayName}</div>
             <div className="text-muted-foreground">{me ? t(`role.${me.user.role}`) : ""}</div>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => { logout(); nav("/login"); }}>{t("auth.logout")}</Button>
+          <Button variant="ghost" size="sm" className="h-10 shrink-0 whitespace-nowrap" aria-label={t("auth.logout")} onClick={() => { logout(); nav("/login"); }}><LogOut aria-hidden className="size-4 rtl:rotate-180 sm:hidden" /><span className="hidden sm:inline">{t("auth.logout")}</span></Button>
         </header>
         <main id="main" className="mx-auto w-full max-w-7xl flex-1 p-4 sm:p-6"><Outlet /></main>
       </div>

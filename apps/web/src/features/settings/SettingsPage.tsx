@@ -4,7 +4,9 @@ import { useTranslation } from "react-i18next";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { dt } from "@/lib/format";
+import { Check } from "lucide-react";
 import { Badge, Button, Card, CardTitle, Empty, Field, Input, Select, Table, Tabs, Td, useToast } from "@/components/ui";
+import { Surface } from "@/brand/ui-kit";
 import { ErrorNote, PageHeader } from "@/components/common";
 
 const ROLES = ["OWNER", "LAB_DIRECTOR", "AUTHORIZED_SIGNATORY", "TECHNOLOGIST", "PHLEBOTOMIST", "RECEPTION", "BRANCH_MANAGER"];
@@ -71,17 +73,41 @@ export function SettingsPage() {
           </Card>
           <Table head={[t("common.name"), t("auth.email"), t("set.role"), t("set.licence"), t("common.status")]}>
             {staff.data?.map((x) => (
-              <tr key={x.id}><Td>{x.displayName}</Td><Td className="text-xs">{x.email}</Td><Td><Select className="h-8 text-xs" aria-label={`${x.displayName} · ${t("set.role")}`} value={x.role} onChange={(e) => patchStaff.mutate({ id: x.id, body: { role: e.target.value } })}>{ROLES.map((r) => <option key={r} value={r}>{t(`role.${r}`)}</option>)}</Select></Td><Td className="text-xs">{x.signatoryLicenceNo ?? "-"}</Td><Td><Button size="sm" variant={x.active ? "outline" : "secondary"} onClick={() => patchStaff.mutate({ id: x.id, body: { active: !x.active } })}>{x.active ? t("set.active") : t("common.inactive")}</Button></Td></tr>
+              <tr key={x.id}><Td><span className="flex items-center gap-2.5"><span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-full bg-accent text-xs font-semibold text-accent-foreground">{x.displayName.trim().slice(0, 1).toUpperCase()}</span><span dir="auto" className="font-medium">{x.displayName}</span></span></Td><Td className="text-xs text-muted-foreground"><bdi dir="ltr">{x.email}</bdi></Td><Td><Select className="h-9 min-w-44 text-xs" aria-label={`${x.displayName} · ${t("set.role")}`} value={x.role} onChange={(e) => patchStaff.mutate({ id: x.id, body: { role: e.target.value } })}>{ROLES.map((r) => <option key={r} value={r}>{t(`role.${r}`)}</option>)}</Select></Td><Td className="text-xs">{x.signatoryLicenceNo ?? "-"}</Td><Td><Button size="sm" variant={x.active ? "outline" : "secondary"} onClick={() => patchStaff.mutate({ id: x.id, body: { active: !x.active } })}>{x.active ? t("set.active") : t("common.inactive")}</Button></Td></tr>
             ))}
           </Table>
         </div>
       ) : null}
-      {tab === "rbac" && rbac.data ? (
-        <div className="overflow-x-auto rounded-lg ring-1 ring-border">
-          <table className="w-full text-xs"><thead className="bg-muted"><tr><th className="px-2 py-2 text-start">{t("set.permission")}</th>{ROLES.map((r) => <th key={r} className="px-2 py-2">{t(`role.${r}`)}</th>)}</tr></thead>
-            <tbody className="divide-y divide-border bg-card">{rbac.data.permissions.map((p: string) => <tr key={p}><td className="px-2 py-1 font-mono">{p}</td>{ROLES.map((r) => <td key={r} className="px-2 py-1 text-center">{rbac.data.roles[r].includes(p) ? "●" : ""}</td>)}</tr>)}</tbody></table>
-        </div>
-      ) : null}
+      {tab === "rbac" && rbac.data ? (() => {
+        const groups: Record<string, string[]> = {};
+        for (const perm of rbac.data.permissions as string[]) (groups[perm.split(".")[0]!] ??= []).push(perm);
+        return (
+          <Surface className="overflow-hidden">
+            <p className="border-b border-border/70 px-4 py-3 text-xs text-muted-foreground">{t("ux.settings.rbacNote")}</p>
+            <div tabIndex={0} role="region" aria-label={t("set.rbac")} className="max-h-[70vh] overflow-auto">
+              <table className="kx-rbac w-full border-separate border-spacing-0 text-xs">
+                <thead>
+                  <tr>
+                    <th scope="col" className="sticky start-0 top-0 z-20 min-w-48 border-b border-border bg-card px-3 py-2 text-start font-semibold">{t("set.permission")}</th>
+                    {ROLES.map((r) => <th scope="col" key={r} className="sticky top-0 z-10 min-w-24 border-b border-border bg-card px-2 py-2 text-center font-semibold leading-tight">{t(`role.${r}`)}</th>)}
+                  </tr>
+                </thead>
+                {Object.entries(groups).map(([g, perms]) => (
+                  <tbody key={g}>
+                    <tr><th scope="colgroup" colSpan={ROLES.length + 1} className="sticky start-0 bg-muted/70 px-3 py-1.5 text-start text-[11px] font-semibold uppercase tracking-wide text-muted-foreground rtl:normal-case rtl:tracking-normal">{g}</th></tr>
+                    {perms.map((perm) => (
+                      <tr key={perm} className="hover:bg-muted/40">
+                        <th scope="row" className="sticky start-0 z-[1] border-b border-border/60 bg-card px-3 py-1.5 text-start font-mono font-normal"><bdi dir="ltr">{perm}</bdi></th>
+                        {ROLES.map((r) => { const on = rbac.data.roles[r].includes(perm); return <td key={r} className="border-b border-border/60 px-2 py-1.5 text-center">{on ? <><Check aria-hidden className="mx-auto size-4 text-[hsl(var(--success))]" /><span className="sr-only">{t(`role.${r}`)}</span></> : <span aria-hidden className="text-border">·</span>}</td>; })}
+                      </tr>
+                    ))}
+                  </tbody>
+                ))}
+              </table>
+            </div>
+          </Surface>
+        );
+      })() : null}
       {tab === "labs" ? (
         <div className="space-y-4">
           {can("settings.manage") ? <Card className="flex flex-wrap items-end gap-3"><Field label={t("common.name")}><Input value={lab.name} onChange={(e) => setLab({ ...lab, name: e.target.value })} /></Field><Field label={t("onboarding.labCode")}><Input value={lab.code} maxLength={6} onChange={(e) => setLab({ ...lab, code: e.target.value.toUpperCase() })} /></Field><Button disabled={!lab.name || !lab.code} onClick={() => addLab.mutate()}>{t("common.add")}</Button><div className="w-full"><ErrorNote error={addLab.error} /></div></Card> : null}

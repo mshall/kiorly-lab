@@ -185,7 +185,7 @@ export function PhlebApp() {
           <Button variant="outline" size="sm" onClick={() => setLang(i18n.language === "ar" ? "en" : "ar")}>{t("app.lang")}</Button>
         </div>
         {route.data?.length ? <div className="mt-2" aria-hidden="true"><div className="h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${Math.round((route.data.filter((h: any) => h.status === "COLLECTED").length / route.data.length) * 100)}%` }} /></div></div> : null}
-        <div className="mt-2 flex items-center gap-2"><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label={t("common.date")} />{can("orders.read") ? <Link to="/" className="text-xs text-primary underline">{t("phleb.console")}</Link> : null}</div>
+        <div className="mt-2 flex items-center gap-2"><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label={t("common.date")} />{can("orders.read") ? <Link to="/" className="shrink-0 whitespace-nowrap text-xs font-medium text-primary underline">{t("phleb.console")}</Link> : null}</div>
       </header>
       {pending > 0 || failed.length > 0 ? (
         <div className="m-3 rounded-lg bg-[hsl(var(--warning)/0.12)] p-3 text-sm text-[hsl(var(--warning))]" role="status">
@@ -198,11 +198,11 @@ export function PhlebApp() {
       {safetyMsg ? <p className={safetyMsg.tone === "ok" ? "m-3 rounded-md bg-[hsl(var(--success)/0.12)] p-2 text-sm text-[hsl(var(--success))]" : "m-3 rounded-md bg-[hsl(var(--danger-text)/0.12)] p-2 text-sm text-[hsl(var(--danger-text))]"} role="status">{safetyMsg.text}</p> : null}
       <main className="space-y-3 p-3">
         {route.isLoading ? <Spinner /> : route.isError ? <p className="text-sm text-[hsl(var(--danger-text))]">{t("phleb.loadError")}</p> : !route.data?.length ? <Empty>{t("phleb.noStops")}</Empty> : route.data.map((h: any, i: number) => (
-          <Card key={h.id} className={`space-y-3 ${["COLLECTED", "FAILED", "ABORTED_UNSAFE"].includes(h.status) ? "opacity-75" : ""}`}>
+          <Card key={h.id} className={`space-y-3 ${["COLLECTED", "FAILED", "ABORTED_UNSAFE"].includes(h.status) ? "bg-muted/50" : ""}`}>
             <div className="flex items-center gap-2"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{h.routeSequence ?? i + 1}</span><span className="flex-1 font-semibold">{h.order.patient.fullName}</span><StatusBadge value={h.status} /></div>
-            <div className="text-xs text-muted-foreground">{new Date(h.slotStart).toISOString().slice(11, 16)}–{new Date(h.slotEnd).toISOString().slice(11, 16)} (UTC)</div>
-            {h.addressMasked ? <p className="flex items-start gap-2 text-sm text-muted-foreground"><MapPin className="mt-0.5 h-4 w-4 shrink-0" />{t("phleb.addressMasked")}{h.districtId ? ` · ${h.districtId}` : ""}</p> : <a className="flex items-start gap-2 text-sm text-primary underline" href={h.geo ? `https://www.google.com/maps/search/?api=1&query=${h.geo.lat},${h.geo.lng}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(h.address)}`} target="_blank" rel="noreferrer"><MapPin className="mt-0.5 h-4 w-4 shrink-0" />{h.address}</a>}
-            {h.contactPhone ? <a className="flex items-center gap-2 text-sm text-primary underline" href={`tel:${h.contactPhone}`}><Phone className="h-4 w-4" />{h.contactPhone}</a> : null}
+            <div className="text-xs text-muted-foreground"><bdi dir="ltr" className="tabular-nums">{new Date(h.slotStart).toISOString().slice(11, 16)}–{new Date(h.slotEnd).toISOString().slice(11, 16)}</bdi> (UTC)</div>
+            {h.addressMasked ? <p className="flex items-start gap-2 text-sm text-muted-foreground"><MapPin className="mt-0.5 h-4 w-4 shrink-0" />{t("phleb.addressMasked")}{h.districtId ? ` · ${h.districtId}` : ""}</p> : <a className="flex min-h-10 items-center gap-2 text-sm text-primary underline" href={h.geo ? `https://www.google.com/maps/search/?api=1&query=${h.geo.lat},${h.geo.lng}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(h.address)}`} target="_blank" rel="noreferrer"><MapPin className="mt-0.5 h-4 w-4 shrink-0" /><bdi dir="auto">{h.address}</bdi></a>}
+            {h.contactPhone ? <a className="flex min-h-10 items-center gap-2 text-sm text-primary underline" href={`tel:${h.contactPhone}`}><Phone className="h-4 w-4" /><bdi dir="ltr" className="tabular-nums">{h.contactPhone}</bdi></a> : null}
             <div className="flex flex-wrap gap-1">{h.order.items.map((it: any) => <Badge key={it.id}>{it.test.code}{it.test.fastingRequired ? " · " + t("orders.fasting") : ""}</Badge>)}</div>
             {["SCHEDULED", "EN_ROUTE", "ARRIVED"].includes(h.status) ? (
               <div className="flex gap-2">

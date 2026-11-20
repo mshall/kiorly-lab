@@ -5,7 +5,10 @@ import { useTranslation } from "react-i18next";
 import { api, download, newKey } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { dt, money, today } from "@/lib/format";
+import { Banknote, CreditCard, Receipt } from "lucide-react";
 import { Badge, Button, Card, CardTitle, Empty, Field, Input, Modal, Select, Spinner, Table, Tabs, Td, useToast } from "@/components/ui";
+import { SearchBox, Segmented } from "@/components/kit";
+import { EmptyState, StatCard, Surface, TableSkeleton } from "@/brand/ui-kit";
 import { ErrorNote, PageHeader, StatusBadge } from "@/components/common";
 
 /** KLBIZ01 reception/billing: invoices (VAT lines only), cash/card payments (mock PSP), cash close, price lists, payer contracts. */
@@ -16,6 +19,8 @@ export function BillingPage() {
   const qc = useQueryClient();
   const toast = useToast();
   const [tab, setTab] = useState("invoices");
+  const [invQ, setInvQ] = useState("");
+  const [invSt, setInvSt] = useState("");
   const [pay, setPay] = useState<any>(null);
   const [p, setP] = useState({ method: "CASH", amount: "", cardToken: "tok_visa" });
   const [key, setKey] = useState(newKey());
@@ -43,14 +48,52 @@ export function BillingPage() {
     <>
       <PageHeader title={t("bill.title")} sub={t("bill.sub")} />
       <Tabs value={tab} onChange={setTab} tabs={[{ id: "invoices", label: t("bill.invoices") }, { id: "cash", label: t("bill.cashClose") }, { id: "prices", label: t("bill.priceLists") }, { id: "b2b", label: t("bill.b2b") }, { id: "recon", label: t("bill.recon") }]} />
-      {tab === "invoices" ? (inv.isLoading ? <Spinner /> : !inv.data?.length ? <Empty>{t("common.none")}</Empty> : (
-        <Table head={[t("bill.number"), t("orders.patient"), t("bill.subtotal"), t("bill.vat"), t("bill.total"), t("bill.paidTotal"), t("common.status"), ""]}>
-          {inv.data.map((i) => (
-            <tr key={i.id}><Td className="font-mono">{i.number}</Td><Td>{i.order?.patient.fullName ?? i.b2bAccount?.name}</Td><Td>{money(i.subtotal, cur, i18n.language)}</Td><Td>{money(i.vatTotal, cur, i18n.language)} <span className="text-xs text-muted-foreground">({i.vatRatePercent}%)</span></Td><Td className="font-semibold">{money(i.total, cur, i18n.language)}</Td><Td>{money(i.paidTotal, cur, i18n.language)}</Td><Td><StatusBadge value={i.status} /></Td>
-              <Td className="space-x-1 text-end rtl:space-x-reverse"><Button size="sm" variant="outline" onClick={() => void download(`/invoices/${i.id}/pdf`, `${i.number}.pdf`)}>PDF</Button>{can("billing.payment") && ["ISSUED", "PARTIALLY_PAID"].includes(i.status) ? <Button size="sm" onClick={() => { setPay(i); setP({ method: "CASH", amount: String(Math.round((i.total - i.paidTotal) * 100) / 100), cardToken: "tok_visa" }); }}>{t("bill.pay")}</Button> : null}{i.order ? <Link to={`/orders/${i.orderId}`} className="text-xs text-primary underline">{t("spec.order")}</Link> : null}</Td></tr>
-          ))}
-        </Table>
-      )) : null}
+      {tab === "invoices" ? (inv.isLoading ? <Surface><TableSkeleton rows={7} cols={6} /></Surface> : !inv.data?.length ? <EmptyState title={t("common.none")} /> : (() => {
+        const all = inv.data;
+        const open = all.filter((i) => ["ISSUED", "PARTIALLY_PAID"].includes(i.status));
+        const outstandingSum = open.reduce((a, i) => a + (Number(i.total) - Number(i.paidTotal)), 0);
+        const vatSum = all.filter((i) => i.status !== "VOID").reduce((a, i) => a + Number(i.vatTotal), 0);
+        const paidSum = all.reduce((a, i) => a + Number(i.paidTotal), 0);
+        const needle = invQ.trim().toLowerCase();
+        const shown = all.filter((i) => (!invSt || i.status === invSt) && (!needle || `${i.number} ${i.order?.patient.fullName ?? i.b2bAccount?.name ?? ""}`.toLowerCase().includes(needle)));
+        const payBtn = (i: any) => can("billing.payment") && ["ISSUED", "PARTIALLY_PAID"].includes(i.status) ? <Button size="sm" onClick={() => { setPay(i); setP({ method: "CASH", amount: String(Math.round((i.total - i.paidTotal) * 100) / 100), cardToken: "tok_visa" }); }}>{t("bill.pay")}</Button> : null;
+        return (
+          <>
+            <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <StatCard label={t("bill.outstanding")} value={money(outstandingSum, cur, i18n.language)} tone={outstandingSum ? "warn" : "good"} icon={<Receipt className="size-4" />} hint={t("ux.bill.openCount", { n: open.length })} />
+              <StatCard label={t("bill.paidTotal")} value={money(paidSum, cur, i18n.language)} tone="good" icon={<Banknote className="size-4" />} />
+              <StatCard label={t("bill.vat")} value={money(vatSum, cur, i18n.language)} tone="info" hint={t("ux.bill.vatLine")} />
+              <StatCard label={t("bill.invoices")} value={all.length} icon={<CreditCard className="size-4" />} />
+            </div>
+            <div className="mb-3 flex flex-wrap items-center gap-3">
+              <div className="-mx-1 max-w-full overflow-x-auto px-1 pb-1"><Segmented label={t("common.status")} value={invSt} onChange={setInvSt} className="flex-nowrap" items={[{ id: "", label: t("common.all") }, ...["ISSUED", "PARTIALLY_PAID", "PAID", "VOID"].map((x) => ({ id: x, label: t(`status.${x}`) }))]} /></div>
+              <SearchBox value={invQ} onChange={setInvQ} placeholder={t("ux.bill.search")} className="ms-auto" />
+            </div>
+            {shown.length === 0 ? <EmptyState compact title={t("common.none")} /> : (
+              <>
+                <div className="hidden md:block">
+                  <Table head={[t("bill.number"), t("orders.patient"), t("bill.subtotal"), t("bill.vat"), t("bill.total"), t("bill.paidTotal"), t("common.status"), ""]}>
+                    {shown.map((i) => (
+                      <tr key={i.id}><Td className="font-mono font-semibold">{i.number}</Td><Td><span dir="auto">{i.order?.patient.fullName ?? i.b2bAccount?.name}</span></Td><Td className="tabular-nums">{money(i.subtotal, cur, i18n.language)}</Td><Td className="whitespace-nowrap tabular-nums">{money(i.vatTotal, cur, i18n.language)} <span className="text-xs text-muted-foreground">({i.vatRatePercent}%)</span></Td><Td className="font-semibold tabular-nums">{money(i.total, cur, i18n.language)}</Td><Td className="tabular-nums">{money(i.paidTotal, cur, i18n.language)}</Td><Td><StatusBadge value={i.status} /></Td>
+                        <Td className="space-x-1 whitespace-nowrap text-end rtl:space-x-reverse"><Button size="sm" variant="outline" onClick={() => void download(`/invoices/${i.id}/pdf`, `${i.number}.pdf`)}>PDF</Button>{payBtn(i)}{i.order ? <Link to={`/orders/${i.orderId}`} className="ms-1 text-xs text-primary underline-offset-4 hover:underline">{t("spec.order")}</Link> : null}</Td></tr>
+                    ))}
+                  </Table>
+                </div>
+                <ul className="space-y-3 md:hidden">
+                  {shown.map((i) => (
+                    <li key={i.id} className="rounded-xl border border-border/80 bg-card p-3 shadow-[var(--kx-shadow-1)]">
+                      <div className="flex items-center justify-between gap-2"><span className="font-mono text-sm font-semibold">{i.number}</span><StatusBadge value={i.status} /></div>
+                      <div className="mt-0.5 text-sm text-muted-foreground" dir="auto">{i.order?.patient.fullName ?? i.b2bAccount?.name}</div>
+                      <dl className="mt-3 grid grid-cols-3 gap-2 text-xs"><div><dt className="text-muted-foreground">{t("bill.subtotal")}</dt><dd className="tabular-nums">{money(i.subtotal, cur, i18n.language)}</dd></div><div><dt className="text-muted-foreground">{t("bill.vat")} {i.vatRatePercent}%</dt><dd className="tabular-nums">{money(i.vatTotal, cur, i18n.language)}</dd></div><div><dt className="text-muted-foreground">{t("bill.total")}</dt><dd className="font-semibold tabular-nums">{money(i.total, cur, i18n.language)}</dd></div></dl>
+                      <div className="mt-3 flex gap-2"><Button size="sm" variant="outline" onClick={() => void download(`/invoices/${i.id}/pdf`, `${i.number}.pdf`)}>PDF</Button>{payBtn(i)}</div>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </>
+        );
+      })()) : null}
       {tab === "cash" ? (
         <div className="space-y-4">
           {can("billing.cashclose") ? <Card className="flex flex-wrap items-end gap-3"><Field label={t("bill.counted", { date: today() })}><Input type="number" step="0.01" value={counted} onChange={(e) => setCounted(e.target.value)} /></Field><Button disabled={!counted || close.isPending} onClick={() => close.mutate()}>{t("bill.closeDay")}</Button><div className="w-full"><ErrorNote error={close.error} /></div></Card> : null}
@@ -81,7 +124,13 @@ export function BillingPage() {
       <Modal open={Boolean(pay)} onClose={() => setPay(null)} title={`${t("bill.pay")} ${pay?.number ?? ""}`}>
         {d ? (
           <div className="space-y-3">
-            <div className="text-sm">{t("bill.outstanding")}: <strong>{money(outstanding, cur, i18n.language)}</strong></div>
+            <dl className="space-y-1 rounded-lg bg-muted/60 p-3 text-sm">
+              <div className="flex justify-between"><dt className="text-muted-foreground">{t("bill.subtotal")}</dt><dd className="tabular-nums">{money(d.subtotal, cur, i18n.language)}</dd></div>
+              <div className="flex justify-between"><dt className="text-muted-foreground">{t("bill.vat")} ({d.vatRatePercent}%)</dt><dd className="tabular-nums">{money(d.vatTotal, cur, i18n.language)}</dd></div>
+              <div className="flex justify-between border-t border-border pt-1 font-semibold"><dt>{t("bill.total")}</dt><dd className="tabular-nums">{money(d.total, cur, i18n.language)}</dd></div>
+              <div className="flex justify-between"><dt className="text-muted-foreground">{t("bill.paidTotal")}</dt><dd className="tabular-nums">{money(d.paidTotal, cur, i18n.language)}</dd></div>
+              <div className="flex justify-between text-base font-bold"><dt>{t("bill.outstanding")}</dt><dd className="tabular-nums">{money(outstanding, cur, i18n.language)}</dd></div>
+            </dl>
             <div className="grid gap-3 sm:grid-cols-3">
               <Field label={t("bill.method")}><Select value={p.method} onChange={(e) => setP({ ...p, method: e.target.value })}><option value="CASH">{t("bill.cash")}</option><option value="CARD">{t("bill.card")}</option></Select></Field>
               <Field label={t("bill.amount")}><Input type="number" step="0.01" value={p.amount} onChange={(e) => setP({ ...p, amount: e.target.value })} /></Field>

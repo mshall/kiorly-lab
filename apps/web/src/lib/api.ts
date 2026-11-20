@@ -66,4 +66,12 @@ export async function download(path: string, filename: string): Promise<void> {
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
+/** Authenticated fetch of a binary (PDF) as an object URL for in-page preview; caller revokes it. */
+export async function blobUrl(path: string): Promise<string> {
+  const tok = getToken();
+  const res = await fetch(`/api/v1${path}`, { headers: tok ? { authorization: `Bearer ${tok}` } : {} });
+  if (!res.ok) throw new ApiError(res.status, "DOWNLOAD_FAILED", null);
+  return URL.createObjectURL(await res.blob());
+}
+
 export const newKey = (): string => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`);

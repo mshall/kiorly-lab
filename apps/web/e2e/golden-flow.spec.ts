@@ -109,6 +109,7 @@ test("golden flow: order -> collect -> QC -> results (dual control) -> validatio
   // 5. sign + release on consented channels (UI)
   await page.goto("/release");
   await page.getByRole("button", { name: "Sign report" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Sign report" }).click(); // sign-off confirmation with the results summary
   await expect(page.getByText(/Signed, awaiting release/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Release", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Release", exact: true }).click();
