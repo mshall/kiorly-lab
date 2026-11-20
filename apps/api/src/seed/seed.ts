@@ -54,7 +54,7 @@ async function main() {
     await app.close();
     return;
   }
-  const tenant = await prisma.tenant.create({ data: { name: "Demo Diagnostics (synthetic)", slug: SLUG, edition: "PRO", vatRatePercent: 14 } });
+  const tenant = await prisma.tenant.create({ data: { name: "Demo Diagnostics (synthetic)", slug: SLUG, edition: "PRO", vatRatePercent: 14, safetyContactName: "Demo safety contact (synthetic)", safetyContactPhone: "+201000000900" } });
   const lab = await prisma.lab.create({ data: { orgId: tenant.id, name: "Cairo Central Lab", code: "CAI", address: "Demo address, Cairo", licenceNo: "DEMO-LAB-001" } });
   const users = {} as Record<StaffRole, AuthUser>;
   for (const [role, local, name, lic] of ROLES) {
