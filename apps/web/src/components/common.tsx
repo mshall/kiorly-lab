@@ -21,7 +21,7 @@ const STATUS_TONE: Record<string, Tone> = {
   ENTERED: "warn", TECH_VALIDATED: "info", MEDICAL_VALIDATED: "ok", CORRECTED: "muted",
   PASS: "ok", WARNING: "warn", FAIL: "crit", OPEN: "crit", CLEARED: "ok", ACKNOWLEDGED: "ok", ESCALATED: "crit",
   ISSUED: "info", PARTIALLY_PAID: "warn", PAID: "ok", VOID: "muted",
-  REQUESTED: "warn", SCHEDULED: "info", EN_ROUTE: "pulse", FAILED: "crit",
+  REQUESTED: "warn", SCHEDULED: "info", EN_ROUTE: "pulse", ARRIVED: "pulse", FAILED: "crit", ABORTED_UNSAFE: "warn",
   OK: "ok", AT_RISK: "warn", BREACHED: "crit", DONE_ON_TIME: "ok", DONE_LATE: "warn", NO_TARGET: "muted",
 };
 

@@ -121,7 +121,8 @@
       "WALK_IN": "Walk-in",
       "KIORLY_CLINIC": "Kiorly Clinic",
       "KIOREX_BOOKING": "Kiorex booking",
-      "REFERRING_DOCTOR": "Referring doctor"
+      "REFERRING_DOCTOR": "Referring doctor",
+      "KIORLY_NURSE": "Kiorly Nurse"
     },
     "sexes": {
       "F": "Female",
@@ -168,7 +169,15 @@
     "specimens": "Specimens",
     "verified": "Verified",
     "verify": "Record verification",
-    "version": "Version"
+    "version": "Version",
+    "nurse": {
+      "title": "Nurse-collected sample",
+      "collector": "Collected by",
+      "collectedAt": "Collected at",
+      "handedOverAt": "Handed over at",
+      "receivedAt": "Received at the lab",
+      "note": "The chain of custody starts at the nurse's collection time. No home address is kept for nurse samples."
+    }
   },
   "spec": {
     "accession": "Accession",
@@ -482,7 +491,15 @@
     "template": "Template",
     "title": "Settings",
     "vat": "VAT rate (%)",
-    "vatHint": "Shown as a line on invoices; set per your accountant"
+    "vatHint": "Shown as a line on invoices; set per your accountant",
+    "safety": "Collector safety",
+    "safetyName": "Safety contact name",
+    "safetyPhone": "Safety contact phone",
+    "safetyHint": "Required before any home collection can start. Alerts go to this number (SMS, then WhatsApp). Safety alerts are always on.",
+    "homeBuffers": "Travel buffer before / after (min)",
+    "homeCap": "Daily home collections per phlebotomist",
+    "coverage": "Coverage districts (comma separated)",
+    "coverageHint": "Home collections are booked only inside these districts. Empty means no restriction yet."
   },
   "phleb": {
     "camera": "Scan with camera",
@@ -509,7 +526,29 @@
     "takePhoto": "Take photo",
     "title": "Collector route",
     "toScan": "To scan",
-    "verifyId": "Verify two identifiers with the patient"
+    "verifyId": "Verify two identifiers with the patient",
+    "arrive": "I've arrived",
+    "imOk": "I'm OK",
+    "sos": "SOS",
+    "sosConfirm": "Send an SOS with your live location to the safety contact?",
+    "sosSent": "SOS sent to the safety contact.",
+    "sosNotSent": "SOS could not be sent. Call emergency services now.",
+    "emergency": "Emergency numbers: ambulance 123 · police 122",
+    "leaveUnsafe": "Leave visit - unsafe",
+    "unsafeNote": "Leaving a visit because you feel unsafe is never counted against you or the patient.",
+    "unsafeReason": "What happened?",
+    "unsafeReasons": {
+      "THREAT_OR_AGGRESSION": "Threat or aggression",
+      "UNSAFE_ENVIRONMENT": "Unsafe place",
+      "ANIMAL": "Animal",
+      "OTHER": "Other"
+    },
+    "promptTitle": "Are you OK?",
+    "promptBody": "This visit is past its planned end. Tap \"I'm OK\" or the safety contact will be alerted.",
+    "addressMasked": "Address hidden (district only)",
+    "locating": "Getting your location...",
+    "needLocation": "Allow location to check in.",
+    "safetyActive": "Safety on: the safety contact is alerted if this visit overruns."
   },
   "public": {
     "code": "6-digit code",
@@ -541,7 +580,8 @@
     "PRINTED": "Printed report",
     "PATIENT_LINK_OTP": "Patient link (OTP)",
     "KIORLY_CLINIC_IMPORT": "Kiorly Clinic import",
-    "KIOREX_VAULT": "Kiorex vault"
+    "KIOREX_VAULT": "Kiorex vault",
+    "KIORLY_NURSE_IMPORT": "Kiorly Nurse import"
   },
   "status": {
     "DRAFT": "Draft",
@@ -586,7 +626,9 @@
     "BREACHED": "Breached",
     "DONE_ON_TIME": "Done on time",
     "DONE_LATE": "Done late",
-    "NO_TARGET": "No target"
+    "NO_TARGET": "No target",
+    "ARRIVED": "Arrived",
+    "ABORTED_UNSAFE": "Left - unsafe"
   },
   "errors": {
     "generic": "Something went wrong ({{code}}).",
@@ -644,6 +686,18 @@
     "ANALYTE_CODE_EXISTS": "That analyte code exists.",
     "TEST_CODE_EXISTS": "That test code exists.",
     "TEST_NEEDS_ANALYTE": "A test needs at least one analyte.",
-    "INTERVAL_INVALID": "Low must not exceed high."
+    "INTERVAL_INVALID": "Low must not exceed high.",
+    "SAFETY_CONTACT_REQUIRED": "Set the safety contact in Settings before home collections can start.",
+    "OUT_OF_COVERAGE": "This address is outside the lab's coverage area.",
+    "PHLEBOTOMIST_UNAVAILABLE": "This phlebotomist has no room for that visit (travel buffers or daily limit).",
+    "GEOSTAMP_REQUIRED": "Check-in needs your location.",
+    "NO_SHOW_NOT_ALLOWED": "A visit left for safety reasons is never a no-show.",
+    "NOT_ASSIGNED": "Assign a phlebotomist first.",
+    "NOT_YOUR_COLLECTION": "This collection is assigned to someone else.",
+    "NOT_IN_FIELD": "This visit is not in progress.",
+    "ILLEGAL_HOME_COLLECTION_TRANSITION": "That step is not allowed from the current visit state.",
+    "SAMPLE_MISSING_FOR_TEST": "A nurse sample is missing for one of the ordered tests.",
+    "SAMPLE_UNMATCHED": "A nurse sample does not match any ordered test.",
+    "COLLECTED_IN_FUTURE": "The collection time is in the future."
   }
 }

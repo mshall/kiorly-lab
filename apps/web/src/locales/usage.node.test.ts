@@ -22,11 +22,11 @@ describe("i18n coverage", () => {
 
   it("dynamic key families cover every enum value the API can return", () => {
     const families: Record<string, string[]> = {
-      status: ["DRAFT", "AWAITING_COLLECTION", "COLLECTED", "IN_LAB", "PARTIALLY_RESULTED", "AWAITING_VALIDATION", "VALIDATED", "RELEASED", "CANCELLED", "PENDING_COLLECTION", "IN_TRANSIT", "RECEIVED", "PROCESSING", "STORED", "DISPOSED", "REJECTED", "ENTERED", "TECH_VALIDATED", "MEDICAL_VALIDATED", "CORRECTED", "PASS", "WARNING", "FAIL", "OPEN", "CLEARED", "ACKNOWLEDGED", "ESCALATED", "ISSUED", "PARTIALLY_PAID", "PAID", "VOID", "REQUESTED", "SCHEDULED", "EN_ROUTE", "FAILED", "OK", "AT_RISK", "BREACHED", "DONE_ON_TIME", "DONE_LATE", "NO_TARGET"],
+      status: ["DRAFT", "AWAITING_COLLECTION", "COLLECTED", "IN_LAB", "PARTIALLY_RESULTED", "AWAITING_VALIDATION", "VALIDATED", "RELEASED", "CANCELLED", "PENDING_COLLECTION", "IN_TRANSIT", "RECEIVED", "PROCESSING", "STORED", "DISPOSED", "REJECTED", "ENTERED", "TECH_VALIDATED", "MEDICAL_VALIDATED", "CORRECTED", "PASS", "WARNING", "FAIL", "OPEN", "CLEARED", "ACKNOWLEDGED", "ESCALATED", "ISSUED", "PARTIALLY_PAID", "PAID", "VOID", "REQUESTED", "SCHEDULED", "EN_ROUTE", "ARRIVED", "FAILED", "ABORTED_UNSAFE", "OK", "AT_RISK", "BREACHED", "DONE_ON_TIME", "DONE_LATE", "NO_TARGET"],
       flag: ["NORMAL", "LOW", "HIGH", "CRITICAL_LOW", "CRITICAL_HIGH", "ABNORMAL"],
       role: ["OWNER", "LAB_DIRECTOR", "AUTHORIZED_SIGNATORY", "TECHNOLOGIST", "PHLEBOTOMIST", "RECEPTION", "BRANCH_MANAGER"],
-      channel: ["PRINTED", "PATIENT_LINK_OTP", "KIORLY_CLINIC_IMPORT", "KIOREX_VAULT"],
-      "orders.sources": ["WALK_IN", "KIORLY_CLINIC", "KIOREX_BOOKING", "REFERRING_DOCTOR"],
+      channel: ["PRINTED", "PATIENT_LINK_OTP", "KIORLY_CLINIC_IMPORT", "KIORLY_NURSE_IMPORT", "KIOREX_VAULT"],
+      "orders.sources": ["WALK_IN", "KIORLY_CLINIC", "KIOREX_BOOKING", "REFERRING_DOCTOR", "KIORLY_NURSE"],
       "spec.event": ["COLLECTED", "TRANSPORT_STARTED", "RECEIVED", "PROCESSING_STARTED", "ALIQUOTED", "STORED", "DISPOSED", "REJECTED", "LABEL_MISMATCH_BLOCKED"],
       "spec.reasons": ["HAEMOLYSED", "INSUFFICIENT_VOLUME", "MISLABELLED", "WRONG_CONTAINER", "CLOTTED", "OTHER"],
       "spec.action": ["collect", "transport", "receive", "process", "store", "dispose"],
@@ -34,12 +34,13 @@ describe("i18n coverage", () => {
       "qc.levels": ["LEVEL_1", "LEVEL_2", "LEVEL_3"],
       "qc.result": ["PASS", "WARNING", "FAIL"],
       "rep.export": ["invoices", "payments", "orders", "qc-runs", "tat", "results-summary"],
+      "phleb.unsafeReasons": ["THREAT_OR_AGGRESSION", "UNSAFE_ENVIRONMENT", "ANIMAL", "OTHER"],
       nav: ["dashboard", "orders", "accessioning", "worklist", "validation", "qc", "release", "critical", "billing", "reports", "catalogue", "settings", "phleb"],
     };
     for (const [fam, keys] of Object.entries(families)) for (const k of keys) assert.equal(typeof get(en, `${fam}.${k}`), "string", `${fam}.${k}`);
   });
 
   it("the stop-ship error codes have friendly messages", () => {
-    for (const c of ["LABEL_MISMATCH", "ACCESSION_DUPLICATE", "QC_BLOCK_OPEN", "REPORT_NOT_READY", "CONSENT_REQUIRED", "FEATURE_DISABLED", "PLAN_REQUIRED", "NOT_AUTHORIZED_SIGNATORY"]) assert.equal(typeof get(en, `errors.${c}`), "string", c);
+    for (const c of ["LABEL_MISMATCH", "ACCESSION_DUPLICATE", "QC_BLOCK_OPEN", "REPORT_NOT_READY", "CONSENT_REQUIRED", "FEATURE_DISABLED", "PLAN_REQUIRED", "NOT_AUTHORIZED_SIGNATORY", "SAFETY_CONTACT_REQUIRED", "OUT_OF_COVERAGE", "PHLEBOTOMIST_UNAVAILABLE", "NO_SHOW_NOT_ALLOWED", "GEOSTAMP_REQUIRED"]) assert.equal(typeof get(en, `errors.${c}`), "string", c);
   });
 });

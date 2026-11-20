@@ -9,6 +9,20 @@ import { ErrorNote, PageHeader } from "@/components/common";
 
 const ROLES = ["OWNER", "LAB_DIRECTOR", "AUTHORIZED_SIGNATORY", "TECHNOLOGIST", "PHLEBOTOMIST", "RECEPTION", "BRANCH_MANAGER"];
 
+/** HVBK01: the districts a lab collects in (comma separated); saved through PUT /labs/:id/coverage. */
+function CoverageEditor({ lab, onSaved }: { lab: any; onSaved: () => void }) {
+  const { t } = useTranslation();
+  const [v, setV] = useState((lab.coverageDistricts ?? []).join(", "));
+  const save = useMutation({ mutationFn: () => api(`/labs/${lab.id}/coverage`, { method: "PUT", body: { districtIds: v.split(",").map((x: string) => x.trim()).filter(Boolean) } }), onSuccess: onSaved });
+  return (
+    <div className="flex items-center gap-2">
+      <Input className="h-8 min-w-48 text-xs" value={v} placeholder={t("set.coverageHint")} aria-label={t("set.coverage")} onChange={(e) => setV(e.target.value)} />
+      <Button size="sm" variant="outline" disabled={!v.trim() || save.isPending} onClick={() => save.mutate()}>{t("common.save")}</Button>
+      <ErrorNote error={save.error} />
+    </div>
+  );
+}
+
 /** Staff & RBAC, labs, tenant settings, integrations (HMAC clients, flag state, dev inbox), audit log. */
 export function SettingsPage() {
   const { t, i18n } = useTranslation();
@@ -71,7 +85,7 @@ export function SettingsPage() {
       {tab === "labs" ? (
         <div className="space-y-4">
           {can("settings.manage") ? <Card className="flex flex-wrap items-end gap-3"><Field label={t("common.name")}><Input value={lab.name} onChange={(e) => setLab({ ...lab, name: e.target.value })} /></Field><Field label={t("onboarding.labCode")}><Input value={lab.code} maxLength={6} onChange={(e) => setLab({ ...lab, code: e.target.value.toUpperCase() })} /></Field><Button disabled={!lab.name || !lab.code} onClick={() => addLab.mutate()}>{t("common.add")}</Button><div className="w-full"><ErrorNote error={addLab.error} /></div></Card> : null}
-          <Table head={[t("onboarding.labCode"), t("common.name"), t("set.licence")]}>{labs.data?.map((l) => <tr key={l.id}><Td className="font-mono">{l.code}</Td><Td>{l.name}</Td><Td>{l.licenceNo ?? "-"}</Td></tr>)}</Table>
+          <Table head={[t("onboarding.labCode"), t("common.name"), t("set.licence"), t("set.coverage")]}>{labs.data?.map((l) => <tr key={l.id}><Td className="font-mono">{l.code}</Td><Td>{l.name}</Td><Td>{l.licenceNo ?? "-"}</Td><Td>{can("settings.manage") ? <CoverageEditor lab={l} onSaved={refresh} /> : (l.coverageDistricts ?? []).join(", ")}</Td></tr>)}</Table>
         </div>
       ) : null}
       {tab === "general" && form ? (
@@ -79,6 +93,15 @@ export function SettingsPage() {
           <Field label={t("common.name")}><Input value={form.name} onChange={(e) => setG({ ...form, name: e.target.value })} /></Field>
           <Field label={t("set.vat")} hint={t("set.vatHint")}><Input type="number" step="0.01" value={form.vatRatePercent} onChange={(e) => setG({ ...form, vatRatePercent: Number(e.target.value) })} /></Field>
           <Field label={t("set.qcHours")} hint={t("set.qcHoursHint")}><Input type="number" value={form.qcValidityHours} onChange={(e) => setG({ ...form, qcValidityHours: Number(e.target.value) })} /></Field>
+          <div className="sm:col-span-2 rounded-md border border-border p-3" data-testid="safety-settings">
+            <p className="mb-2 text-sm font-semibold">{t("set.safety")}</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label={t("set.safetyName")}><Input value={form.safetyContactName ?? ""} onChange={(e) => setG({ ...form, safetyContactName: e.target.value || null })} /></Field>
+              <Field label={t("set.safetyPhone")} hint={t("set.safetyHint")}><Input type="tel" value={form.safetyContactPhone ?? ""} onChange={(e) => setG({ ...form, safetyContactPhone: e.target.value || null })} /></Field>
+              <Field label={t("set.homeBuffers")}><div className="flex gap-2"><Input type="number" min={0} max={180} value={form.homeBufferBeforeMin} onChange={(e) => setG({ ...form, homeBufferBeforeMin: Number(e.target.value) })} /><Input type="number" min={0} max={180} value={form.homeBufferAfterMin} onChange={(e) => setG({ ...form, homeBufferAfterMin: Number(e.target.value) })} /></div></Field>
+              <Field label={t("set.homeCap")}><Input type="number" min={1} max={50} value={form.homeDailyCap ?? ""} onChange={(e) => setG({ ...form, homeDailyCap: e.target.value ? Number(e.target.value) : null })} /></Field>
+            </div>
+          </div>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.referringDoctorStatements} onChange={(e) => setG({ ...form, referringDoctorStatements: e.target.checked })} />{t("set.statements")}</label>
           <div className="sm:col-span-2 flex flex-wrap items-center gap-2"><Button disabled={!g || save.isPending} onClick={() => save.mutate()}>{t("common.save")}</Button><Button variant="outline" onClick={() => starter.mutate()}>{t("set.loadStarter")}</Button><ErrorNote error={save.error} /></div>
           <p className="sm:col-span-2 text-xs text-muted-foreground">{t("set.noTaxNote")}</p>

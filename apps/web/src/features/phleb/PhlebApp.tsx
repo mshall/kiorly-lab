@@ -2,16 +2,29 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { CloudOff, MapPin, Phone, RefreshCw, ScanBarcode } from "lucide-react";
+import { AlertTriangle, CloudOff, MapPin, Phone, RefreshCw, ScanBarcode, ShieldAlert } from "lucide-react";
 import { api, getToken, newKey } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { setLang } from "@/lib/i18n";
 import { type QueuedCall, clearFailed, enqueue, flushQueue, listQueue } from "@/lib/offline";
 import { today } from "@/lib/format";
-import { Badge, Button, Card, Input, Modal, Spinner } from "@/components/ui";
+import { Badge, Button, Card, Input, Modal, Select, Spinner } from "@/components/ui";
 import { StatusBadge } from "@/components/common";
 
 const CACHE = "kiorly.phleb.route";
+/** Same reasons as the API (category only, no free text: BR61). */
+const UNSAFE_REASONS = ["THREAT_OR_AGGRESSION", "UNSAFE_ENVIRONMENT", "ANIMAL", "OTHER"] as const;
+/** HVSAF01: the server prompts 30 min after the planned end; the app shows the same prompt so the collector can answer in one tap. */
+const PROMPT_AFTER_MS = 30 * 60_000;
+const IN_FIELD = ["EN_ROUTE", "ARRIVED"];
+
+/** Current position (check-in geostamp / SOS). The server coarsens check-in stamps to ~1 km before storing them. */
+function locate(): Promise<{ lat: number; lng: number } | null> {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) return resolve(null);
+    navigator.geolocation.getCurrentPosition((p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }), () => resolve(null), { enableHighAccuracy: true, timeout: 10_000, maximumAge: 15_000 });
+  });
+}
 
 /** Resizes a captured label photo to <= 1280px JPEG (keeps uploads small on mobile data). */
 async function toJpegBase64(file: File): Promise<string> {
@@ -49,6 +62,10 @@ export function PhlebApp() {
   const [photo, setPhoto] = useState<string | null>(null);
   const [fail, setFail] = useState("");
   const [msg, setMsg] = useState("");
+  const [unsafe, setUnsafe] = useState<any>(null);
+  const [reason, setReason] = useState<string>(UNSAFE_REASONS[0]);
+  const [safetyMsg, setSafetyMsg] = useState<{ tone: "ok" | "bad"; text: string } | null>(null);
+  const [now, setNow] = useState(Date.now());
   const fileRef = useRef<HTMLInputElement>(null);
 
   const route = useQuery({
@@ -76,6 +93,11 @@ export function PhlebApp() {
   }, [refreshQueue, route, t]);
 
   useEffect(() => {
+    const i = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(i);
+  }, []);
+
+  useEffect(() => {
     void refreshQueue();
     const on = () => { setOnline(true); void flush(); };
     const off = () => setOnline(false);
@@ -101,6 +123,35 @@ export function PhlebApp() {
     await queueCall(`/home-collections/${stop.id}/confirm`, { scannedBarcodes: scans, ...(ids.length >= 2 ? { identifiersChecked: ids } : {}) });
     setStop(null);
     qc.setQueryData(["my-route", date], (old: any[] | undefined) => old?.map((h) => (h.id === stop.id ? { ...h, status: "COLLECTED" } : h)));
+  };
+  // ---- safety (HVSAF01/02, BR61): real-time calls, never queued; never behind a flag
+  const act = async (fn: () => Promise<unknown>, okText: string) => {
+    try { await fn(); setSafetyMsg({ tone: "ok", text: okText }); void route.refetch(); } catch (e: any) { setSafetyMsg({ tone: "bad", text: t(`errors.${e?.code}`, { defaultValue: t("errors.generic", { code: e?.code ?? "UNKNOWN" }) }) }); }
+  };
+  const imOk = (h: any) => act(() => api(`/home-collections/${h.id}/safety/answer`, { method: "POST", body: {} }), t("phleb.imOk"));
+  const sos = async (h: any) => {
+    if (!window.confirm(t("phleb.sosConfirm"))) return;
+    const g = await locate();
+    try {
+      const r = await api<any>(`/home-collections/${h.id}/sos`, { body: g ?? { lat: 0, lng: 0 } });
+      setSafetyMsg({ tone: r.delivered ? "ok" : "bad", text: r.delivered ? t("phleb.sosSent") : t("phleb.sosNotSent") });
+    } catch { setSafetyMsg({ tone: "bad", text: t("phleb.sosNotSent") }); }
+  };
+  const leaveUnsafe = async () => {
+    const g = await locate();
+    await act(() => api(`/home-collections/${unsafe.id}/leave-unsafe`, { body: { reason, ...(g ? { geostamp: g } : {}) } }), t("status.ABORTED_UNSAFE"));
+    setUnsafe(null);
+  };
+  const depart = async (h: any) => {
+    const g = await locate();
+    await queueCall(`/home-collections/${h.id}/start`, g ? { geostamp: g } : {});
+  };
+  const arrive = async (h: any) => {
+    setMsg(t("phleb.locating"));
+    const g = await locate();
+    if (!g) { setMsg(t("phleb.needLocation")); return; }
+    setMsg("");
+    await queueCall(`/home-collections/${h.id}/arrive`, { geostamp: g });
   };
   // optional camera scanning where the browser supports BarcodeDetector
   const scanWithCamera = async () => {
@@ -142,23 +193,51 @@ export function PhlebApp() {
         </div>
       ) : null}
       {msg ? <p className="m-3 rounded-md bg-emerald-50 p-2 text-sm text-emerald-900">{msg}</p> : null}
+      {safetyMsg ? <p className={safetyMsg.tone === "ok" ? "m-3 rounded-md bg-emerald-50 p-2 text-sm text-emerald-900" : "m-3 rounded-md bg-red-50 p-2 text-sm text-red-800"} role="status">{safetyMsg.text}</p> : null}
       <main className="space-y-3 p-3">
         {route.isLoading ? <Spinner /> : route.isError ? <p className="text-sm text-red-700">{t("phleb.loadError")}</p> : !route.data?.length ? <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">{t("phleb.noStops")}</p> : route.data.map((h: any, i: number) => (
           <Card key={h.id} className="space-y-2">
             <div className="flex items-center gap-2"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{h.routeSequence ?? i + 1}</span><span className="flex-1 font-semibold">{h.order.patient.fullName}</span><StatusBadge value={h.status} /></div>
             <div className="text-xs text-muted-foreground">{new Date(h.slotStart).toISOString().slice(11, 16)}–{new Date(h.slotEnd).toISOString().slice(11, 16)} (UTC)</div>
-            <a className="flex items-start gap-2 text-sm text-primary underline" href={h.geo ? `https://www.google.com/maps/search/?api=1&query=${h.geo.lat},${h.geo.lng}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(h.address)}`} target="_blank" rel="noreferrer"><MapPin className="mt-0.5 h-4 w-4 shrink-0" />{h.address}</a>
+            {h.addressMasked ? <p className="flex items-start gap-2 text-sm text-muted-foreground"><MapPin className="mt-0.5 h-4 w-4 shrink-0" />{t("phleb.addressMasked")}{h.districtId ? ` · ${h.districtId}` : ""}</p> : <a className="flex items-start gap-2 text-sm text-primary underline" href={h.geo ? `https://www.google.com/maps/search/?api=1&query=${h.geo.lat},${h.geo.lng}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(h.address)}`} target="_blank" rel="noreferrer"><MapPin className="mt-0.5 h-4 w-4 shrink-0" />{h.address}</a>}
             {h.contactPhone ? <a className="flex items-center gap-2 text-sm text-primary underline" href={`tel:${h.contactPhone}`}><Phone className="h-4 w-4" />{h.contactPhone}</a> : null}
             <div className="flex flex-wrap gap-1">{h.order.items.map((it: any) => <Badge key={it.id}>{it.test.code}{it.test.fastingRequired ? " · " + t("orders.fasting") : ""}</Badge>)}</div>
-            {["SCHEDULED", "EN_ROUTE"].includes(h.status) ? (
+            {["SCHEDULED", "EN_ROUTE", "ARRIVED"].includes(h.status) ? (
               <div className="flex gap-2">
-                {h.status === "SCHEDULED" ? <Button variant="secondary" className="flex-1" onClick={() => void queueCall(`/home-collections/${h.id}/start`, {})}>{t("phleb.start")}</Button> : null}
-                <Button className="flex-1" onClick={() => open(h)}><ScanBarcode className="h-4 w-4" />{t("phleb.collect")}</Button>
+                {h.status === "SCHEDULED" ? <Button variant="secondary" className="flex-1" onClick={() => void depart(h)}>{t("phleb.start")}</Button> : null}
+                {h.status === "EN_ROUTE" ? <Button variant="secondary" className="flex-1" onClick={() => void arrive(h)}><MapPin className="h-4 w-4" />{t("phleb.arrive")}</Button> : null}
+                {h.status === "ARRIVED" ? <Button className="flex-1" onClick={() => open(h)}><ScanBarcode className="h-4 w-4" />{t("phleb.collect")}</Button> : null}
+              </div>
+            ) : null}
+            {IN_FIELD.includes(h.status) ? (
+              <div className="space-y-2 rounded-lg border border-red-200 bg-red-50/60 p-2" role="region" aria-label={t("set.safety")}>
+                {now > new Date(h.slotEnd).getTime() + PROMPT_AFTER_MS ? (
+                  <div className="rounded-md bg-amber-100 p-2 text-sm text-amber-900" role="alert">
+                    <p className="flex items-center gap-1 font-semibold"><AlertTriangle className="h-4 w-4" />{t("phleb.promptTitle")}</p>
+                    <p className="text-xs">{t("phleb.promptBody")}</p>
+                  </div>
+                ) : <p className="flex items-center gap-1 text-xs text-red-900"><ShieldAlert className="h-3 w-3" />{t("phleb.safetyActive")}</p>}
+                <div className="flex gap-2">
+                  <Button variant="secondary" size="sm" className="flex-1" onClick={() => void imOk(h)}>{t("phleb.imOk")}</Button>
+                  <Button variant="destructive" size="sm" className="flex-1" onClick={() => void sos(h)}>{t("phleb.sos")}</Button>
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => { setUnsafe(h); setReason(UNSAFE_REASONS[0]); }}>{t("phleb.leaveUnsafe")}</Button>
+                </div>
+                <p className="text-xs text-red-900">{t("phleb.emergency")} · <a className="underline" href="tel:123">123</a> · <a className="underline" href="tel:122">122</a></p>
               </div>
             ) : null}
           </Card>
         ))}
       </main>
+      <Modal open={Boolean(unsafe)} onClose={() => setUnsafe(null)} title={t("phleb.leaveUnsafe")}>
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">{t("phleb.unsafeNote")}</p>
+          <label className="block text-sm font-semibold">{t("phleb.unsafeReason")}
+            <Select className="mt-1" value={reason} onChange={(e) => setReason(e.target.value)}>{UNSAFE_REASONS.map((r) => <option key={r} value={r}>{t(`phleb.unsafeReasons.${r}`)}</option>)}</Select>
+          </label>
+          <Button variant="destructive" className="w-full" onClick={() => void leaveUnsafe()}>{t("phleb.leaveUnsafe")}</Button>
+          <p className="text-xs text-red-900">{t("phleb.emergency")}</p>
+        </div>
+      </Modal>
       <Modal open={Boolean(stop)} onClose={() => setStop(null)} title={stop?.order.patient.fullName ?? ""}>
         {stop ? (
           <div className="space-y-4">

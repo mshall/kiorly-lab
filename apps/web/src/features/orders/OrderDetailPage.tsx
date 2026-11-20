@@ -75,8 +75,19 @@ export function OrderDetailPage() {
             <div className="mt-3 rounded-md bg-accent p-3 text-sm">
               <div className="mb-1 flex items-center gap-2 font-semibold">{t("orders.homeCollection")} <StatusBadge value={d.homeCollection.status} /></div>
               <div>{d.homeCollection.address}</div>
+              {d.homeCollection.addressMasked ? <div className="text-xs text-muted-foreground">{t("phleb.addressMasked")}</div> : null}
               <div className="text-muted-foreground">{dt(d.homeCollection.slotStart, i18n.language)} – {dt(d.homeCollection.slotEnd, i18n.language)}</div>
               {d.homeCollection.labelPhotoKey ? <div className="text-xs text-muted-foreground">{t("order.labelPhoto")}</div> : null}
+            </div>
+          ) : null}
+          {d.nurseCollection ? (
+            <div className="mt-3 rounded-md bg-accent p-3 text-sm" data-testid="nurse-collection">
+              <div className="mb-1 font-semibold">{t("order.nurse.title")}</div>
+              <div>{t("order.nurse.collector")}: {d.nurseCollection.collectorName ?? d.nurseCollection.collectorRef}</div>
+              <div className="text-muted-foreground">{t("order.nurse.collectedAt")}: {dt(d.nurseCollection.collectedAt, i18n.language)}</div>
+              {d.nurseCollection.handedOverAt ? <div className="text-muted-foreground">{t("order.nurse.handedOverAt")}: {dt(d.nurseCollection.handedOverAt, i18n.language)}</div> : null}
+              {d.nurseCollection.receivedAt ? <div className="text-muted-foreground">{t("order.nurse.receivedAt")}: {dt(d.nurseCollection.receivedAt, i18n.language)}</div> : null}
+              <div className="mt-1 text-xs text-muted-foreground">{t("order.nurse.note")}</div>
             </div>
           ) : null}
         </Card>
