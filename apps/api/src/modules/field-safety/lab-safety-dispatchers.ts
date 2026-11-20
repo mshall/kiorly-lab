@@ -12,6 +12,7 @@ class MessagingDispatcher implements SafetyAlertDispatcher {
     private readonly messaging: MessagingAdapter,
     private readonly orgId: string,
     private readonly phone: string,
+    private readonly nowMs: () => number,
   ) {}
 
   async dispatch(alert: SafetyAlert) {
@@ -20,10 +21,10 @@ class MessagingDispatcher implements SafetyAlertDispatcher {
     if (alert.liveLocation) params.live = `${alert.liveLocation.lat},${alert.liveLocation.lng}`;
     const r = await this.messaging.send({ orgId: this.orgId, channel: this.channel, purpose: "SAFETY_ALERT", recipientRef: this.phone, templateId: "TODO_NEEDS_HUMAN_SAFETY_ALERT", params, relatedType: "HomeCollection", relatedId: alert.visitId });
     if (r.status !== "SENT") throw new Error(`${this.channel} delivery failed`);
-    return { deliveredAtMs: Date.now(), channel: this.channel };
+    return { deliveredAtMs: this.nowMs(), channel: this.channel };
   }
 }
 
-export function labSafetyDispatchers(messaging: MessagingAdapter, orgId: string, contactPhone: string): SafetyAlertDispatcher[] {
-  return [new MessagingDispatcher("SMS", messaging, orgId, contactPhone), new MessagingDispatcher("WHATSAPP", messaging, orgId, contactPhone)];
+export function labSafetyDispatchers(messaging: MessagingAdapter, orgId: string, contactPhone: string, nowMs: () => number = Date.now): SafetyAlertDispatcher[] {
+  return [new MessagingDispatcher("SMS", messaging, orgId, contactPhone, nowMs), new MessagingDispatcher("WHATSAPP", messaging, orgId, contactPhone, nowMs)];
 }

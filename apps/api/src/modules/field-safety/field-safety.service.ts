@@ -57,16 +57,18 @@ export class FieldSafetyService implements OnModuleInit, OnModuleDestroy {
     const rows = await this.prisma.homeCollection.findMany({ where: { status: { in: [...FIELD_STATUSES] } }, select: { id: true, orgId: true } });
     let prompts = 0;
     let alerts = 0;
+    const fresh = new Set<string>();
     for (const r of rows) {
       try {
         const out = await this.evaluateOne(r.orgId, r.id, nowMs, clock);
         prompts += out.prompts;
-        alerts += out.alerts;
+        alerts += out.alerts.length;
+        for (const id of out.alerts) fresh.add(id);
       } catch (e) {
         this.log.error(`safety evaluation failed for ${r.id}: ${(e as Error).message}`);
       }
     }
-    const retried = await this.retryUndelivered(clock);
+    const retried = await this.retryUndelivered(clock, fresh);
     return { prompts, alerts, retried };
   }
 
@@ -97,7 +99,7 @@ export class FieldSafetyService implements OnModuleInit, OnModuleDestroy {
       await this.messaging.send({ orgId, channel: "PUSH", purpose: "SAFETY_ALERT", recipientRef: promptTo, templateId: "TODO_NEEDS_HUMAN_SAFETY_PROMPT", params: { kind: "PROMPT", collection: id }, relatedType: "HomeCollection", relatedId: id }).catch(() => undefined);
     }
     for (const c of created) await this.deliver(c.row, undefined, clock);
-    return { prompts, alerts: created.length };
+    return { prompts, alerts: created.map((c) => c.row.id) };
   }
 
   /** Delivers a persisted alert row through the dispatchers and records the outcome (an undelivered alert is an incident: retried every tick). */
@@ -112,7 +114,7 @@ export class FieldSafetyService implements OnModuleInit, OnModuleDestroy {
         ...buildSafetyAlert({ kind: row.kind, visit: { id: hc.id, history: toFieldVisit(hc).history }, contactId: `${row.orgId}:safety-contact`, nowMs: row.raisedAt.getTime(), liveLocation }),
         emergencyNumbers: { ...EGYPT_EMERGENCY_NUMBERS },
       };
-      result = await deliverSafetyAlert(alert, labSafetyDispatchers(this.messaging, row.orgId, tenant.safetyContactPhone), row.dueAt.getTime(), clock);
+      result = await deliverSafetyAlert(alert, labSafetyDispatchers(this.messaging, row.orgId, tenant.safetyContactPhone, clock), row.dueAt.getTime(), clock);
     }
     const prev = (Array.isArray(row.attempts) ? row.attempts : []) as unknown[];
     await this.prisma.safetyAlert.update({
@@ -126,8 +128,8 @@ export class FieldSafetyService implements OnModuleInit, OnModuleDestroy {
     return result.delivered;
   }
 
-  private async retryUndelivered(clock: () => number): Promise<number> {
-    const pending = await this.prisma.safetyAlert.findMany({ where: { delivered: false }, orderBy: { raisedAt: "asc" }, take: 50 });
+  private async retryUndelivered(clock: () => number, skip: ReadonlySet<string>): Promise<number> {
+    const pending = await this.prisma.safetyAlert.findMany({ where: { delivered: false, id: { notIn: [...skip] } }, orderBy: { raisedAt: "asc" }, take: 50 });
     let ok = 0;
     for (const row of pending) if (await this.deliver(row, undefined, clock).catch(() => false)) ok++;
     return ok;
