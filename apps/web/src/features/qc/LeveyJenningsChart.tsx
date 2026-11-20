@@ -30,7 +30,7 @@ export function LeveyJenningsChart({ data }: { data: LjData }) {
   return (
     <figure>
       <div tabIndex={0} role="region" aria-label={t("qc.chartLabel", { analyte: data.analyte.code, level: data.level })} className="overflow-x-auto rounded-md focus-visible:outline-offset-2">
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-[40rem]" style={{ direction: "ltr" }} role="img" aria-label={`${t("qc.chartLabel", { analyte: data.analyte.code, level: data.level })}. ${t("qc.chartSummary", { n: data.points.length, bad: fails })}`}>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full min-w-160" style={{ direction: "ltr" }} role="img" aria-label={`${t("qc.chartLabel", { analyte: data.analyte.code, level: data.level })}. ${t("qc.chartSummary", { n: data.points.length, bad: fails })}`}>
         {band(1, -1, C.pass, 0.07)}{band(2, 1, C.warn, 0.08)}{band(-1, -2, C.warn, 0.08)}{band(3, 2, C.fail, 0.08)}{band(-2, -3, C.fail, 0.08)}
         {lines.map((z) => (
           <g key={z}>

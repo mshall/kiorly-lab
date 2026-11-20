@@ -43,7 +43,7 @@ export function DoctorPortalPage() {
               <Table className="rounded-none border-0 shadow-none" head={[t("order.number"), t("orders.patient"), t("orders.tests"), t("common.status"), t("common.date"), ""]}>
                 {q.data.orders.map((o: any) => (
                   <tr key={o.id}>
-                    <Td className="font-mono text-xs">{o.orderNumber}</Td><Td dir="auto">{o.patient}</Td><Td className="max-w-[14rem] truncate text-xs" dir="auto">{o.tests.join(", ")}</Td><Td><StatusBadge value={o.status} /></Td><Td className="text-xs">{dt(o.createdAt, i18n.language)}</Td>
+                    <Td className="font-mono text-xs">{o.orderNumber}</Td><Td dir="auto">{o.patient}</Td><Td className="max-w-56 truncate text-xs" dir="auto">{o.tests.join(", ")}</Td><Td><StatusBadge value={o.status} /></Td><Td className="text-xs">{dt(o.createdAt, i18n.language)}</Td>
                     <Td>{o.report ? <Button size="sm" variant="outline" disabled={busy === o.id} onClick={() => void open(o.id)}><FileText aria-hidden className="size-4" />PDF v{o.report.version}</Button> : o.status === "RELEASED" && !o.consented ? <Badge tone="muted"><Lock aria-hidden className="me-1 size-3" />{t("portal.noConsent")}</Badge> : null}</Td>
                   </tr>
                 ))}

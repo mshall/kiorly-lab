@@ -54,7 +54,7 @@ export function AppShell() {
   const openAlerts = alerts.data?.length ?? 0;
   return (
     <div className="flex min-h-screen">
-      <aside className={cn("fixed inset-y-0 start-0 z-40 w-64 shrink-0 border-e border-border bg-card p-4 lg:sticky lg:top-0 lg:h-screen overflow-y-auto transition-transform lg:translate-x-0", open ? "translate-x-0" : "max-lg:-translate-x-full max-lg:rtl:translate-x-full")}>
+      <aside className={cn("fixed inset-y-0 inset-s-0 z-40 w-64 shrink-0 border-e border-border bg-card p-4 lg:sticky lg:top-0 lg:h-screen overflow-y-auto transition-transform lg:translate-x-0", open ? "translate-x-0" : "max-lg:-translate-x-full max-lg:rtl:translate-x-full")}>
         <div className="mb-6 border-b border-border pb-4">
           <KiorlyBrandLockup height={40} />
           <div className="mt-2 truncate text-xs text-muted-foreground">{me?.tenant.name}</div>
@@ -68,7 +68,7 @@ export function AppShell() {
               <div key={g.key} role="group" aria-label={t(`nav.groups.${g.key}`)} className="space-y-1">
                 <div className="px-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/80 rtl:normal-case rtl:tracking-normal">{t(`nav.groups.${g.key}`)}</div>
                 {items.map((n) => (
-                  <NavLink key={n.to} to={n.to} end={"end" in n} onClick={() => setOpen(false)} className={({ isActive }) => cn("relative flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150", isActive ? "bg-accent font-semibold text-accent-foreground before:absolute before:inset-y-2 before:start-0 before:w-[3px] before:rounded-full before:bg-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground")}>
+                  <NavLink key={n.to} to={n.to} end={"end" in n} onClick={() => setOpen(false)} className={({ isActive }) => cn("relative flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150", isActive ? "bg-accent font-semibold text-accent-foreground before:absolute before:inset-y-2 before:inset-s-0 before:w-[3px] before:rounded-full before:bg-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground")}>
                     <n.icon className="h-4 w-4" />
                     <span className="flex-1">{t(`nav.${n.key}`)}</span>
                     {n.key === "critical" && openAlerts > 0 ? <Badge tone="crit">{openAlerts}</Badge> : null}
@@ -85,7 +85,7 @@ export function AppShell() {
       </aside>
       {open ? <div className="fixed inset-0 z-30 bg-black/30 lg:hidden" onClick={() => setOpen(false)} aria-hidden /> : null}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-card/90 px-4 py-2.5 backdrop-blur">
+        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-card/90 px-4 py-2.5 backdrop-blur-sm">
           <Button variant="ghost" size="icon" className="lg:hidden" aria-label="menu" onClick={() => setOpen(true)}><Menu className="h-5 w-5" /></Button>
           <div className="flex-1" />
           <div className="hidden items-center gap-3 sm:flex">

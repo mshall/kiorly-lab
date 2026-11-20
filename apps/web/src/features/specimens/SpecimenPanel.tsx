@@ -66,7 +66,7 @@ export function SpecimenPanel({ specimenId, onChanged }: { specimenId: string; o
               <Field label={t("spec.scanLabel")} hint={t("spec.scanHint")}>
                 <Input autoFocus value={scan} onChange={(e) => setScan(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && next.length === 1 && (!needsScan(next[0]!.action) || scan)) act.mutate(next[0]!.action); }} placeholder={s.barcode.replace(/./g, "•")} inputMode="text" aria-label={t("spec.scanLabel")} className="h-12 font-mono text-base tracking-wider" />
               </Field>
-              <Field label={t("spec.temperature")}><Input type="number" step="0.1" value={temp} onChange={(e) => setTemp(e.target.value)} className="max-w-[10rem]" /></Field>
+              <Field label={t("spec.temperature")}><Input type="number" step="0.1" value={temp} onChange={(e) => setTemp(e.target.value)} className="max-w-40" /></Field>
               <div className="flex flex-wrap gap-2">
                 {next.map((n, i) => <Button key={n.action} variant={i === 0 ? "default" : "outline"} onClick={() => act.mutate(n.action)} disabled={act.isPending || (needsScan(n.action) && !scan)}>{t(`spec.action.${n.action}`)}</Button>)}
               </div>
@@ -101,7 +101,7 @@ export function SpecimenPanel({ specimenId, onChanged }: { specimenId: string; o
             const latest = i === s.custody.length - 1;
             return (
               <li key={c.id} className="relative">
-                <span aria-hidden="true" className={`absolute -start-[1.72rem] top-1 grid size-3.5 place-items-center rounded-full ring-4 ring-card ${bad ? "bg-[hsl(var(--danger-text))]" : latest ? "bg-primary" : "bg-[hsl(var(--success))]"}`} />
+                <span aria-hidden="true" className={`absolute inset-s-[-1.72rem] top-1 grid size-3.5 place-items-center rounded-full ring-4 ring-card ${bad ? "bg-[hsl(var(--danger-text))]" : latest ? "bg-primary" : "bg-[hsl(var(--success))]"}`} />
                 <div className={`font-semibold ${bad ? "text-[hsl(var(--danger-text))]" : ""}`}>{t(`spec.event.${c.type}`)}{bad ? <span className="ms-2 rounded-full bg-[hsl(var(--danger-text)/0.12)] px-2 py-0.5 text-xs">{t("spec.blocked")}</span> : null}</div>
                 <div className="text-xs tabular-nums text-muted-foreground">{dt(c.occurredAt, i18n.language)}{c.temperatureC != null ? ` · ${c.temperatureC}°C` : ""}{c.note ? ` · ${c.note}` : ""}</div>
               </li>

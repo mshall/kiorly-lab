@@ -73,7 +73,7 @@ export function OrderDetailPage() {
             <li key={x.k} aria-current={i === activeStep ? "step" : undefined} className="flex min-w-0 flex-1 flex-col items-center gap-1.5 px-0.5 text-center">
               <div className="flex w-full items-center">
                 <span aria-hidden className={kcn("h-0.5 flex-1 rounded-full", i === 0 ? "opacity-0" : x.on ? "bg-primary" : "bg-border")} />
-                <span className={kcn("grid size-7 shrink-0 place-items-center rounded-full text-xs font-semibold ring-4 ring-background", x.on ? "bg-primary text-primary-foreground" : i === activeStep ? "bg-accent text-accent-foreground ring-2 !ring-primary" : "bg-muted text-muted-foreground")}>{x.on ? <Check aria-hidden className="size-4" /> : i + 1}</span>
+                <span className={kcn("grid size-7 shrink-0 place-items-center rounded-full text-xs font-semibold ring-4 ring-background", x.on ? "bg-primary text-primary-foreground" : i === activeStep ? "bg-accent text-accent-foreground ring-2 ring-primary!" : "bg-muted text-muted-foreground")}>{x.on ? <Check aria-hidden className="size-4" /> : i + 1}</span>
                 <span aria-hidden className={kcn("h-0.5 flex-1 rounded-full", i === steps.length - 1 ? "opacity-0" : steps[i + 1]!.on ? "bg-primary" : "bg-border")} />
               </div>
               <span className={kcn("text-[11px] leading-tight sm:text-xs", x.on || i === activeStep ? "font-semibold" : "text-muted-foreground")}>{t(`ux.order.steps.${x.k}`)}</span>

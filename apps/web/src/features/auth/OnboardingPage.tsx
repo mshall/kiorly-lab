@@ -49,7 +49,7 @@ export function OnboardingPage() {
             <div>
               <span className="mb-1 block text-xs font-medium text-muted-foreground">{t("onboarding.edition")}</span>
               <div role="radiogroup" aria-label={t("onboarding.edition")} className="grid grid-cols-3 gap-2">
-                {EDITIONS.map((x) => <button key={x} type="button" role="radio" aria-checked={f.edition === x} onClick={() => set("edition", x)} className={kcn("h-10 rounded-lg border text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", f.edition === x ? "border-primary bg-accent text-accent-foreground shadow-[0_0_0_1px_hsl(var(--primary))]" : "border-border bg-card hover:bg-muted/60")}>{x}</button>)}
+                {EDITIONS.map((x) => <button key={x} type="button" role="radio" aria-checked={f.edition === x} onClick={() => set("edition", x)} className={kcn("h-10 rounded-lg border text-sm font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring", f.edition === x ? "border-primary bg-accent text-accent-foreground shadow-[0_0_0_1px_hsl(var(--primary))]" : "border-border bg-card hover:bg-muted/60")}>{x}</button>)}
               </div>
             </div>
           </div>

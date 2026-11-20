@@ -33,8 +33,8 @@ export function LoginPage() {
   return (
     <div className="grid min-h-screen lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
       <aside className="relative hidden overflow-hidden p-12 text-white lg:flex lg:flex-col lg:justify-between" style={{ background: "linear-gradient(145deg,#3730A3 0%,#2B2680 55%,#0A4F7A 100%)" }}>
-        <div aria-hidden className="pointer-events-none absolute -end-24 -top-24 size-96 rounded-full bg-white/5" />
-        <div aria-hidden className="pointer-events-none absolute -bottom-32 -start-20 size-[28rem] rounded-full bg-white/5" />
+        <div aria-hidden className="pointer-events-none absolute -inset-e-24 -top-24 size-96 rounded-full bg-white/5" />
+        <div aria-hidden className="pointer-events-none absolute -bottom-32 -inset-s-20 size-112 rounded-full bg-white/5" />
         <div className="relative w-fit"><KiorexLogo variant="lockup" product="lab" lang={i18n.language} tone="inverse" height={48} /><p data-kx-tagline className="mt-1 text-xs text-white/70">{t("app.tagline")}</p></div>
         <div className="relative max-w-md space-y-6">
           <h2 className="text-balance text-3xl font-semibold leading-tight">{t("ux.login.headline")}</h2>
@@ -53,7 +53,7 @@ export function LoginPage() {
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">{t("app.product")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{t("auth.devNote")}</p>
-          <Surface className="mt-6 space-y-5 p-5 shadow-[var(--kx-shadow-2)]">
+          <Surface className="mt-6 space-y-5 p-5 shadow-kx-2">
             {orgs.isLoading ? <div role="status" aria-busy="true" className="space-y-3"><Skeleton className="h-10" /><Skeleton className="h-16" /><Skeleton className="h-16" /></div> : null}
             {orgs.isError ? <ErrorNote error={orgs.error} /> : null}
             {orgs.data?.length === 0 ? <p className="text-sm">{t("auth.noOrgs")}</p> : null}
@@ -69,7 +69,7 @@ export function LoginPage() {
                       const on = s.email === chosen;
                       return (
                         <button key={s.email} type="button" role="radio" aria-checked={on} onClick={() => setEmail(s.email)} onDoubleClick={() => m.mutate()}
-                          className={kcn("flex min-h-14 items-center gap-3 rounded-xl border px-3 py-2 text-start transition-[border-color,box-shadow,background-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", on ? "border-primary bg-accent shadow-[0_0_0_1px_hsl(var(--primary))]" : "border-border bg-card hover:bg-muted/60")}>
+                          className={kcn("flex min-h-14 items-center gap-3 rounded-xl border px-3 py-2 text-start transition-[border-color,box-shadow,background-color] duration-150 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring", on ? "border-primary bg-accent shadow-[0_0_0_1px_hsl(var(--primary))]" : "border-border bg-card hover:bg-muted/60")}>
                           <span aria-hidden className={kcn("grid size-9 shrink-0 place-items-center rounded-full text-sm font-semibold", on ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>{on ? <Check className="size-4" /> : s.displayName.trim().slice(0, 1).toUpperCase()}</span>
                           <span className="min-w-0"><span dir="auto" className="block truncate text-sm font-medium">{s.displayName}</span><span className="block truncate text-xs text-muted-foreground">{t(`role.${s.role}`)}</span></span>
                         </button>

@@ -38,7 +38,7 @@ export function PublicReportPage() {
         <KiorlyBrandLockup height={38} />
         <KxControlPair><ThemeToggle labels={{ theme: t("theme.label"), light: t("theme.light"), dark: t("theme.dark"), system: t("theme.system") }} /><LanguageToggle onChange={setLang} /></KxControlPair>
       </div>
-      <Surface className="space-y-5 p-6 shadow-[var(--kx-shadow-3)]">
+      <Surface className="space-y-5 p-6 shadow-kx-3">
         <div className="flex items-center gap-3"><span className="grid size-11 place-items-center rounded-xl bg-accent text-accent-foreground"><FileText aria-hidden className="size-5" /></span><div><h1 className="text-lg font-semibold leading-tight">{t("public.title")}</h1>{info.data ? <p className="text-xs text-muted-foreground">{t("ux.public.secure")}</p> : null}</div></div>
         {info.isLoading ? <div role="status" aria-busy="true" className="space-y-3"><Skeleton className="h-4" /><Skeleton className="h-11" /></div> : info.isError ? <EmptyState tone="error" compact title={t("public.invalid")} /> : (
           <>

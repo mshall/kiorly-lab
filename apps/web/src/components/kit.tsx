@@ -19,12 +19,12 @@ export function SearchBox({ value, onChange, placeholder, label, className, shor
     return () => window.removeEventListener("keydown", h);
   }, [shortcut]);
   return (
-    <div className={kcn("relative min-w-[12rem] flex-1 sm:max-w-sm", className)}>
-      <Search aria-hidden className="pointer-events-none absolute inset-y-0 start-3 my-auto size-4 text-muted-foreground" />
+    <div className={kcn("relative min-w-48 flex-1 sm:max-w-sm", className)}>
+      <Search aria-hidden className="pointer-events-none absolute inset-y-0 inset-s-3 my-auto size-4 text-muted-foreground" />
       <input ref={ref} type="search" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} aria-label={label ?? placeholder}
-        className="h-10 w-full rounded-lg border border-input bg-card ps-9 pe-9 text-sm shadow-[var(--kx-shadow-1)] transition-[border-color,box-shadow] duration-150 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-search-cancel-button]:appearance-none" />
-      {value ? <button type="button" aria-label="clear" onClick={() => { onChange(""); ref.current?.focus(); }} className="absolute inset-y-0 end-1 my-auto grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><X aria-hidden className="size-4" /></button>
-        : shortcut ? <kbd aria-hidden className="pointer-events-none absolute inset-y-0 end-2.5 my-auto hidden h-5 items-center rounded border border-border bg-muted px-1.5 font-mono text-[10px] text-muted-foreground sm:inline-flex">/</kbd> : null}
+        className="h-10 w-full rounded-lg border border-input bg-card ps-9 pe-9 text-sm shadow-kx-1 transition-[border-color,box-shadow] duration-150 placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-search-cancel-button]:appearance-none" />
+      {value ? <button type="button" aria-label="clear" onClick={() => { onChange(""); ref.current?.focus(); }} className="absolute inset-y-0 inset-e-1 my-auto grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"><X aria-hidden className="size-4" /></button>
+        : shortcut ? <kbd aria-hidden className="pointer-events-none absolute inset-y-0 inset-e-2.5 my-auto hidden h-5 items-center rounded border border-border bg-muted px-1.5 font-mono text-[10px] text-muted-foreground sm:inline-flex">/</kbd> : null}
     </div>
   );
 }
@@ -42,7 +42,7 @@ export function Segmented({ items, value, onChange, label, className }: { items:
         const on = i.id === value;
         return (
           <button key={i.id} ref={(el) => { refs.current[n] = el; }} type="button" role="radio" aria-checked={on} tabIndex={on ? 0 : -1} onClick={() => onChange(i.id)}
-            className={kcn("inline-flex min-h-8 items-center gap-2 rounded-lg px-3 text-sm transition-[background-color,box-shadow,color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", on ? "bg-card font-semibold text-foreground shadow-[var(--kx-shadow-1)]" : "text-muted-foreground hover:text-foreground")}>
+            className={kcn("inline-flex min-h-8 items-center gap-2 rounded-lg px-3 text-sm transition-[background-color,box-shadow,color] duration-150 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring", on ? "bg-card font-semibold text-foreground shadow-kx-1" : "text-muted-foreground hover:text-foreground")}>
             {i.label}
             {i.count != null ? <span className={kcn("min-w-5 rounded-full px-1.5 text-center text-xs font-semibold tabular-nums", i.tone === "bad" && i.count > 0 ? "bg-[hsl(var(--danger-text)/0.14)] text-[hsl(var(--danger-text))]" : i.tone === "warn" && i.count > 0 ? "bg-[hsl(var(--warning)/0.16)] text-[hsl(var(--warning))]" : on ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground")}>{i.count}</span> : null}
           </button>
@@ -69,7 +69,7 @@ export const priorityRank = (p?: string | null) => (p === "STAT" ? 0 : p === "UR
 export function BulkBar({ count, label, onClear, clearLabel, children }: { count: number; label: string; onClear: () => void; clearLabel: string; children: ReactNode }) {
   if (count === 0) return null;
   return (
-    <div role="region" aria-label={label} className="kx-bulk fixed inset-x-3 bottom-3 z-30 mx-auto flex max-w-2xl flex-wrap items-center gap-3 rounded-2xl border border-border bg-card/95 px-4 py-3 shadow-[var(--kx-shadow-4)] backdrop-blur">
+    <div role="region" aria-label={label} className="kx-bulk fixed inset-x-3 bottom-3 z-30 mx-auto flex max-w-2xl flex-wrap items-center gap-3 rounded-2xl border border-border bg-card/95 px-4 py-3 shadow-kx-4 backdrop-blur-sm">
       <span aria-live="polite" className="text-sm font-semibold tabular-nums">{label}</span>
       <div className="ms-auto flex flex-wrap items-center gap-2">{children}<button type="button" onClick={onClear} className="h-9 rounded-lg px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground">{clearLabel}</button></div>
     </div>
@@ -88,7 +88,7 @@ export function Meta({ label, children, className }: { label: ReactNode; childre
 /** Physical-label preview: white sticker with the Code 128 SVG from the API (always light, as it prints on paper). */
 export function LabelPreview({ label, className }: { label: { svg: string; accessionNumber: string; patientName: string; tests: string[]; specimenType: string; orderNumber?: string }; className?: string }) {
   return (
-    <figure className={kcn("w-full max-w-[19rem] rounded-lg border border-slate-300 bg-white p-3 text-slate-900 shadow-[var(--kx-shadow-2)]", className)} style={{ colorScheme: "light" }}>
+    <figure className={kcn("w-full max-w-76 rounded-lg border border-slate-300 bg-white p-3 text-slate-900 shadow-kx-2", className)} style={{ colorScheme: "light" }}>
       <div className="flex items-baseline justify-between gap-2"><div className="truncate text-sm font-bold" dir="auto">{label.patientName}</div><div className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label.specimenType}</div></div>
       <div className="mt-0.5 truncate text-[11px] text-slate-600" dir="auto">{label.tests.join(" · ")}</div>
       <div className="my-2 flex justify-center [&_svg]:h-14 [&_svg]:w-full" role="img" aria-label={label.accessionNumber} dangerouslySetInnerHTML={{ __html: label.svg }} />
@@ -118,7 +118,7 @@ export function PdfPreview({ path, title, filename, onDownload }: { path: string
   return (
     <div className="space-y-3">
       <iframe title={title} src={q.data} className="h-[68vh] w-full rounded-lg border border-border bg-white" />
-      <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs text-muted-foreground">{filename}</p><button type="button" onClick={onDownload} className="inline-flex h-9 items-center gap-2 rounded-lg border border-input bg-card px-3 text-sm font-medium shadow-[var(--kx-shadow-1)] hover:bg-accent"><Download aria-hidden className="size-4" />{t("ux.preview.download")}</button></div>
+      <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs text-muted-foreground">{filename}</p><button type="button" onClick={onDownload} className="inline-flex h-9 items-center gap-2 rounded-lg border border-input bg-card px-3 text-sm font-medium shadow-kx-1 hover:bg-accent"><Download aria-hidden className="size-4" />{t("ux.preview.download")}</button></div>
     </div>
   );
 }

@@ -79,7 +79,7 @@ export function OrdersPage() {
           <ul className="space-y-3 md:hidden">
             {rows.map((o: any) => (
               <li key={o.id}>
-                <Link to={`/orders/${o.id}`} className={kcn("block rounded-xl border border-border/80 bg-card p-3 shadow-[var(--kx-shadow-1)] active:translate-y-px", o.priority === "STAT" && "kx-stat-card")}>
+                <Link to={`/orders/${o.id}`} className={kcn("block rounded-xl border border-border/80 bg-card p-3 shadow-kx-1 active:translate-y-px", o.priority === "STAT" && "kx-stat-card")}>
                   <div className="flex items-start justify-between gap-2"><span className="font-mono text-sm font-semibold text-primary">{o.orderNumber}</span><StatusBadge value={o.status} /></div>
                   <div className="mt-1 text-sm font-medium" dir="auto">{o.patient.fullName}</div>
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><PriorityChip priority={o.priority} /><span>{t(`orders.sources.${o.source}`)}</span>{o.collectionType === "HOME" ? <Badge tone="pulse">{t("orders.home")}</Badge> : null}<span className="ms-auto tabular-nums">{age(o.createdAt)}</span></div>

@@ -81,7 +81,7 @@ export function BillingPage() {
                 </div>
                 <ul className="space-y-3 md:hidden">
                   {shown.map((i) => (
-                    <li key={i.id} className="rounded-xl border border-border/80 bg-card p-3 shadow-[var(--kx-shadow-1)]">
+                    <li key={i.id} className="rounded-xl border border-border/80 bg-card p-3 shadow-kx-1">
                       <div className="flex items-center justify-between gap-2"><span className="font-mono text-sm font-semibold">{i.number}</span><StatusBadge value={i.status} /></div>
                       <div className="mt-0.5 text-sm text-muted-foreground" dir="auto">{i.order?.patient.fullName ?? i.b2bAccount?.name}</div>
                       <dl className="mt-3 grid grid-cols-3 gap-2 text-xs"><div><dt className="text-muted-foreground">{t("bill.subtotal")}</dt><dd className="tabular-nums">{money(i.subtotal, cur, i18n.language)}</dd></div><div><dt className="text-muted-foreground">{t("bill.vat")} {i.vatRatePercent}%</dt><dd className="tabular-nums">{money(i.vatTotal, cur, i18n.language)}</dd></div><div><dt className="text-muted-foreground">{t("bill.total")}</dt><dd className="font-semibold tabular-nums">{money(i.total, cur, i18n.language)}</dd></div></dl>

@@ -48,7 +48,7 @@ export function StoragePage() {
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {(units.data ?? []).map((u) => {
               const pct = Math.round((u.occupied / u.capacity) * 100);
-              return <button key={u.id} type="button" onClick={() => setUnit(u.id)} className="rounded-xl border border-border bg-card p-4 text-start shadow-[var(--kx-shadow-1)] transition hover:border-primary">
+              return <button key={u.id} type="button" onClick={() => setUnit(u.id)} className="rounded-xl border border-border bg-card p-4 text-start shadow-kx-1 transition hover:border-primary">
                 <div className="mb-2 flex items-center justify-between"><span className="flex items-center gap-2 font-semibold"><Box aria-hidden className="size-4 text-primary" /><span dir="auto">{u.name}</span></span><Badge tone="info">{t(`sto.kinds.${u.kind}`)}</Badge></div>
                 <div className="mb-1 h-2 overflow-hidden rounded-full bg-muted"><div className={`h-full ${pct > 85 ? "bg-[hsl(var(--danger-text))]" : "bg-primary"}`} style={{ width: `${pct}%` }} /></div>
                 <div className="flex justify-between text-xs text-muted-foreground"><span className="tabular-nums">{u.occupied}/{u.capacity}</span><span>{u.tempMinC != null ? `${u.tempMinC}…${u.tempMaxC} °C` : ""}</span></div>

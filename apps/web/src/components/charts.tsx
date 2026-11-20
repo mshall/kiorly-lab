@@ -87,7 +87,7 @@ export function Donut({ data, label }: { data: { label: string; value: number }[
   return (
     <div className="flex flex-wrap items-center gap-5" role="img" aria-label={label}>
       <svg viewBox="0 0 120 120" className="size-32 shrink-0">{arcs}<text x={cx} y={cy + 4} textAnchor="middle" fontSize="13" fontWeight={700} fill="hsl(var(--foreground))">{fmt(total)}</text></svg>
-      <ul className="min-w-[10rem] flex-1 space-y-1 text-xs">
+      <ul className="min-w-40 flex-1 space-y-1 text-xs">
         {data.slice(0, 8).map((d, i) => <li key={d.label} className="flex items-center justify-between gap-3"><span className="inline-flex items-center gap-2"><span aria-hidden className="size-2.5 rounded-sm" style={{ background: SERIES[i % SERIES.length] }} /><span dir="auto">{d.label}</span></span><span className="tabular-nums text-muted-foreground">{fmt(d.value)} · {Math.round((d.value / total) * 100)}%</span></li>)}
       </ul>
     </div>

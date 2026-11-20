@@ -33,7 +33,7 @@ export function AccessioningPage() {
       <PageHeader title={t("spec.title")} sub={t("spec.sub")} />
       <Surface className="mb-4 p-4">
         <form className="flex flex-wrap items-end gap-3" onSubmit={(e) => { e.preventDefault(); if (scan) find.mutate(scan.trim()); }}>
-          <div className="min-w-[14rem] flex-1">
+          <div className="min-w-56 flex-1">
             <label className="mb-1.5 flex items-center gap-2 text-sm font-medium" htmlFor="scan"><ScanBarcode aria-hidden className="size-4 text-primary" />{t("spec.scanOpen")}</label>
             <Input id="scan" autoFocus value={scan} onChange={(e) => setScan(e.target.value)} placeholder="TL2611200001" autoComplete="off" spellCheck={false} className="h-12 font-mono text-base tracking-wider" />
           </div>

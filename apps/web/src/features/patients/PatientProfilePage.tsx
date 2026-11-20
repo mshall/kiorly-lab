@@ -65,7 +65,7 @@ export function PatientProfilePage() {
       {tab === "trends" && can("results.read") ? (
         trends.isLoading ? <Skeleton className="h-72" /> : !series.length ? <EmptyState title={t("pat.noTrends")} /> : (
           <div className="grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
-            <Surface className="max-h-[28rem] overflow-auto p-2">
+            <Surface className="max-h-112 overflow-auto p-2">
               <ul className="space-y-0.5">{series.map((s) => {
                 const on = s.analyte.id === cur?.analyte.id;
                 const d = s.stats.deltaPercent;

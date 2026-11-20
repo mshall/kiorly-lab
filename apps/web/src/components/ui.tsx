@@ -6,15 +6,15 @@ import { EmptyState } from "@/brand/ui-kit";
 import { PulseLine } from "@/brand/components";
 
 /** shadcn/ui-style primitives (hand-written, same token scheme as the Kiorly Clinical OS palette). */
-const button = cva("inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-[background-color,box-shadow,transform] duration-150 ease-[var(--kx-ease-standard)] active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50", {
+const button = cva("inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-[background-color,box-shadow,transform] duration-150 ease-(--kx-ease-standard) active:translate-y-px focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50", {
   variants: {
     variant: {
-      default: "bg-primary text-primary-foreground shadow-[var(--kx-shadow-1)] hover:bg-[var(--kx-primary-hover)]",
+      default: "bg-primary text-primary-foreground shadow-kx-1 hover:bg-(--kx-primary-hover)",
       secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-      outline: "border border-input bg-card shadow-[var(--kx-shadow-1)] hover:bg-accent",
+      outline: "border border-input bg-card shadow-kx-1 hover:bg-accent",
       ghost: "hover:bg-accent",
       destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 dark:bg-[#c92a2a] dark:hover:bg-[#b32424]",
-      pulse: "bg-primary text-primary-foreground shadow-[var(--kx-shadow-1)] hover:bg-[var(--kx-primary-hover)]",
+      pulse: "bg-primary text-primary-foreground shadow-kx-1 hover:bg-(--kx-primary-hover)",
     },
     size: { default: "h-10 px-4", sm: "h-9 px-3 text-xs", lg: "h-12 px-6 text-base", icon: "h-10 w-10" },
   },
@@ -24,7 +24,7 @@ export function Button({ className, variant, size, ...p }: ButtonHTMLAttributes<
   return <button type="button" className={cn(button({ variant, size }), className)} {...p} />;
 }
 
-const field = "w-full rounded-lg border border-input bg-card px-3 text-sm shadow-[var(--kx-shadow-1)] transition-[border-color,box-shadow] duration-150 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 aria-[invalid=true]:border-[hsl(var(--danger-text))]";
+const field = "w-full rounded-lg border border-input bg-card px-3 text-sm shadow-kx-1 transition-[border-color,box-shadow] duration-150 placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 aria-invalid:border-[hsl(var(--danger-text))]";
 export const Input = ({ className, ...p }: InputHTMLAttributes<HTMLInputElement>) => <input className={cn(field, "h-10", className)} {...p} />;
 export const Textarea = ({ className, ...p }: TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea className={cn(field, "py-2", className)} {...p} />;
 export const Select = ({ className, ...p }: SelectHTMLAttributes<HTMLSelectElement>) => <select className={cn(field, "h-10", className)} {...p} />;
@@ -42,7 +42,7 @@ export function Field({ label, children, hint, error, className }: { label: stri
   );
 }
 
-export const Card = ({ className, ...p }: React.HTMLAttributes<HTMLDivElement>) => <div className={cn("rounded-xl border border-border/80 bg-card p-4 shadow-[var(--kx-shadow-1)]", className)} {...p} />;
+export const Card = ({ className, ...p }: React.HTMLAttributes<HTMLDivElement>) => <div className={cn("rounded-xl border border-border/80 bg-card p-4 shadow-kx-1", className)} {...p} />;
 export const CardTitle = ({ className, ...p }: React.HTMLAttributes<HTMLHeadingElement>) => <h3 className={cn("mb-3 text-sm font-semibold", className)} {...p} />;
 
 const tones = {
@@ -84,8 +84,8 @@ export function Modal({ open, onClose, title, children, wide, xl }: { open: bool
   }, [open, onClose]);
   if (!open) return null;
   return (
-    <div className="kx-modal-backdrop fixed inset-0 z-50 flex items-end justify-center bg-[var(--kx-overlay)] backdrop-blur-[2px] p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={title} onClick={onClose}>
-      <div ref={box} tabIndex={-1} className={cn("kx-modal max-h-[92vh] w-full overflow-auto rounded-t-2xl bg-card p-5 shadow-[var(--kx-shadow-4)] focus:outline-none sm:rounded-2xl", xl ? "sm:max-w-5xl" : wide ? "sm:max-w-3xl" : "sm:max-w-lg")} onClick={(e) => e.stopPropagation()}>
+    <div className="kx-modal-backdrop fixed inset-0 z-50 flex items-end justify-center bg-(--kx-overlay) backdrop-blur-[2px] p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={title} onClick={onClose}>
+      <div ref={box} tabIndex={-1} className={cn("kx-modal max-h-[92vh] w-full overflow-auto rounded-t-2xl bg-card p-5 shadow-kx-4 focus:outline-hidden sm:rounded-2xl", xl ? "sm:max-w-5xl" : wide ? "sm:max-w-3xl" : "sm:max-w-lg")} onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">{title}</h2>
           <Button variant="ghost" size="icon" onClick={onClose} aria-label="close"><X className="h-4 w-4" /></Button>
@@ -110,7 +110,7 @@ export function Tabs({ tabs, value, onChange }: { tabs: { id: string; label: str
 
 export function Table({ head, children, className }: { head: ReactNode[]; children: ReactNode; className?: string }) {
   return (
-    <div tabIndex={0} role="region" aria-label={head.filter((h) => typeof h === "string" && h).slice(0, 2).join(" / ") || "table"} className={cn("kx-sticky-head kx-table-wrap overflow-auto rounded-xl border border-border/80 shadow-[var(--kx-shadow-1)]", className)}>
+    <div tabIndex={0} role="region" aria-label={head.filter((h) => typeof h === "string" && h).slice(0, 2).join(" / ") || "table"} className={cn("kx-sticky-head kx-table-wrap overflow-auto rounded-xl border border-border/80 shadow-kx-1", className)}>
       <table className="kx-table w-full text-sm">
         <thead className="bg-muted/60 text-xs uppercase tracking-wide text-muted-foreground rtl:normal-case rtl:tracking-normal">
           <tr>{head.map((h, i) => <th key={i} className="whitespace-nowrap px-3 py-2.5 text-start text-[11px] font-semibold">{h}</th>)}</tr>
@@ -136,8 +136,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastCtx.Provider value={push}>
       {children}
-      <div className="pointer-events-none fixed inset-x-0 bottom-4 z-[60] flex flex-col items-center gap-2 px-4" aria-live="polite">
-        {items.map((t) => <div key={t.id} className={cn("pointer-events-auto rounded-lg px-4 py-2.5 text-sm font-medium shadow-[var(--kx-shadow-3)]", tones[t.tone])}>{t.msg}</div>)}
+      <div className="pointer-events-none fixed inset-x-0 bottom-4 z-60 flex flex-col items-center gap-2 px-4" aria-live="polite">
+        {items.map((t) => <div key={t.id} className={cn("pointer-events-auto rounded-lg px-4 py-2.5 text-sm font-medium shadow-kx-3", tones[t.tone])}>{t.msg}</div>)}
       </div>
     </ToastCtx.Provider>
   );

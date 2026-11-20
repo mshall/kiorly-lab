@@ -90,16 +90,16 @@ export function SettingsPage() {
               <table className="kx-rbac w-full border-separate border-spacing-0 text-xs">
                 <thead>
                   <tr>
-                    <th scope="col" className="sticky start-0 top-0 z-20 min-w-48 border-b border-border bg-card px-3 py-2 text-start font-semibold">{t("set.permission")}</th>
+                    <th scope="col" className="sticky inset-s-0 top-0 z-20 min-w-48 border-b border-border bg-card px-3 py-2 text-start font-semibold">{t("set.permission")}</th>
                     {ROLES.map((r) => <th scope="col" key={r} className="sticky top-0 z-10 min-w-24 border-b border-border bg-card px-2 py-2 text-center font-semibold leading-tight">{t(`role.${r}`)}</th>)}
                   </tr>
                 </thead>
                 {Object.entries(groups).map(([g, perms]) => (
                   <tbody key={g}>
-                    <tr><th scope="colgroup" colSpan={ROLES.length + 1} className="sticky start-0 bg-muted/70 px-3 py-1.5 text-start text-[11px] font-semibold uppercase tracking-wide text-muted-foreground rtl:normal-case rtl:tracking-normal">{g}</th></tr>
+                    <tr><th scope="colgroup" colSpan={ROLES.length + 1} className="sticky inset-s-0 bg-muted/70 px-3 py-1.5 text-start text-[11px] font-semibold uppercase tracking-wide text-muted-foreground rtl:normal-case rtl:tracking-normal">{g}</th></tr>
                     {perms.map((perm) => (
                       <tr key={perm} className="hover:bg-muted/40">
-                        <th scope="row" className="sticky start-0 z-[1] border-b border-border/60 bg-card px-3 py-1.5 text-start font-mono font-normal"><bdi dir="ltr">{perm}</bdi></th>
+                        <th scope="row" className="sticky inset-s-0 z-1 border-b border-border/60 bg-card px-3 py-1.5 text-start font-mono font-normal"><bdi dir="ltr">{perm}</bdi></th>
                         {ROLES.map((r) => { const on = rbac.data.roles[r].includes(perm); return <td key={r} className="border-b border-border/60 px-2 py-1.5 text-center">{on ? <><Check aria-hidden className="mx-auto size-4 text-[hsl(var(--success))]" /><span className="sr-only">{t(`role.${r}`)}</span></> : <span aria-hidden className="text-border">·</span>}</td>; })}
                       </tr>
                     ))}
