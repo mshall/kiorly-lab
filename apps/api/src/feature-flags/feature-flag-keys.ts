@@ -23,3 +23,10 @@ export const isKnownFlagKey = (key: string): boolean => FLAG_KEYS.includes(key);
 
 /** Flags the web console needs state for. */
 export const FEATURE_FLAG_KEYS_FOR_UI: readonly string[] = FLAG_KEYS;
+
+/**
+ * Control-plane entitlement keys that are NOT (yet) in the shared flag catalogue of @kiorex/contracts (flags/catalogue.json), so they are kept out of
+ * FLAG_DEFINITIONS (a test pins that list to the contract). They are evaluated from the same Kiorex snapshot (global/market/org OFF) by
+ * FeatureFlagsService.evaluateEntitlement. TODO(contracts): add `mobile_staff_app` (class Module, no deps, not launch-locked) for each product.
+ */
+export const ENTITLEMENT_KEYS = ["mobile_staff_app"] as const;

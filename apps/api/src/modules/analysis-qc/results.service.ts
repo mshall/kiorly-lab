@@ -1,8 +1,9 @@
-import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException, Optional, UnprocessableEntityException } from "@nestjs/common";
 import type { LabSection, Prisma, Result, ResultSource } from "@prisma/client";
 import type { AuthUser } from "../../auth/auth.types";
 import { SIGNATORY_ROLES } from "../../auth/rbac";
 import { AuditService } from "../../audit/audit.service";
+import { MobilePushService } from "../../adapters/mobile-push.adapter";
 import { ageInDays } from "../../common/age";
 import { classifyResult, deltaPercent, isCriticalFlag } from "../../common/clinical-flags";
 import { D, type Db } from "../../common/db";
@@ -49,6 +50,7 @@ export class ResultsService {
     @Inject(CriticalService) private readonly critical: CriticalService,
     @Inject(OrderStatusService) private readonly orderStatus: OrderStatusService,
     @Inject(InventoryService) private readonly inventory: InventoryService,
+    @Optional() @Inject(MobilePushService) private readonly mobilePush?: MobilePushService,
   ) {}
 
   // ------------------------------------------------------------- entry
@@ -312,8 +314,20 @@ export class ResultsService {
       await tx.result.update({ where: { id }, data: { status: "TECH_VALIDATED", techValidatedBy: u.staffId, techValidatedAt: new Date() } });
       await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "result.tech_validate", entityType: "Result", entityId: id, meta: { deltaAcknowledged: Boolean(b.deltaAcknowledged) } }, tx);
       await this.afterChange(tx, r);
+      await this.notifyAwaitingValidation(tx, u.orgId, r.orderItemId);
       return tx.result.findUniqueOrThrow({ where: { id } });
     });
+  }
+
+  /** Kiorly Work (mock push): once every current result of the order is technically validated, tell the signatories it awaits sign-off. Informational, never throws. */
+  private async notifyAwaitingValidation(tx: Prisma.TransactionClient, orgId: string, orderItemId: string) {
+    try {
+      const item = await tx.orderItem.findUnique({ where: { id: orderItemId }, select: { orderId: true, order: { select: { orderNumber: true } } } });
+      if (!item) return;
+      const pending = await tx.result.count({ where: { orgId, status: "ENTERED", orderItem: { orderId: item.orderId } } });
+      if (pending > 0) return;
+      await this.mobilePush?.notifyRoles(orgId, ["AUTHORIZED_SIGNATORY", "LAB_DIRECTOR"], "RESULT_AWAITING_VALIDATION", { orderNumber: item.order.orderNumber ?? item.orderId }, { relatedType: "LabOrder", relatedId: item.orderId, deepLink: `kiorlywork://lab/validation/${item.orderId}` }, tx);
+    } catch { /* informational */ }
   }
 
   /** KLQC04 (medical validation): only an authorised signatory with a recorded licence number. */

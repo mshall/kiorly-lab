@@ -2562,3 +2562,68 @@ model Expense {
 
   @@index([orgId, date])
 }
+
+// ------------------------------------------------- Kiorly Work (mobile) ----
+
+enum MobileDeviceStatus {
+  ACTIVE
+  REVOKED
+}
+
+/// Kiorly Work staff app: one row per (staff, device). Device-bound token is stored hashed (sha256), never in clear.
+model MobileDevice {
+  id           String             @id @default(cuid())
+  orgId        String
+  staffId      String
+  /// Client-generated UUID, stable per app install.
+  deviceId     String
+  platform     String
+  name         String
+  appVersion   String?
+  tokenHash    String
+  status       MobileDeviceStatus @default(ACTIVE)
+  pushToken    String?
+  pushProvider String?
+  lastSeenAt   DateTime?
+  revokedAt    DateTime?
+  revokedBy    String?
+  createdAt    DateTime           @default(now())
+
+  @@unique([staffId, deviceId])
+  @@index([orgId, status])
+}
+
+/// Mock push sender output = the staff in-app inbox (MODE=mock). Titles/bodies are bilingual and carry no raw result values.
+model MobilePush {
+  id          String    @id @default(cuid())
+  orgId       String
+  staffId     String
+  /// GENERAL | SAFETY | CLINICAL | OPS
+  kind        String
+  templateId  String
+  title       String
+  titleAr     String
+  body        String
+  bodyAr      String
+  data        Json      @default("{}")
+  status      String    @default("DELIVERED")
+  provider    String    @default("mock")
+  createdAt   DateTime  @default(now())
+  deliveredAt DateTime?
+  readAt      DateTime?
+
+  @@index([staffId, createdAt])
+  @@index([orgId, staffId, readAt])
+}
+
+/// Acknowledgement of derived safety alerts (QC block, TAT breach, home-collection safety). Critical-value alerts ack on CriticalAlert itself.
+model MobileAlertAck {
+  id       String   @id @default(cuid())
+  orgId    String
+  alertKey String
+  ackedBy  String
+  note     String?
+  ackedAt  DateTime @default(now())
+
+  @@unique([orgId, alertKey])
+}

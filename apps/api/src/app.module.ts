@@ -31,19 +31,24 @@ import { ReceptionModule } from "./modules/reception/reception.module";
 import { RegistryModule } from "./modules/registry/registry.module";
 import { ReleaseModule } from "./modules/release/release.module";
 import { SpecimensModule } from "./modules/specimens/specimens.module";
+import { MobileGuard } from "./modules/mobile/mobile.guard";
+import { MobileModule } from "./modules/mobile/mobile.module";
+import { MobileAlertsModule } from "./modules/mobile-alerts/mobile-alerts.module";
 import { OutboxModule } from "./outbox/outbox.module";
 import { PrismaModule } from "./prisma/prisma.module";
 
 @Module({
   imports: [
     PrismaModule, AuthModule, AuditModule, OutboxModule, AdaptersModule, KernelModule, CoreModule, FeatureFlagsModule, HealthModule,
-    AdminModule, CatalogueModule, OrdersModule, SpecimensModule, AnalysisQcModule, AnalyzersModule, CriticalModule, FieldSafetyModule, ReleaseModule, BusinessModule, RegistryModule, ReceptionModule, PreanalyticsModule, MicrobiologyModule, HistopathologyModule, QualityModule, InventoryModule, AnalyticsModule, IntegrationModule,
+    AdminModule, CatalogueModule, OrdersModule, SpecimensModule, AnalysisQcModule, AnalyzersModule, CriticalModule, FieldSafetyModule, ReleaseModule, BusinessModule, RegistryModule, ReceptionModule, PreanalyticsModule, MicrobiologyModule, HistopathologyModule, QualityModule, InventoryModule, AnalyticsModule, MobileAlertsModule, MobileModule, IntegrationModule,
   ],
   providers: [
     // order matters: authenticate first, then flag, then plan entitlement
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: RequiresFlagGuard },
     { provide: APP_GUARD, useClass: EntitlementGuard },
+    // Kiorly Work: device binding (401 DEVICE_REVOKED) + mobile_staff_app entitlement (403 FEATURE_DISABLED)
+    { provide: APP_GUARD, useClass: MobileGuard },
     { provide: APP_INTERCEPTOR, useClass: ZodInterceptor },
     { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
   ],

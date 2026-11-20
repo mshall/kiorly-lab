@@ -42,3 +42,12 @@ Synthetic, guarded like the other seeds. Idempotent: skipped when the marker sup
 - **Quality**: 4 calibrations (one failed -> NCR), 6 EQA results (one unacceptable -> NCR), maintenance schedules (one overdue) and logs, 4 NCRs in different states with CAPA, 6 SOP/policy documents (approved with revisions, in review, draft) with acknowledgements.
 - **Reception**: 8 appointments tomorrow, queue tickets today (routine + STAT lanes, one served, one called).
 Logins: `supervisor@demo-lab.test`, `finance@demo-lab.test` in addition to the base roles. Order dates in the history are back-shifted with a session-local trigger bypass (needs a superuser role, which the local `postgres` is); on a restricted DB role the seed still works and the dates stay current.
+
+## Kiorly Work mobile (staff app) — `npm run db:seed:mobile -w api` (added 20 Nov 2026)
+Run after `db:seed` (+ `db:seed:demo`). Idempotent, guarded like the other demo seeds. Dev-login: `POST /api/v1/auth/dev-login {"orgSlug","email"}`; every tenant has one login per role: `owner|director|signatory|tech|phleb|reception|manager|supervisor|finance` @ `<slug>.test`.
+| Org slug | Plan (edition) | Purpose |
+|---|---|---|
+| `demo-lab` | PRO | full app: open critical alerts (incl. escalated), pathologist validation queue, an open QC block, orders in every state, inbox messages |
+| `chain-lab` | ENTERPRISE (CHAIN) | "Delta Diagnostics Group": a pending phlebotomy order, in-lab specimen, awaiting-sign-off order, one open critical value |
+| `basic-lab` | BASIC (LITE) | upgrade screen + safety-alert inbox only (has an open critical value to acknowledge) |
+Examples: `signatory@demo-lab.test` (sign-off), `phleb@demo-lab.test` (collection round/scan), `tech@demo-lab.test`, `director@basic-lab.test` (BASIC: bootstrap `entitlement.enabled=false`, `/mobile/alerts` works, everything else with `X-Kiorly-Client: kiorly-work` -> 403 FEATURE_DISABLED). Details: `Docs/MOBILE.md`.

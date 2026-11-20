@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit, Optional } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
-import { FLAG_DEFINITIONS, isKnownFlagKey } from "./feature-flag-keys";
+import { ENTITLEMENT_KEYS, FLAG_DEFINITIONS, isKnownFlagKey } from "./feature-flag-keys";
 import { signControlPlaneRequest, verifySnapshot } from "@kiorex/contracts";
 import { type FlagSnapshot, type SnapshotFlag } from "./flag-snapshot";
 import { SafetyControlNotAFlagError, isSafetyControlKey } from "./safety-controls";
@@ -121,6 +121,19 @@ export class FeatureFlagsService implements OnModuleInit, OnModuleDestroy {
     if (launchLocked && !(row?.gateSatisfied ?? false)) return { key, enabled: false, scope: "launch-locked" };
     if (row?.expiresAt && Date.parse(row.expiresAt) < Date.now()) return { key, enabled: true };
     const v = row?.values;
+    if (v?.global === "OFF") return { key, enabled: false, scope: "global" };
+    if (ctx.market && v?.markets?.[ctx.market] === "OFF") return { key, enabled: false, scope: "market" };
+    if (ctx.orgId && v?.orgs?.[ctx.orgId] === "OFF") return { key, enabled: false, scope: "org" };
+    return { key, enabled: true };
+  }
+
+  /**
+   * Entitlement keys outside the shared catalogue (see ENTITLEMENT_KEYS): same snapshot layers (global/market/org), default ON; the plan default
+   * is applied by the caller. Never a safety control (ADR-025).
+   */
+  evaluateEntitlement(key: (typeof ENTITLEMENT_KEYS)[number], ctx: FlagContext = {}): FlagDecision {
+    if (isSafetyControlKey(key) || !ENTITLEMENT_KEYS.includes(key)) throw new Error(`"${key}" is not an entitlement key`);
+    const v = this.snapshot?.flags.find((f) => f.key === key)?.values;
     if (v?.global === "OFF") return { key, enabled: false, scope: "global" };
     if (ctx.market && v?.markets?.[ctx.market] === "OFF") return { key, enabled: false, scope: "market" };
     if (ctx.orgId && v?.orgs?.[ctx.orgId] === "OFF") return { key, enabled: false, scope: "org" };

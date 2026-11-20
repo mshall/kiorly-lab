@@ -1,8 +1,9 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 import type { NotificationChannel, NotificationPurpose } from "@prisma/client";
 import { appConfig } from "../config/app-config";
 import { PrismaService } from "../prisma/prisma.service";
 import type { Db } from "../common/db";
+import { MobilePushService } from "./mobile-push.adapter";
 
 export interface SendInput {
   orgId: string;
@@ -28,7 +29,10 @@ const FORBIDDEN_PARAM_KEYS = /value|result|analyte|diagnosis|mmol|mg\/dl|g\/dl/i
  */
 @Injectable()
 export class MessagingAdapter {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Optional() @Inject(MobilePushService) private readonly mobilePush?: MobilePushService,
+  ) {}
 
   async send(input: SendInput, db: Db = this.prisma): Promise<{ id: string; status: "SENT" | "FAILED" }> {
     for (const [k, v] of Object.entries(input.params ?? {})) {
@@ -57,6 +61,8 @@ export class MessagingAdapter {
         relatedId: input.relatedId,
       },
     });
+    // Kiorly Work: PUSH-channel notifications to staff also land in the app inbox (mock push).
+    if (input.channel === "PUSH" && !fail) await this.mobilePush?.mirror({ orgId: input.orgId, recipientRef: input.recipientRef, purpose: input.purpose, params: input.params, relatedType: input.relatedType, relatedId: input.relatedId }, db);
     return { id: row.id, status: fail ? "FAILED" : "SENT" };
   }
 }
