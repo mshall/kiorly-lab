@@ -18,7 +18,7 @@ export function AnalyticsPage() {
   const { me } = useAuth();
   const ar = i18n.language === "ar";
   const [kind, setKind] = useState("volume-by-day");
-  const [from, setFrom] = useState(new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10));
+  const [from, setFrom] = useState(() => new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10));
   const [to, setTo] = useState(today());
   const [labId, setLabId] = useState("");
   const list = useQuery({ queryKey: ["analytics-list"], queryFn: () => api<any[]>("/analytics/reports") });

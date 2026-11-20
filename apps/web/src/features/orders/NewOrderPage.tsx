@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -41,7 +41,8 @@ export function NewOrderPage() {
   const referrers = useQuery({ queryKey: ["referrers-pick"], queryFn: () => api<any[]>("/referrers?active=true"), enabled: can("referrers.read") });
   const icd = useQuery({ queryKey: ["icd", icdQ], queryFn: () => api<any[]>(`/icd/search?q=${encodeURIComponent(icdQ)}`), enabled: icdQ.length >= 1 });
   const preset = useQuery({ queryKey: ["patient", sp.get("patientId")], queryFn: () => api<any>(`/patients/${sp.get("patientId")}`), enabled: Boolean(sp.get("patientId")) && !existing });
-  useEffect(() => { if (preset.data && !existing) setExisting(preset.data); }, [preset.data, existing]);
+  // Preselected patient arrived: adopt it (state adjusted during render, no effect needed).
+  if (preset.data && !existing) setExisting(preset.data);
   const packages = useQuery({ queryKey: ["packages"], queryFn: () => api<any[]>("/catalogue/packages") });
   const found = useQuery({ queryKey: ["patient-search", search], queryFn: () => api<any[]>(`/patients?search=${encodeURIComponent(search)}&limit=5`), enabled: search.length >= 3 });
   const homeOk = flagOn("lab.home_collection") && (me?.capabilities.includes("home_collection") ?? false);

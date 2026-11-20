@@ -18,7 +18,7 @@ export function ReceptionPage() {
   const qc = useQueryClient();
   const toast = useToast();
   const [tab, setTab] = useState("queue");
-  const [date, setDate] = useState(new Date(Date.now() + 86_400_000).toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => new Date(Date.now() + 86_400_000).toISOString().slice(0, 10));
   const [counter, setCounter] = useState("1");
   const [tk, setTk] = useState({ patientName: "", priority: "ROUTINE" });
   const [book, setBook] = useState<any>(null);

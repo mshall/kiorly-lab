@@ -9,7 +9,7 @@ import { ErrorNote, FlagBadge, PageHeader, StatusBadge } from "@/components/comm
 
 function Countdown({ to }: { to: string }) {
   const { t } = useTranslation();
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const i = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(i); }, []);
   const ms = new Date(to).getTime() - now;
   const m = Math.floor(Math.abs(ms) / 60000);

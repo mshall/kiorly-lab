@@ -66,7 +66,7 @@ export function PhlebApp() {
   const [unsafe, setUnsafe] = useState<any>(null);
   const [reason, setReason] = useState<string>(UNSAFE_REASONS[0]);
   const [safetyMsg, setSafetyMsg] = useState<{ tone: "ok" | "bad"; text: string } | null>(null);
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
   const fileRef = useRef<HTMLInputElement>(null);
 
   const route = useQuery({
@@ -85,7 +85,7 @@ export function PhlebApp() {
     refetchInterval: 60_000,
   });
 
-  const refreshQueue = useCallback(async () => setQueue(await listQueue()), []);
+  const refreshQueue = useCallback(() => listQueue().then(setQueue), []);
   const flush = useCallback(async () => {
     if (!navigator.onLine) return;
     const r = await flushQueue(sendQueued);

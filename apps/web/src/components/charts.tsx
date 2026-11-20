@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useId, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 /** Brand chart palette (CSS vars so charts follow light/dark). */
@@ -74,15 +74,16 @@ export function Donut({ data, label }: { data: { label: string; value: number }[
   const total = data.reduce((a, d) => a + d.value, 0) || 1;
   const R = 52, r = 32, cx = 60, cy = 60;
   let a0 = -Math.PI / 2;
-  const arcs = data.slice(0, 8).map((d, i) => {
+  const arcs: ReactNode[] = [];
+  for (const [i, d] of data.slice(0, 8).entries()) {
     const a1 = a0 + (d.value / total) * Math.PI * 2;
     const large = a1 - a0 > Math.PI ? 1 : 0;
     const p = (rad: number, a: number) => `${cx + rad * Math.cos(a)},${cy + rad * Math.sin(a)}`;
     const full = d.value / total > 0.999;
     const path = full ? `M${cx - R},${cy} a${R},${R} 0 1,0 ${2 * R},0 a${R},${R} 0 1,0 ${-2 * R},0 M${cx - r},${cy} a${r},${r} 0 1,1 ${2 * r},0 a${r},${r} 0 1,1 ${-2 * r},0` : `M${p(R, a0)} A${R},${R} 0 ${large} 1 ${p(R, a1)} L${p(r, a1)} A${r},${r} 0 ${large} 0 ${p(r, a0)} Z`;
     a0 = a1;
-    return <path key={i} d={path} fill={SERIES[i % SERIES.length]} fillRule="evenodd" stroke={C.card} strokeWidth={1.5} />;
-  });
+    arcs.push(<path key={i} d={path} fill={SERIES[i % SERIES.length]} fillRule="evenodd" stroke={C.card} strokeWidth={1.5} />);
+  }
   return (
     <div className="flex flex-wrap items-center gap-5" role="img" aria-label={label}>
       <svg viewBox="0 0 120 120" className="size-32 shrink-0">{arcs}<text x={cx} y={cy + 4} textAnchor="middle" fontSize="13" fontWeight={700} fill="hsl(var(--foreground))">{fmt(total)}</text></svg>

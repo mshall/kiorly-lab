@@ -21,7 +21,7 @@ export function FinancePage() {
   const qc = useQueryClient();
   const toast = useToast();
   const [tab, setTab] = useState("summary");
-  const [from, setFrom] = useState(new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10));
+  const [from, setFrom] = useState(() => new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10));
   const [to, setTo] = useState(today());
   const [exp, setExp] = useState<any>(null);
   const [acc, setAcc] = useState<any>(null);

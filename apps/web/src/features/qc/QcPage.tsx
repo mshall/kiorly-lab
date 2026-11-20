@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "@/lib/api";
@@ -33,7 +33,9 @@ export function QcPage() {
   const clearRuns = useQuery({ queryKey: ["clear-runs", clear?.id], queryFn: () => api<any[]>(`/qc/runs?instrumentId=${clear.instrumentId}&limit=30`), enabled: Boolean(clear) });
   const m = materials.data?.find((x) => x.id === mat);
   const [last, setLast] = useState<any>(null);
-  useEffect(() => setLast(null), [inst, mat]);
+  const [lastKey, setLastKey] = useState(`${inst}|${mat}`);
+  // Instrument/material changed: drop the previous run summary (state adjusted during render, no effect needed).
+  if (lastKey !== `${inst}|${mat}`) { setLastKey(`${inst}|${mat}`); setLast(null); }
   const submit = useMutation({ mutationFn: () => api<any>("/qc/runs", { body: { instrumentId: inst, materialId: mat, value: Number(value) } }), onSuccess: (r) => { setLast(r); setValue(""); void qc.invalidateQueries(); toast(t(`qc.result.${r.run.status}`), r.run.status === "PASS" ? "ok" : r.run.status === "WARNING" ? "warn" : "crit"); } });
   const analyzersOn = flagOn("lab.analyzer_interfaces") && (me?.capabilities.includes("analyzer_interfaces") ?? false);
   const sim = useMutation({ mutationFn: (z: number) => api<any>("/analyzers/simulate", { body: { instrumentId: inst, qc: { materialId: mat, z } } }), onSuccess: () => void qc.invalidateQueries() });

@@ -1,4 +1,4 @@
-import { useDeferredValue, useState } from "react";
+import { useDeferredValue, useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -39,7 +39,9 @@ export function OrdersPage() {
   const rows: any[] = q.data?.rows ?? [];
   const from = total ? page * PAGE + 1 : 0;
   const to = Math.min(total, page * PAGE + rows.length);
-  const age = (v: string) => { const m = Math.max(0, Math.round((Date.now() - new Date(v).getTime()) / 60000)); return m < 60 ? t("ux.age.min", { n: m }) : m < 1440 ? t("ux.age.hour", { n: Math.floor(m / 60) }) : t("ux.age.day", { n: Math.floor(m / 1440) }); };
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => { const i = setInterval(() => setNowMs(Date.now()), 30_000); return () => clearInterval(i); }, []);
+  const age = (v: string) => { const m = Math.max(0, Math.round((nowMs - new Date(v).getTime()) / 60000)); return m < 60 ? t("ux.age.min", { n: m }) : m < 1440 ? t("ux.age.hour", { n: Math.floor(m / 60) }) : t("ux.age.day", { n: Math.floor(m / 1440) }); };
   return (
     <>
       <PageHeader title={t("orders.title")} sub={t("orders.sub")} actions={can("orders.create") && flagOn("lab.module") ? <Link to="/orders/new"><Button><Plus aria-hidden className="size-4" />{t("orders.new")}</Button></Link> : null} />
