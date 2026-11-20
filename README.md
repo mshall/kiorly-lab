@@ -240,7 +240,7 @@ Flags `lab.module`, `lab.analyzer_interfaces`, `lab.home_collection`, `lab.kiore
 
 | Layer | Version |
 |---|---|
-| Runtime | Node.js 26 LTS (`.nvmrc`), npm 11+, Lambda `nodejs26.x` |
+| Runtime | Node.js 26 LTS (`.nvmrc`), npm 11+, Lambda `nodejs24.x` |
 | Language | TypeScript 6.0 |
 | API | NestJS 12, `@nestjs/swagger` 12, Express 5, class-validator 0.15, jose 6, pdfkit 0.21 |
 | Data | Prisma 7 (`prisma-client` generator, `@prisma/adapter-pg`), PostgreSQL 16 |
