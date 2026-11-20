@@ -18,6 +18,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { STARTER_ANALYTES } from "../modules/admin/starter-catalogue";
 import { seal } from "../common/secret-box";
 import { PARTNER_DEV_DEFAULTS } from "@kiorex/contracts";
+import { seedLis } from "./seed-lis";
 
 /**
  * SYNTHETIC demo data (no real patients, labs or analyzers). Idempotent: skips when the demo tenant exists.
@@ -28,6 +29,7 @@ const SLUG = "demo-lab";
 const ROLES: [StaffRole, string, string, string | null][] = [
   ["OWNER", "owner", "Layla Owner", null], ["LAB_DIRECTOR", "director", "Dr. Karim Director", "DEMO-LIC-DIR-001"], ["AUTHORIZED_SIGNATORY", "signatory", "Dr. Salma Signatory", "DEMO-LIC-SIG-002"],
   ["TECHNOLOGIST", "tech", "Omar Technologist", null], ["PHLEBOTOMIST", "phleb", "Nour Phlebotomist", null], ["RECEPTION", "reception", "Mona Reception", null], ["BRANCH_MANAGER", "manager", "Hassan Manager", null],
+  ["SUPERVISOR", "supervisor", "Rania Supervisor", null], ["FINANCE", "finance", "Fady Finance", null],
 ];
 
 function rng(seed: number) {
@@ -176,8 +178,9 @@ async function main() {
   const cl = await admin.createClient(users.OWNER, "KIORLY_CLINIC");
   await prisma.integrationClient.update({ where: { id: cl.id }, data: { key: "kl_dev_clinic", secretEnc: seal("dev_clinic_secret_change_me") } });
 
+  await seedLis(app, tenant);
   console.log(`seeded demo tenant "${SLUG}" (org ${tenant.id}).`);
-  console.log(`dev login: POST /api/v1/auth/dev-login {"orgSlug":"${SLUG}","email":"<role>@${SLUG}.test"} with owner|director|signatory|tech|phleb|reception|manager`);
+  console.log(`dev login: POST /api/v1/auth/dev-login {"orgSlug":"${SLUG}","email":"<role>@${SLUG}.test"} with owner|director|signatory|tech|phleb|reception|manager|supervisor|finance`);
   console.log("integration dev clients: kl_dev_kiorex / dev_kiorex_secret_change_me, kl_dev_clinic / dev_clinic_secret_change_me, kl_dev_nurse / dev_nurse_secret_change_me (KIORLY_NURSE, relayed by Kiorex; local only)");
   await app.close();
 }
