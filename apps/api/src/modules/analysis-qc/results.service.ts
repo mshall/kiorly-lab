@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
-import type { Prisma, Result, ResultSource } from "@prisma/client";
+import type { LabSection, Prisma, Result, ResultSource } from "@prisma/client";
 import type { AuthUser } from "../../auth/auth.types";
 import { SIGNATORY_ROLES } from "../../auth/rbac";
 import { AuditService } from "../../audit/audit.service";
@@ -12,6 +12,7 @@ import { CatalogueService } from "../catalogue/catalogue.service";
 import { CriticalService } from "../critical/critical.service";
 import { ANALYZABLE } from "../specimens/specimen-state";
 import { qcBlockers } from "./qc-gate";
+import { evalFormula, formulaInputs } from "./formula";
 
 export interface EnterInput {
   orderItemId: string;
@@ -20,14 +21,20 @@ export interface EnterInput {
   value?: number;
   valueText?: string;
   unit?: string;
+  /** Measured value is multiplied by this factor (dilution); the raw value is kept. */
+  dilutionFactor?: number;
 }
 
-type PersistInput = EnterInput & { orgId: string; actor: string; source: ResultSource; analyzerMessageId?: string; supersedes?: string; correctionReason?: string };
+type PersistInput = EnterInput & {
+  orgId: string; actor: string; source: ResultSource; analyzerMessageId?: string; supersedes?: string; correctionReason?: string;
+  /** Calculated results inherit the QC run and instrument of their inputs. */
+  qcRunId?: string | null; derivedFromIds?: string[];
+};
 
 /** Decimal columns -> JSON numbers for API responses. */
-export function normalizeResult<T extends { valueNumeric?: unknown; refLow?: unknown; refHigh?: unknown; deltaPercent?: unknown }>(r: T): T {
+export function normalizeResult<T extends { valueNumeric?: unknown; refLow?: unknown; refHigh?: unknown; deltaPercent?: unknown; rawValue?: unknown; dilutionFactor?: unknown }>(r: T): T {
   const n = (v: unknown) => (v == null ? null : Number(String(v)));
-  return { ...r, valueNumeric: n(r.valueNumeric), refLow: n(r.refLow), refHigh: n(r.refHigh), deltaPercent: n(r.deltaPercent) };
+  return { ...r, valueNumeric: n(r.valueNumeric), refLow: n(r.refLow), refHigh: n(r.refHigh), deltaPercent: n(r.deltaPercent), rawValue: n(r.rawValue), dilutionFactor: n(r.dilutionFactor) };
 }
 
 const CURRENT = { status: { notIn: ["CORRECTED", "REJECTED"] as ("CORRECTED" | "REJECTED")[] } };
@@ -65,6 +72,7 @@ export class ResultsService {
   private async persistIn(tx: Prisma.TransactionClient, i: PersistInput): Promise<Result> {
     if (i.value == null && !i.valueText) throw new BadRequestException({ code: "VALUE_REQUIRED" });
     if (i.value != null && !Number.isFinite(i.value)) throw new BadRequestException({ code: "VALUE_INVALID" });
+    if (i.dilutionFactor != null && !(i.dilutionFactor > 0)) throw new BadRequestException({ code: "DILUTION_INVALID" });
     {
       const item = await tx.orderItem.findFirst({ where: { id: i.orderItemId, order: { orgId: i.orgId } }, include: { order: { include: { patient: true } }, test: { include: { analytes: true } } } });
       if (!item) throw new NotFoundException({ code: "ORDER_ITEM_NOT_FOUND" });
@@ -79,14 +87,28 @@ export class ResultsService {
       }
       const analyte = await tx.analyte.findUniqueOrThrow({ where: { id: i.analyteId } });
 
+      // semi-quantitative / choice / text results: the value must come from the allowed scale; flag from the normal set
+      let textFlag: "NORMAL" | "ABNORMAL" | null = null;
+      if (analyte.valueType === "CHOICE" || analyte.valueType === "SEMI_QUANT") {
+        if (!i.valueText || !analyte.allowedValues.includes(i.valueText)) throw new UnprocessableEntityException({ code: "VALUE_NOT_ALLOWED", allowed: analyte.allowedValues });
+        if (i.value != null) throw new BadRequestException({ code: "TEXT_VALUE_ONLY" });
+      }
+      if (analyte.valueType !== "NUMERIC" && analyte.normalValues.length && i.valueText) textFlag = analyte.normalValues.includes(i.valueText) ? "NORMAL" : "ABNORMAL";
+
+      // rerun / dilution: a numeric entry for a pending rerun links back to the rejected first run; the dilution factor scales the measured value
+      const rerun = await tx.rerunRequest.findFirst({ where: { orderItemId: item.id, analyteId: i.analyteId, status: "OPEN" }, orderBy: { createdAt: "desc" } });
+      const factor = i.dilutionFactor ?? (rerun?.dilutionFactor ? D(rerun.dilutionFactor) : null);
+      const rawValue = i.value != null && factor != null && factor !== 1 ? i.value : null;
+      if (rawValue != null) i = { ...i, value: Math.round(rawValue * factor! * 1e5) / 1e5 };
+
       // reference interval + critical rule + flag
       const at = new Date();
       const patient = item.order.patient;
-      const interval = await this.catalogue.resolveInterval(tx, i.orgId, i.analyteId, patient.sex, ageInDays(patient.dateOfBirth, at), at);
+      const interval = await this.catalogue.resolveInterval(tx, i.orgId, i.analyteId, patient.sex, ageInDays(patient.dateOfBirth, at), at, patient.conditions);
       const rule = await tx.criticalRule.findFirst({ where: { orgId: i.orgId, analyteId: i.analyteId, active: true } });
       const low = interval?.low == null ? null : D(interval.low);
       const high = interval?.high == null ? null : D(interval.high);
-      const flag = i.value != null ? classifyResult(i.value, { low, high }, rule ? { criticalLow: rule.criticalLow == null ? null : D(rule.criticalLow), criticalHigh: rule.criticalHigh == null ? null : D(rule.criticalHigh) } : null) : "NORMAL";
+      const flag = i.value != null ? classifyResult(i.value, { low, high }, rule ? { criticalLow: rule.criticalLow == null ? null : D(rule.criticalLow), criticalHigh: rule.criticalHigh == null ? null : D(rule.criticalHigh) } : null) : (textFlag ?? "NORMAL");
 
       // delta check vs the patient's prior validated/released result
       let dPct: number | null = null;
@@ -96,13 +118,16 @@ export class ResultsService {
           where: { orgId: i.orgId, analyteId: i.analyteId, valueNumeric: { not: null }, status: { in: ["MEDICAL_VALIDATED", "RELEASED"] }, orderItem: { order: { patientId: item.order.patientId, id: { not: item.orderId } } } },
           orderBy: { enteredAt: "desc" },
         });
-        dPct = deltaPercent(i.value, prior?.valueNumeric == null ? null : D(prior.valueNumeric));
         const avr = await tx.autoVerificationRule.findUnique({ where: { orgId_analyteId: { orgId: i.orgId, analyteId: i.analyteId } } });
+        // the look-back window limits how old a prior may be to count for the delta check
+        const priorUsed = prior && avr?.deltaWindowDays != null && at.getTime() - prior.enteredAt.getTime() > avr.deltaWindowDays * 86_400_000 ? null : prior;
+        dPct = deltaPercent(i.value, priorUsed?.valueNumeric == null ? null : D(priorUsed.valueNumeric));
         if (dPct != null && avr?.maxDeltaPercent != null && Math.abs(dPct) > D(avr.maxDeltaPercent)) deltaFailed = true;
+        if (priorUsed?.valueNumeric != null && avr?.maxDeltaAbsolute != null && Math.abs(i.value - D(priorUsed.valueNumeric)) > D(avr.maxDeltaAbsolute)) deltaFailed = true;
       }
 
       // covering QC run: the latest run for this instrument/analyte (any level)
-      const qc = await tx.qcRun.findFirst({ where: { instrumentId: i.instrumentId, material: { analyteId: i.analyteId } }, orderBy: { runAt: "desc" } });
+      const qc = i.qcRunId !== undefined ? (i.qcRunId ? await tx.qcRun.findUnique({ where: { id: i.qcRunId } }) : null) : await tx.qcRun.findFirst({ where: { instrumentId: i.instrumentId, material: { analyteId: i.analyteId } }, orderBy: { runAt: "desc" } });
 
       const row = await tx.result.create({
         data: {
@@ -110,15 +135,129 @@ export class ResultsService {
           valueNumeric: i.value ?? null, valueText: i.valueText ?? null, unit: i.unit ?? analyte.unit, flag, referenceIntervalId: interval?.id ?? null,
           refLow: low, refHigh: high, deltaPercent: dPct, deltaCheckFailed: deltaFailed, enteredBy: i.actor, analyzerMessageId: i.analyzerMessageId,
           supersedesResultId: i.supersedes, correctionReason: i.correctionReason,
+          rawValue, dilutionFactor: rawValue != null ? factor : null, derivedFromIds: i.derivedFromIds ?? [], rerunOfId: rerun?.originalResultId ?? null,
         },
       });
+      if (rerun) await tx.rerunRequest.update({ where: { id: rerun.id }, data: { status: "DONE", newResultId: row.id, doneAt: new Date() } });
       await this.audit.record({ orgId: i.orgId, actorId: i.actor, action: "result.enter", entityType: "Result", entityId: row.id, meta: { source: i.source, flag, qcRunId: qc?.id ?? null } }, tx);
       if (isCriticalFlag(flag)) await this.critical.raise(tx, row, item.order);
       await this.autoVerify(tx, row);
+      if (i.source !== "CALCULATED") await this.recomputeDerived(tx, item.orderId, i.actor);
       await this.orderStatus.refreshItem(tx, item.id);
       await this.orderStatus.refreshOrder(tx, item.orderId);
       return tx.result.findUniqueOrThrow({ where: { id: row.id } });
     }
+  }
+
+  /** Structured (microbiology / histopathology) report result: no dual control, still needs processing specimen, QC cover and full validation. */
+  async enterStructured(u: Pick<AuthUser, "orgId" | "staffId">, tx: Prisma.TransactionClient, b: { orderItemId: string; instrumentId: string; analyteId: string; valueText: string; flag?: "NORMAL" | "ABNORMAL"; critical?: boolean }) {
+    const row = await this.persistIn(tx, { orgId: u.orgId, actor: u.staffId, source: "STRUCTURED", orderItemId: b.orderItemId, analyteId: b.analyteId, instrumentId: b.instrumentId, valueText: b.valueText });
+    if (b.critical) {
+      // e.g. a positive blood culture: a critical value with the same acknowledgement + escalation as any other (KLCRIT01)
+      const r2 = await tx.result.update({ where: { id: row.id }, data: { flag: "CRITICAL_HIGH" } });
+      const item = await tx.orderItem.findUniqueOrThrow({ where: { id: b.orderItemId }, include: { order: true } });
+      await this.critical.raise(tx, r2, item.order);
+      return r2;
+    }
+    return b.flag && row.flag !== b.flag ? tx.result.update({ where: { id: row.id }, data: { flag: b.flag } }) : row;
+  }
+
+  /**
+   * Pathologist sign-out of a structured result: the authorised signatory is both the technical and the medical validator.
+   * Still refused when QC cover is missing or blocked (safety.lab.qc_block).
+   */
+  async signOutStructured(u: AuthUser, tx: Prisma.TransactionClient, resultId: string) {
+    this.assertSignatory(u);
+    const r = await this.mustFind(tx, u.orgId, resultId);
+    if (r.status !== "ENTERED") throw new ConflictException({ code: "ILLEGAL_RESULT_TRANSITION", from: r.status });
+    await this.assertQc(tx, r);
+    const now = new Date();
+    const out = await tx.result.update({ where: { id: resultId }, data: { status: "MEDICAL_VALIDATED", techValidatedBy: u.staffId, techValidatedAt: now, medicalValidatedBy: u.staffId, medicalValidatedAt: now } });
+    await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "result.signout_structured", entityType: "Result", entityId: resultId }, tx);
+    await this.afterChange(tx, r);
+    return out;
+  }
+
+  /**
+   * Calculated tests: whenever an input result changes, derived analytes of the order are (re)computed from their formula.
+   * A derived value is created only when every input has a current numeric result; recomputation replaces an unreleased derived value
+   * (the old row is REJECTED so it needs full validation again). Never touches released results.
+   */
+  async recomputeDerived(tx: Prisma.TransactionClient, orderId: string, actor: string): Promise<void> {
+    const items = await tx.orderItem.findMany({ where: { orderId, status: { not: "CANCELLED" } }, include: { order: { include: { patient: true } }, test: { include: { analytes: { include: { analyte: true } } } } } });
+    const targets = items.flatMap((it) => it.test.analytes.filter((a) => a.analyte.formula).map((a) => ({ it, analyte: a.analyte })));
+    if (!targets.length) return;
+    const current = await tx.result.findMany({ where: { orderItem: { orderId }, ...CURRENT }, include: { analyte: { select: { code: true } } } });
+    for (const { it, analyte } of targets) {
+      const inputs = formulaInputs(analyte.formula!);
+      const rows = inputs.map((c) => current.find((r) => r.analyte.code === c && r.valueNumeric != null && r.source !== "CALCULATED"));
+      if (rows.some((r) => !r)) continue;
+      const p = it.order.patient;
+      const vars: Record<string, number> = { AGE: (ageInDays(p.dateOfBirth, new Date()) ?? 0) / 365.25, MALE: p.sex === "M" ? 1 : 0 };
+      rows.forEach((r, n) => { vars[inputs[n]!] = D(r!.valueNumeric!); });
+      const raw = evalFormula(analyte.formula!, vars);
+      if (raw == null) continue;
+      const value = Math.round(raw * 10 ** analyte.precision) / 10 ** analyte.precision;
+      const existing = current.find((r) => r.analyteId === analyte.id);
+      if (existing) {
+        if (existing.source !== "CALCULATED" || existing.status === "RELEASED" || (existing.valueNumeric != null && D(existing.valueNumeric) === value)) continue;
+        await tx.result.update({ where: { id: existing.id }, data: { status: "REJECTED", correctionReason: "recalculated: an input changed", techValidatedBy: null, techValidatedAt: null, medicalValidatedBy: null, medicalValidatedAt: null } });
+      }
+      const first = rows[0]!;
+      if (!first.instrumentId) continue;
+      try {
+        await this.persistIn(tx, { orgId: it.order.orgId, actor, source: "CALCULATED", orderItemId: it.id, analyteId: analyte.id, instrumentId: first.instrumentId, value, qcRunId: first.qcRunId, derivedFromIds: rows.map((r) => r!.analyteId) });
+      } catch (e) {
+        // the derived analyte's own specimen may not be in processing yet: it is computed when that result arrives
+        if (!(e instanceof ConflictException)) throw e;
+      }
+    }
+  }
+
+  /**
+   * Rerun / dilution workflow: the (not yet released) result is sent back (REJECTED) and a RerunRequest tells the bench to repeat the test,
+   * optionally on a dilution. The next entry for this analyte links to the first run and applies the factor to the measured value.
+   * Released results are never rerun: use a correction.
+   */
+  async rerun(u: AuthUser, id: string, b: { reason: string; dilutionFactor?: number }) {
+    if (b.reason.trim().length < 3) throw new BadRequestException({ code: "RERUN_REASON_REQUIRED" });
+    if (b.dilutionFactor != null && !(b.dilutionFactor > 0)) throw new BadRequestException({ code: "DILUTION_INVALID" });
+    return this.prisma.$transaction(async (tx) => {
+      const r = await tx.result.findFirst({ where: { id, orgId: u.orgId } });
+      if (!r) throw new NotFoundException({ code: "RESULT_NOT_FOUND" });
+      if (!["ENTERED", "TECH_VALIDATED", "MEDICAL_VALIDATED"].includes(r.status)) throw new ConflictException({ code: "RERUN_NOT_ALLOWED", status: r.status, message: "released results are corrected, not rerun" });
+      if (r.source === "CALCULATED") throw new ConflictException({ code: "RERUN_INPUT_INSTEAD", message: "rerun an input analyte; calculated values follow" });
+      await tx.result.update({ where: { id }, data: { status: "REJECTED", correctionReason: `rerun: ${b.reason}`, techValidatedBy: null, techValidatedAt: null, medicalValidatedBy: null, medicalValidatedAt: null, secondEntryBy: null } });
+      const req = await tx.rerunRequest.create({ data: { orgId: u.orgId, orderItemId: r.orderItemId, analyteId: r.analyteId, originalResultId: id, reason: b.reason, dilutionFactor: b.dilutionFactor, requestedBy: u.staffId } });
+      // calculated values built on the rejected input are no longer valid either
+      const derived = await tx.result.findMany({ where: { orgId: u.orgId, orderItem: { orderId: (await tx.orderItem.findUniqueOrThrow({ where: { id: r.orderItemId } })).orderId }, derivedFromIds: { has: r.analyteId }, status: { in: ["ENTERED", "TECH_VALIDATED", "MEDICAL_VALIDATED"] } } });
+      if (derived.length) await tx.result.updateMany({ where: { id: { in: derived.map((d) => d.id) } }, data: { status: "REJECTED", correctionReason: "input rerun", techValidatedBy: null, techValidatedAt: null, medicalValidatedBy: null, medicalValidatedAt: null } });
+      await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "result.rerun", entityType: "Result", entityId: id, meta: { requestId: req.id, dilution: b.dilutionFactor ?? null, derivedRevoked: derived.length } }, tx);
+      await this.afterChange(tx, r);
+      return req;
+    });
+  }
+
+  async listReruns(orgId: string, status?: "OPEN" | "DONE" | "CANCELLED") {
+    const rows = await this.prisma.rerunRequest.findMany({ where: { orgId, ...(status ? { status } : {}) }, orderBy: { createdAt: "desc" }, take: 200 });
+    const items = await this.prisma.orderItem.findMany({ where: { id: { in: rows.map((r) => r.orderItemId) } }, select: { id: true, order: { select: { id: true, orderNumber: true } }, test: { select: { code: true } } } });
+    const analytes = await this.prisma.analyte.findMany({ where: { id: { in: rows.map((r) => r.analyteId) } }, select: { id: true, code: true } });
+    return rows.map((r) => ({ ...r, dilutionFactor: r.dilutionFactor == null ? null : D(r.dilutionFactor), order: items.find((i) => i.id === r.orderItemId)?.order ?? null, test: items.find((i) => i.id === r.orderItemId)?.test.code ?? null, analyte: analytes.find((a) => a.id === r.analyteId)?.code ?? null }));
+  }
+
+  /** Amendment timeline of an order: report versions (with reasons) and every result correction (old -> new value). */
+  async amendments(orgId: string, orderId: string) {
+    if (!(await this.prisma.labOrder.findFirst({ where: { id: orderId, orgId }, select: { id: true } }))) throw new NotFoundException({ code: "ORDER_NOT_FOUND" });
+    const versions = await this.prisma.reportVersion.findMany({ where: { orgId, orderId }, orderBy: { version: "asc" }, select: { id: true, version: true, correctionReason: true, signedBy: true, signedAt: true, supersedesId: true, contentHash: true } });
+    const corrections = await this.prisma.result.findMany({ where: { orgId, orderItem: { orderId }, supersedesResultId: { not: null } }, include: { analyte: { select: { code: true, nameEn: true, unit: true } } }, orderBy: { enteredAt: "asc" } });
+    const olds = await this.prisma.result.findMany({ where: { id: { in: corrections.map((c) => c.supersedesResultId!) } } });
+    return {
+      versions,
+      corrections: corrections.map((c) => {
+        const o = olds.find((x) => x.id === c.supersedesResultId);
+        return { resultId: c.id, analyte: c.analyte, reason: c.correctionReason, correctedBy: c.enteredBy, at: c.enteredAt, from: o ? { value: o.valueNumeric == null ? o.valueText : D(o.valueNumeric), flag: o.flag, releasedReportVersionId: o.releasedReportVersionId } : null, to: { value: c.valueNumeric == null ? c.valueText : D(c.valueNumeric), flag: c.flag, status: c.status, releasedReportVersionId: c.releasedReportVersionId } };
+      }),
+    };
   }
 
   /**
@@ -126,7 +265,7 @@ export class ResultsService {
    * are technically validated by the system. It NEVER medically validates and NEVER releases.
    */
   private async autoVerify(tx: Prisma.TransactionClient, r: Result): Promise<void> {
-    if (r.source === "MANUAL" || r.flag !== "NORMAL" || r.deltaCheckFailed || !r.qcRunId || !r.instrumentId) return;
+    if (r.source === "MANUAL" || r.source === "STRUCTURED" || r.flag !== "NORMAL" || r.deltaCheckFailed || !r.qcRunId || !r.instrumentId) return;
     const rule = await tx.autoVerificationRule.findUnique({ where: { orgId_analyteId: { orgId: r.orgId, analyteId: r.analyteId } } });
     if (!rule?.enabled) return;
     const run = await tx.qcRun.findUnique({ where: { id: r.qcRunId } });
@@ -262,16 +401,23 @@ export class ResultsService {
   }
 
   /** Technologist worklist: specimens in processing with their expected analytes and entered results. */
-  async worklist(orgId: string, labIds: string[], status: "PROCESSING" | "RECEIVED" = "PROCESSING") {
+  async worklist(orgId: string, labIds: string[], status: "PROCESSING" | "RECEIVED" = "PROCESSING", f: { section?: LabSection; instrumentId?: string; priority?: string } = {}) {
+    let sections: LabSection[] | undefined = f.section ? [f.section] : undefined;
+    if (f.instrumentId) {
+      const inst = await this.prisma.instrument.findFirst({ where: { id: f.instrumentId, orgId }, select: { sections: true } });
+      if (!inst) throw new NotFoundException({ code: "INSTRUMENT_NOT_FOUND" });
+      if (inst.sections.length) sections = sections ? sections.filter((x) => inst.sections.includes(x)) : inst.sections;
+    }
     const specimens = await this.prisma.specimen.findMany({
-      where: { orgId, status, ...(labIds.length ? { labId: { in: labIds } } : {}) },
+      where: { orgId, status, ...(labIds.length ? { labId: { in: labIds } } : {}), ...(f.priority ? { order: { priority: f.priority } } : {}) },
       include: { order: { select: { id: true, orderNumber: true, priority: true, patient: { select: { fullName: true, sex: true, dateOfBirth: true } } } } }, orderBy: { createdAt: "asc" }, take: 200,
     });
     const items = await this.prisma.orderItem.findMany({
       where: { specimenId: { in: specimens.map((s) => s.id) }, status: { not: "CANCELLED" } },
       include: { test: { include: { analytes: { include: { analyte: true }, orderBy: { position: "asc" } } } }, results: { where: CURRENT } },
     });
-    return specimens.map((s) => ({ ...s, items: items.filter((i) => i.specimenId === s.id).map((i) => ({ id: i.id, status: i.status, test: { code: i.test.code, nameEn: i.test.nameEn }, analytes: i.test.analytes.map((a) => ({ id: a.analyteId, code: a.analyte.code, nameEn: a.analyte.nameEn, unit: a.analyte.unit })), results: i.results.map((r) => ({ id: r.id, analyteId: r.analyteId, status: r.status, flag: r.flag, valueNumeric: r.valueNumeric == null ? null : D(r.valueNumeric), valueText: r.valueText, secondEntryBy: r.secondEntryBy, deltaCheckFailed: r.deltaCheckFailed, autoVerified: r.autoVerified, source: r.source })) })) }));
+    const inSection = (i: (typeof items)[number]) => !sections || sections.includes(i.test.section);
+    return specimens.filter((s) => !sections || items.some((i) => i.specimenId === s.id && inSection(i))).map((s) => ({ ...s, items: items.filter((i) => i.specimenId === s.id && inSection(i)).map((i) => ({ id: i.id, status: i.status, test: { code: i.test.code, nameEn: i.test.nameEn, section: i.test.section }, analytes: i.test.analytes.map((a) => ({ id: a.analyteId, code: a.analyte.code, nameEn: a.analyte.nameEn, unit: a.analyte.unit })), results: i.results.map((r) => ({ id: r.id, analyteId: r.analyteId, status: r.status, flag: r.flag, valueNumeric: r.valueNumeric == null ? null : D(r.valueNumeric), valueText: r.valueText, secondEntryBy: r.secondEntryBy, deltaCheckFailed: r.deltaCheckFailed, autoVerified: r.autoVerified, source: r.source })) })) }));
   }
 
   /** Validation queue: results awaiting technical (ENTERED) or medical (TECH_VALIDATED) validation. */
@@ -288,9 +434,9 @@ export class ResultsService {
   listAutoVerification(orgId: string) {
     return this.prisma.autoVerificationRule.findMany({ where: { orgId }, include: { analyte: { select: { code: true, nameEn: true } } } });
   }
-  async setAutoVerification(u: AuthUser, analyteId: string, b: { enabled: boolean; maxDeltaPercent?: number | null; requireNormal?: boolean }) {
+  async setAutoVerification(u: AuthUser, analyteId: string, b: { enabled: boolean; maxDeltaPercent?: number | null; requireNormal?: boolean; maxDeltaAbsolute?: number | null; deltaWindowDays?: number | null }) {
     if (!(await this.prisma.analyte.findFirst({ where: { id: analyteId, orgId: u.orgId } }))) throw new NotFoundException({ code: "ANALYTE_NOT_FOUND" });
-    const data = { enabled: b.enabled, maxDeltaPercent: b.maxDeltaPercent ?? null, requireNormal: b.requireNormal ?? true };
+    const data = { enabled: b.enabled, maxDeltaPercent: b.maxDeltaPercent ?? null, requireNormal: b.requireNormal ?? true, maxDeltaAbsolute: b.maxDeltaAbsolute ?? null, deltaWindowDays: b.deltaWindowDays ?? null };
     const row = await this.prisma.autoVerificationRule.upsert({ where: { orgId_analyteId: { orgId: u.orgId, analyteId } }, create: { orgId: u.orgId, analyteId, ...data }, update: data });
     await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "auto_verification.set", entityType: "AutoVerificationRule", entityId: row.id, meta: { enabled: b.enabled } });
     return row;

@@ -173,6 +173,10 @@ enum ResultSource {
   ANALYZER_ASTM
   ANALYZER_HL7
   MANUAL
+  /// Derived from other results by a formula (calculated tests).
+  CALCULATED
+  /// Microbiology / histopathology structured report.
+  STRUCTURED
 }
 
 enum ResultStatus {
@@ -377,17 +381,24 @@ model StaffUser {
 
 /// KLQC03 reportable analyte (e.g. Hb, WBC, ALT).
 model Analyte {
-  id            String   @id @default(cuid())
+  id            String           @id @default(cuid())
   orgId         String
   code          String
   nameEn        String
   nameAr        String?
   unit          String?
   /// Decimal places for reporting.
-  precision     Int      @default(1)
+  precision     Int              @default(1)
   /// Codes this analyte is known by on analyzers (ASTM/HL7 universal test ids).
   analyzerCodes String[]
-  active        Boolean  @default(true)
+  active        Boolean          @default(true)
+  /// NUMERIC | TEXT (free) | SEMI_QUANT (ordered scale, e.g. Neg/Trace/1+..4+) | CHOICE (pick from allowedValues).
+  valueType     AnalyteValueType @default(NUMERIC)
+  allowedValues String[]         @default([])
+  /// Subset of allowedValues that are NORMAL (anything else flags ABNORMAL).
+  normalValues  String[]         @default([])
+  /// Calculated analyte: expression over analyte codes, e.g. "TC - HDL - TG/5". Built-ins: AGE (years), MALE (1/0).
+  formula       String?
 
   testAnalytes       TestAnalyte[]
   referenceIntervals ReferenceInterval[]
@@ -401,23 +412,24 @@ model Analyte {
 
 /// KLORD01: code, name AR/EN, specimen type, container, volume, prep, TAT, price.
 model TestDefinition {
-  id                 String   @id @default(cuid())
+  id                 String     @id @default(cuid())
   orgId              String
   code               String
   nameEn             String
   nameAr             String?
   specimenType       String
   container          String?
-  volumeMl           Decimal? @db.Decimal(6, 2)
-  fastingRequired    Boolean  @default(false)
+  volumeMl           Decimal?   @db.Decimal(6, 2)
+  fastingRequired    Boolean    @default(false)
   prepInstructionsEn String?
   prepInstructionsAr String?
   /// Turnaround time target in minutes (KLBIZ02 SLA alerts).
   tatMinutes         Int?
-  price              Decimal  @default(0) @db.Decimal(14, 2)
+  price              Decimal    @default(0) @db.Decimal(14, 2)
   /// Sent to a referral lab (send-out) instead of run in-house.
-  sendOut            Boolean  @default(false)
-  active             Boolean  @default(true)
+  sendOut            Boolean    @default(false)
+  active             Boolean    @default(true)
+  section            LabSection @default(GENERAL)
 
   analytes     TestAnalyte[]
   orderItems   OrderItem[]
@@ -474,13 +486,15 @@ model ReferenceInterval {
   version       Int       @default(1)
   effectiveFrom DateTime
   effectiveTo   DateTime?
+  /// Physiological condition this interval applies to (e.g. PREGNANT_T1); null = general population.
+  condition     String?
   /// NH-LB-013: source and licence of the interval.
   source        String?
   createdBy     String?
 
   analyte Analyte @relation(fields: [analyteId], references: [id])
 
-  @@unique([analyteId, sex, ageMinDays, version])
+  @@unique([analyteId, sex, ageMinDays, condition, version])
   @@index([orgId, analyteId])
 }
 
@@ -769,6 +783,8 @@ model Instrument {
   interfaceRef String?
   model        String?
   protocol     AnalyzerProtocol?
+  /// Sections this instrument serves (worklist filter). Empty = all.
+  sections     LabSection[]      @default([])
   /// Simulated analyzer bridge (MODE=mock): no physical device.
   simulated    Boolean           @default(false)
   /// sha256 of the instrument API key used by the bridge to post messages.
@@ -884,6 +900,12 @@ model Result {
   deltaPercent            Decimal?     @db.Decimal(9, 2)
   autoVerified            Boolean      @default(false)
   analyzerMessageId       String?
+  /// Rerun / dilution: the repeat run links to the rejected first run; value = rawValue x dilutionFactor.
+  rerunOfId               String?
+  dilutionFactor          Decimal?     @db.Decimal(10, 4)
+  rawValue                Decimal?     @db.Decimal(14, 5)
+  /// Calculated results: analyte ids of the inputs (QC blocks on any input block the derived value).
+  derivedFromIds          String[]     @default([])
   /// KLQC05: a correction supersedes the prior result row.
   supersedesResultId      String?
   correctionReason        String?
@@ -1042,14 +1064,17 @@ model CollectionSlot {
 
 /// KLQC01: auto-verification (never replaces medical validation or release).
 model AutoVerificationRule {
-  id              String   @id @default(cuid())
-  orgId           String
-  analyteId       String
-  enabled         Boolean  @default(false)
+  id               String   @id @default(cuid())
+  orgId            String
+  analyteId        String
+  enabled          Boolean  @default(false)
   /// Delta check: fail when |change| exceeds this percent of the prior value. NULL = no delta check. NEEDS_HUMAN (NH-LB-013).
-  maxDeltaPercent Decimal? @db.Decimal(9, 2)
+  maxDeltaPercent  Decimal? @db.Decimal(9, 2)
   /// Only auto-verify results inside the reference interval.
-  requireNormal   Boolean  @default(true)
+  requireNormal    Boolean  @default(true)
+  /// Delta check on the absolute change (same unit as the analyte) and the look-back window (days; null = any prior).
+  maxDeltaAbsolute Decimal? @db.Decimal(14, 4)
+  deltaWindowDays  Int?
 
   analyte Analyte @relation(fields: [analyteId], references: [id])
 
@@ -1666,4 +1691,241 @@ model CourierEvent {
   manifest TransportManifest @relation(fields: [manifestId], references: [id], onDelete: Cascade)
 
   @@index([manifestId, at])
+}
+
+// ============================================================ analytics (M4) ====
+
+enum LabSection {
+  GENERAL
+  HEMATOLOGY
+  CHEMISTRY
+  IMMUNOLOGY
+  SEROLOGY
+  COAGULATION
+  URINALYSIS
+  MICROBIOLOGY
+  HISTOPATHOLOGY
+  CYTOLOGY
+  MOLECULAR
+}
+
+enum AnalyteValueType {
+  NUMERIC
+  TEXT
+  SEMI_QUANT
+  CHOICE
+}
+
+enum RerunStatus {
+  OPEN
+  DONE
+  CANCELLED
+}
+
+enum MicroStatus {
+  RECEIVED
+  INCUBATING
+  PRELIMINARY
+  FINAL
+}
+
+enum Susceptibility {
+  S
+  I
+  R
+  SDD
+  NS
+}
+
+enum HistoKind {
+  HISTOPATHOLOGY
+  CYTOLOGY
+}
+
+enum HistoStatus {
+  RECEIVED
+  GROSSING
+  PROCESSING
+  REPORTING
+  SIGNED_OUT
+}
+
+/// Repeat / dilute request on a result. The first run is REJECTED; the repeat links back through Result.rerunOfId.
+model RerunRequest {
+  id               String      @id @default(cuid())
+  orgId            String
+  orderItemId      String
+  analyteId        String
+  originalResultId String
+  reason           String
+  dilutionFactor   Decimal?    @db.Decimal(10, 4)
+  status           RerunStatus @default(OPEN)
+  requestedBy      String
+  newResultId      String?
+  createdAt        DateTime    @default(now())
+  doneAt           DateTime?
+
+  @@index([orgId, status])
+  @@index([orderItemId, analyteId, status])
+}
+
+model Organism {
+  id     String  @id @default(cuid())
+  orgId  String
+  code   String
+  nameEn String
+  nameAr String?
+  /// POS | NEG | YEAST | OTHER
+  gram   String  @default("OTHER")
+  active Boolean @default(true)
+
+  isolates MicrobiologyIsolate[]
+
+  @@unique([orgId, code])
+}
+
+model Antibiotic {
+  id              String  @id @default(cuid())
+  orgId           String
+  code            String
+  nameEn          String
+  nameAr          String?
+  antibioticClass String?
+  active          Boolean @default(true)
+
+  panelItems AntibioticPanelItem[]
+  results    MicrobiologySusceptibility[]
+
+  @@unique([orgId, code])
+}
+
+/// Antibiotic panel offered for an organism group (e.g. "Enterobacterales", "Staphylococcus").
+model AntibioticPanel {
+  id            String  @id @default(cuid())
+  orgId         String
+  name          String
+  organismGroup String
+  active        Boolean @default(true)
+
+  items AntibioticPanelItem[]
+
+  @@unique([orgId, name])
+}
+
+model AntibioticPanelItem {
+  panelId      String
+  antibioticId String
+  orgId        String
+  position     Int    @default(0)
+
+  panel      AntibioticPanel @relation(fields: [panelId], references: [id], onDelete: Cascade)
+  antibiotic Antibiotic      @relation(fields: [antibioticId], references: [id])
+
+  @@id([panelId, antibioticId])
+}
+
+/// Culture & sensitivity case for a microbiology order item.
+model MicrobiologyCase {
+  id                  String      @id @default(cuid())
+  orgId               String
+  orderItemId         String      @unique
+  specimenId          String
+  /// Collection site / source (urine, wound swab, blood culture ...).
+  site                String?
+  gramStain           String?
+  cultureMedia        String[]    @default([])
+  incubationStartedAt DateTime?
+  status              MicroStatus @default(RECEIVED)
+  /// null until read; true = growth, false = no growth.
+  growth              Boolean?
+  comment             String?
+  enteredBy           String
+  finalizedBy         String?
+  finalizedAt         DateTime?
+  resultId            String?
+  createdAt           DateTime    @default(now())
+
+  isolates MicrobiologyIsolate[]
+
+  @@index([orgId, status])
+}
+
+model MicrobiologyIsolate {
+  id         String   @id @default(cuid())
+  orgId      String
+  caseId     String
+  organismId String
+  isolateNo  Int      @default(1)
+  /// e.g. ">10^5 CFU/mL", "heavy growth".
+  quantity   String?
+  note       String?
+  createdAt  DateTime @default(now())
+
+  microCase        MicrobiologyCase             @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  organism         Organism                     @relation(fields: [organismId], references: [id])
+  susceptibilities MicrobiologySusceptibility[]
+
+  @@unique([caseId, isolateNo])
+}
+
+model MicrobiologySusceptibility {
+  id             String         @id @default(cuid())
+  orgId          String
+  isolateId      String
+  antibioticId   String
+  /// DISK | MIC | ETEST
+  method         String         @default("DISK")
+  micMgL         Decimal?       @db.Decimal(10, 4)
+  zoneMm         Int?
+  interpretation Susceptibility
+  /// Selective reporting: only reported rows appear on the patient report.
+  reported       Boolean        @default(true)
+
+  isolate    MicrobiologyIsolate @relation(fields: [isolateId], references: [id], onDelete: Cascade)
+  antibiotic Antibiotic          @relation(fields: [antibioticId], references: [id])
+
+  @@unique([isolateId, antibioticId])
+}
+
+/// Basic histopathology / cytology report workflow.
+model HistoCase {
+  id                     String      @id @default(cuid())
+  orgId                  String
+  orderItemId            String      @unique
+  specimenId             String
+  kind                   HistoKind   @default(HISTOPATHOLOGY)
+  site                   String?
+  clinicalHistory        String?
+  grossDescription       String?
+  microscopicDescription String?
+  diagnosis              String?
+  /// ICD-O morphology / SNOMED-style code, free text (no coding service).
+  morphologyCode         String?
+  synoptic               Json?
+  blocks                 Int         @default(0)
+  slides                 Int         @default(0)
+  status                 HistoStatus @default(RECEIVED)
+  pathologistId          String?
+  signedOutAt            DateTime?
+  resultId               String?
+  createdBy              String
+  createdAt              DateTime    @default(now())
+
+  addenda HistoAddendum[]
+
+  @@index([orgId, status])
+}
+
+/// Addenda after sign-out (append-only; the signed diagnosis is never edited).
+model HistoAddendum {
+  id      String   @id @default(cuid())
+  orgId   String
+  caseId  String
+  text    String
+  addedBy String
+  addedAt DateTime @default(now())
+
+  histoCase HistoCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
 }

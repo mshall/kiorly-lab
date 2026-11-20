@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { createHash, randomBytes } from "node:crypto";
-import type { AnalyzerProtocol, InstrumentKind, QcLevel } from "@prisma/client";
+import type { AnalyzerProtocol, InstrumentKind, LabSection, QcLevel } from "@prisma/client";
 import type { AuthUser } from "../../auth/auth.types";
 import { AuditService } from "../../audit/audit.service";
 import { D, type Db } from "../../common/db";
@@ -35,6 +35,14 @@ export class QcService {
     return { id, active };
   }
   /** Issues a bridge API key (shown once; only its hash is stored). */
+  async setInstrumentSections(u: AuthUser, id: string, sections: LabSection[]) {
+    const inst = await this.prisma.instrument.findFirst({ where: { id, orgId: u.orgId } });
+    if (!inst) throw new NotFoundException({ code: "INSTRUMENT_NOT_FOUND" });
+    const row = await this.prisma.instrument.update({ where: { id }, data: { sections } });
+    await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "instrument.sections", entityType: "Instrument", entityId: id, meta: { sections } });
+    return row;
+  }
+
   async issueApiKey(u: AuthUser, id: string) {
     const i = await this.prisma.instrument.findFirst({ where: { id, orgId: u.orgId } });
     if (!i) throw new NotFoundException({ code: "INSTRUMENT_NOT_FOUND" });
@@ -99,7 +107,7 @@ export class QcService {
   /** Unreleased results entered since the last passing run for this analyte/instrument are not trustworthy: send them back for re-run. */
   private async revokeSinceLastPass(tx: Db, u: { orgId: string; staffId: string }, instrumentId: string, analyteId: string, failAt: Date): Promise<number> {
     const lastPass = await tx.qcRun.findFirst({ where: { instrumentId, material: { analyteId }, status: "PASS", runAt: { lt: failAt } }, orderBy: { runAt: "desc" } });
-    const affected = await tx.result.findMany({ where: { orgId: u.orgId, instrumentId, analyteId, releasedAt: null, status: { in: ["ENTERED", "TECH_VALIDATED", "MEDICAL_VALIDATED"] }, enteredAt: { gt: lastPass?.runAt ?? new Date(0) } }, select: { id: true, orderItemId: true } });
+    const affected = await tx.result.findMany({ where: { orgId: u.orgId, instrumentId, OR: [{ analyteId }, { derivedFromIds: { has: analyteId } }], releasedAt: null, status: { in: ["ENTERED", "TECH_VALIDATED", "MEDICAL_VALIDATED"] }, enteredAt: { gt: lastPass?.runAt ?? new Date(0) } }, select: { id: true, orderItemId: true } });
     if (!affected.length) return 0;
     await tx.result.updateMany({ where: { id: { in: affected.map((a) => a.id) } }, data: { status: "REJECTED", correctionReason: "QC failure: re-run required", techValidatedBy: null, techValidatedAt: null, medicalValidatedBy: null, medicalValidatedAt: null } });
     for (const a of affected) await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "result.revoked_qc_failure", entityType: "Result", entityId: a.id }, tx);

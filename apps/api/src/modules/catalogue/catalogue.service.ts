@@ -1,11 +1,12 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from "@nestjs/common";
-import type { Sex } from "@prisma/client";
+import type { AnalyteValueType, LabSection, Sex } from "@prisma/client";
 import type { AuthUser } from "../../auth/auth.types";
 import { AuditService } from "../../audit/audit.service";
 import { D, type Db } from "../../common/db";
 import { PrismaService } from "../../prisma/prisma.service";
 import { KERNEL_PRICE_BOOK, type PriceBookPort } from "../../kernel-adapter/ports";
 import { pickInterval } from "../../common/clinical-flags";
+import { formulaInputs, FormulaError } from "../analysis-qc/formula";
 
 @Injectable()
 export class CatalogueService {
@@ -20,12 +21,40 @@ export class CatalogueService {
     return this.prisma.analyte.findMany({ where: { orgId }, orderBy: { code: "asc" } });
   }
 
-  async createAnalyte(u: AuthUser, b: { code: string; nameEn: string; nameAr?: string; unit?: string; precision?: number; analyzerCodes?: string[] }) {
+  private async checkAnalyteSpec(orgId: string, selfCode: string | null, b: { valueType?: AnalyteValueType; allowedValues?: string[]; normalValues?: string[]; formula?: string | null }) {
+    const type = b.valueType ?? "NUMERIC";
+    if ((type === "CHOICE" || type === "SEMI_QUANT") && !(b.allowedValues?.length)) throw new BadRequestException({ code: "ALLOWED_VALUES_REQUIRED" });
+    if (b.normalValues?.some((v) => !(b.allowedValues ?? []).includes(v))) throw new BadRequestException({ code: "NORMAL_VALUES_NOT_ALLOWED" });
+    if (b.formula) {
+      if (type !== "NUMERIC") throw new BadRequestException({ code: "FORMULA_NUMERIC_ONLY" });
+      let inputs: string[];
+      try { inputs = formulaInputs(b.formula); } catch (e) { if (e instanceof FormulaError) throw new BadRequestException({ code: "FORMULA_INVALID", message: e.message }); throw e; }
+      if (!inputs.length) throw new BadRequestException({ code: "FORMULA_INVALID", message: "a calculated analyte needs at least one input analyte" });
+      if (selfCode && inputs.includes(selfCode)) throw new BadRequestException({ code: "FORMULA_SELF_REFERENCE" });
+      const found = await this.prisma.analyte.findMany({ where: { orgId, code: { in: inputs } } });
+      const missing = inputs.filter((c) => !found.some((f) => f.code === c));
+      if (missing.length) throw new BadRequestException({ code: "FORMULA_UNKNOWN_ANALYTE", analytes: missing });
+      const chained = found.filter((f) => f.formula);
+      if (chained.length) throw new BadRequestException({ code: "FORMULA_CHAINED", message: "calculated analytes cannot be inputs of other calculated analytes", analytes: chained.map((c) => c.code) });
+    }
+  }
+
+  async createAnalyte(u: AuthUser, b: { code: string; nameEn: string; nameAr?: string; unit?: string; precision?: number; analyzerCodes?: string[]; valueType?: AnalyteValueType; allowedValues?: string[]; normalValues?: string[]; formula?: string }) {
     const code = b.code.trim().toUpperCase();
     if (await this.prisma.analyte.findFirst({ where: { orgId: u.orgId, code } })) throw new ConflictException({ code: "ANALYTE_CODE_EXISTS" });
-    const a = await this.prisma.analyte.create({ data: { orgId: u.orgId, code, nameEn: b.nameEn, nameAr: b.nameAr, unit: b.unit, precision: b.precision ?? 1, analyzerCodes: b.analyzerCodes ?? [code] } });
+    await this.checkAnalyteSpec(u.orgId, code, b);
+    const a = await this.prisma.analyte.create({ data: { orgId: u.orgId, code, nameEn: b.nameEn, nameAr: b.nameAr, unit: b.unit, precision: b.precision ?? 1, analyzerCodes: b.analyzerCodes ?? [code], valueType: b.valueType ?? "NUMERIC", allowedValues: b.allowedValues ?? [], normalValues: b.normalValues ?? [], formula: b.formula ?? null } });
     await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "analyte.create", entityType: "Analyte", entityId: a.id });
     return a;
+  }
+
+  async updateAnalyte(u: AuthUser, id: string, b: Partial<{ nameEn: string; nameAr: string; unit: string; precision: number; analyzerCodes: string[]; valueType: AnalyteValueType; allowedValues: string[]; normalValues: string[]; formula: string | null; active: boolean }>) {
+    const cur = await this.prisma.analyte.findFirst({ where: { id, orgId: u.orgId } });
+    if (!cur) throw new NotFoundException({ code: "ANALYTE_NOT_FOUND" });
+    await this.checkAnalyteSpec(u.orgId, cur.code, { valueType: b.valueType ?? cur.valueType, allowedValues: b.allowedValues ?? cur.allowedValues, normalValues: b.normalValues ?? cur.normalValues, formula: b.formula === undefined ? cur.formula : b.formula });
+    const row = await this.prisma.analyte.update({ where: { id }, data: b });
+    await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "analyte.update", entityType: "Analyte", entityId: id, meta: { fields: Object.keys(b) } });
+    return row;
   }
 
   // --------------------------------------------------------------- tests
@@ -52,7 +81,7 @@ export class CatalogueService {
     u: AuthUser,
     b: {
       code: string; nameEn: string; nameAr?: string; specimenType: string; container?: string; volumeMl?: number; fastingRequired?: boolean;
-      prepInstructionsEn?: string; prepInstructionsAr?: string; tatMinutes?: number; price: number; sendOut?: boolean; analyteCodes?: string[];
+      prepInstructionsEn?: string; prepInstructionsAr?: string; tatMinutes?: number; price: number; sendOut?: boolean; analyteCodes?: string[]; section?: LabSection;
     },
   ) {
     const code = b.code.trim().toUpperCase();
@@ -63,7 +92,7 @@ export class CatalogueService {
         data: {
           orgId: u.orgId, code, nameEn: b.nameEn, nameAr: b.nameAr, specimenType: b.specimenType, container: b.container, volumeMl: b.volumeMl,
           fastingRequired: b.fastingRequired ?? false, prepInstructionsEn: b.prepInstructionsEn, prepInstructionsAr: b.prepInstructionsAr,
-          tatMinutes: b.tatMinutes, price: b.price, sendOut: b.sendOut ?? false,
+          tatMinutes: b.tatMinutes, price: b.price, sendOut: b.sendOut ?? false, section: b.section ?? "GENERAL",
         },
       });
       await this.linkAnalytes(tx, u.orgId, t.id, b.analyteCodes ?? []);
@@ -141,28 +170,29 @@ export class CatalogueService {
   }
 
   /** KLQC03: versioned, never edited in place — closes the prior version and inserts version+1. */
-  async addInterval(u: AuthUser, analyteId: string, b: { sex?: Sex | null; ageMinDays?: number; ageMaxDays?: number | null; low?: number | null; high?: number | null; source?: string }) {
+  async addInterval(u: AuthUser, analyteId: string, b: { sex?: Sex | null; ageMinDays?: number; ageMaxDays?: number | null; low?: number | null; high?: number | null; source?: string; condition?: string | null }) {
     if (b.low != null && b.high != null && b.low > b.high) throw new BadRequestException({ code: "INTERVAL_INVALID" });
     const a = await this.prisma.analyte.findFirst({ where: { id: analyteId, orgId: u.orgId } });
     if (!a) throw new NotFoundException({ code: "ANALYTE_NOT_FOUND" });
     const sex = b.sex ?? null;
     const ageMinDays = b.ageMinDays ?? 0;
     return this.prisma.$transaction(async (tx) => {
-      const cur = await tx.referenceInterval.findFirst({ where: { orgId: u.orgId, analyteId, sex, ageMinDays, effectiveTo: null }, orderBy: { version: "desc" } });
+      const condition = b.condition ?? null;
+      const cur = await tx.referenceInterval.findFirst({ where: { orgId: u.orgId, analyteId, sex, ageMinDays, condition, effectiveTo: null }, orderBy: { version: "desc" } });
       const now = new Date();
       if (cur) await tx.referenceInterval.update({ where: { id: cur.id }, data: { effectiveTo: now } });
-      const latest = await tx.referenceInterval.findFirst({ where: { analyteId, sex, ageMinDays }, orderBy: { version: "desc" } });
+      const latest = await tx.referenceInterval.findFirst({ where: { analyteId, sex, ageMinDays, condition }, orderBy: { version: "desc" } });
       const row = await tx.referenceInterval.create({
-        data: { orgId: u.orgId, analyteId, sex, ageMinDays, ageMaxDays: b.ageMaxDays ?? null, low: b.low ?? null, high: b.high ?? null, version: (latest?.version ?? 0) + 1, effectiveFrom: now, source: b.source, createdBy: u.staffId },
+        data: { orgId: u.orgId, analyteId, sex, ageMinDays, condition, ageMaxDays: b.ageMaxDays ?? null, low: b.low ?? null, high: b.high ?? null, version: (latest?.version ?? 0) + 1, effectiveFrom: now, source: b.source, createdBy: u.staffId },
       });
       await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "reference_interval.version", entityType: "ReferenceInterval", entityId: row.id, meta: { analyteId, version: row.version } }, tx);
       return row;
     });
   }
 
-  async resolveInterval(db: Db, orgId: string, analyteId: string, sex: string, ageDays: number | null, at: Date) {
+  async resolveInterval(db: Db, orgId: string, analyteId: string, sex: string, ageDays: number | null, at: Date, conditions: readonly string[] = []) {
     const cands = await db.referenceInterval.findMany({ where: { orgId, analyteId } });
-    return pickInterval(cands, sex, ageDays, at);
+    return pickInterval(cands, sex, ageDays, at, conditions);
   }
 
   // ----------------------------------------------------- critical rules

@@ -9,7 +9,7 @@ export type QcBlocker = "QC_RUN_MISSING" | "QC_RUN_FAILED" | "QC_BLOCK_OPEN" | "
  */
 export async function qcBlockers(
   db: Db,
-  r: { orgId: string; instrumentId: string | null; analyteId: string; qcRunId: string | null; enteredAt: Date },
+  r: { orgId: string; instrumentId: string | null; analyteId: string; qcRunId: string | null; enteredAt: Date; derivedFromIds?: string[] },
   validityHours: number,
 ): Promise<QcBlocker[]> {
   const out: QcBlocker[] = [];
@@ -24,7 +24,8 @@ export async function qcBlockers(
     }
   }
   if (r.instrumentId) {
-    const open = await db.qcBlock.count({ where: { orgId: r.orgId, instrumentId: r.instrumentId, analyteId: r.analyteId, status: "OPEN" } });
+    // a calculated value is only as good as its inputs: a block on any input analyte blocks it too
+    const open = await db.qcBlock.count({ where: { orgId: r.orgId, instrumentId: r.instrumentId, analyteId: { in: [r.analyteId, ...(r.derivedFromIds ?? [])] }, status: "OPEN" } });
     if (open > 0) out.push("QC_BLOCK_OPEN");
   }
   return out;

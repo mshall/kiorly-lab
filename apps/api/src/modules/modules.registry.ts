@@ -13,4 +13,6 @@ export const BOUNDED_CONTEXTS = [
   { dir: "registry", name: "RegistryModule", prefix: "KLPAT", title: "Standalone patient registry, referrers directory, commission/credit accounts, doctor portal", safetyPath: false },
   { dir: "reception", name: "ReceptionModule", prefix: "KLORD06", title: "Reception: appointments, queue/token board, audited order edit, ICD hints", safetyPath: false },
   { dir: "preanalytics", name: "PreanalyticsModule", prefix: "KLSPC05", title: "Storage racks/freezers, retention & disposal, recollections, transport manifests and courier tracking", safetyPath: true },
+  { dir: "microbiology", name: "MicrobiologyModule", prefix: "KLQC06", title: "Microbiology: culture & sensitivity with organisms, antibiotic panels, selective reporting", safetyPath: false },
+  { dir: "histopathology", name: "HistopathologyModule", prefix: "KLQC07", title: "Histopathology and cytology basic reporting with pathologist sign-out and addenda", safetyPath: false },
 ] as const;

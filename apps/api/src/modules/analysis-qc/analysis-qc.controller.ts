@@ -12,11 +12,14 @@ const Active = z.object({ active: z.boolean() }).strict();
 const Material = z.object({ analyteId: z.string(), level: z.enum(["LEVEL_1", "LEVEL_2", "LEVEL_3"]), materialLot: z.string().min(1), targetMean: num, targetSd: num.positive(), expiresAt: z.string().optional() }).strict();
 const Run = z.object({ instrumentId: z.string(), materialId: z.string(), value: num }).strict();
 const Clear = z.object({ clearedByRunId: z.string(), note: z.string().min(10).max(1000) }).strict();
-const Enter = z.object({ orderItemId: z.string(), analyteId: z.string(), instrumentId: z.string(), value: num.optional(), valueText: z.string().max(500).optional(), unit: z.string().optional() }).strict();
+const Enter = z.object({ orderItemId: z.string(), analyteId: z.string(), instrumentId: z.string(), value: num.optional(), valueText: z.string().max(500).optional(), unit: z.string().optional(), dilutionFactor: num.positive().max(100000).optional() }).strict();
+const Rerun = z.object({ reason: z.string().min(3).max(300), dilutionFactor: num.positive().max(100000).optional() }).strict();
+const Section = z.enum(["GENERAL", "HEMATOLOGY", "CHEMISTRY", "IMMUNOLOGY", "SEROLOGY", "COAGULATION", "URINALYSIS", "MICROBIOLOGY", "HISTOPATHOLOGY", "CYTOLOGY", "MOLECULAR"]);
+const InstrumentSections = z.object({ sections: z.array(Section).max(11) }).strict();
 const Second = z.object({ value: num.optional(), valueText: z.string().max(500).optional() }).strict();
 const Tech = z.object({ deltaAcknowledged: z.boolean().optional(), note: z.string().max(500).optional() }).strict();
 const Correct = z.object({ value: num.optional(), valueText: z.string().max(500).optional(), reason: z.string().min(5).max(500) }).strict();
-const Avr = z.object({ enabled: z.boolean(), maxDeltaPercent: num.nullable().optional(), requireNormal: z.boolean().optional() }).strict();
+const Avr = z.object({ enabled: z.boolean(), maxDeltaPercent: num.nullable().optional(), requireNormal: z.boolean().optional(), maxDeltaAbsolute: num.nullable().optional(), deltaWindowDays: z.number().int().min(1).max(3650).nullable().optional() }).strict();
 
 /** KLQC. SAFETY PATH (ADR-025): nothing here is flag-gated. */
 @ApiTags("analysis-qc")
@@ -41,7 +44,11 @@ export class AnalysisQcController {
   @Get("qc/blocks") @Perm("qc.read") blocks(@CurrentUser() u: AuthUser, @Query("status") status?: "OPEN" | "CLEARED") { return this.qc.listBlocks(u.orgId, status); }
   @Post("qc/blocks/:id/clear") @Perm("qc.clear_block") @ZBody(Clear) clear(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof Clear>) { return this.qc.clearBlock(u, id, b); }
 
-  @Get("worklist") @Perm("results.read") worklist(@CurrentUser() u: AuthUser, @Query("status") status?: "PROCESSING" | "RECEIVED") { return this.results.worklist(u.orgId, u.labIds, status ?? "PROCESSING"); }
+  @Get("worklist") @Perm("results.read") worklist(@CurrentUser() u: AuthUser, @Query() q: { status?: "PROCESSING" | "RECEIVED"; section?: string; instrumentId?: string; priority?: string }) { return this.results.worklist(u.orgId, u.labIds, q.status ?? "PROCESSING", { section: Section.safeParse(q.section).data, instrumentId: q.instrumentId, priority: q.priority }); }
+  @Put("instruments/:id/sections") @Perm("instruments.manage") @ZBody(InstrumentSections) instrumentSections(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof InstrumentSections>) { return this.qc.setInstrumentSections(u, id, b.sections); }
+  @Post("results/:id/rerun") @Perm("results.rerun") @ZBody(Rerun) rerun(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof Rerun>) { return this.results.rerun(u, id, b); }
+  @Get("reruns") @Perm("results.read") reruns(@CurrentUser() u: AuthUser, @Query("status") status?: "OPEN" | "DONE" | "CANCELLED") { return this.results.listReruns(u.orgId, status); }
+  @Get("orders/:orderId/amendments") @Perm("results.read") amendments(@CurrentUser() u: AuthUser, @Param("orderId") orderId: string) { return this.results.amendments(u.orgId, orderId); }
   @Get("validation-queue") @Perm("results.read") queue(@CurrentUser() u: AuthUser, @Query("stage") stage: "tech" | "medical" = "tech") { return this.results.validationQueue(u.orgId, stage === "medical" ? "medical" : "tech"); }
   @Get("orders/:orderId/results") @Perm("results.read") forOrder(@CurrentUser() u: AuthUser, @Param("orderId") orderId: string) { return this.results.forOrder(u.orgId, orderId); }
   @Post("results") @Perm("results.enter") @ZBody(Enter) enter(@CurrentUser() u: AuthUser, @Body() b: z.infer<typeof Enter>) { return this.results.enterManual(u, b).then(normalizeResult); }
