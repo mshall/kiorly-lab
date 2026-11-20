@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { CustodyEventType } from "@prisma/client";
+import type { CustodyEventType } from "../../generated/prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import type { Db } from "../../common/db";
 

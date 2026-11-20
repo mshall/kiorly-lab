@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, ForbiddenException, HttpException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { randomBytes } from "node:crypto";
-import type { Edition, Prisma, StaffRole } from "@prisma/client";
+import type { Edition, Prisma, StaffRole } from "../../generated/prisma/client";
 import { normalizeDistrictId } from "@kiorly/field-visit";
 import type { AuthUser } from "../../auth/auth.types";
 import { PERMISSIONS, ROLE_PERMISSIONS } from "../../auth/rbac";

@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "../generated/prisma/client";
 import type { AuthUser } from "../auth/auth.types";
 import { InventoryService } from "../modules/inventory/inventory.service";
 import { OrdersService } from "../modules/orders/orders.service";

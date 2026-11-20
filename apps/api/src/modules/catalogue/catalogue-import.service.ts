@@ -1,5 +1,5 @@
 import { BadRequestException, Inject, Injectable, UnprocessableEntityException } from "@nestjs/common";
-import type { AnalyteValueType, LabSection } from "@prisma/client";
+import type { AnalyteValueType, LabSection } from "../../generated/prisma/client";
 import type { AuthUser } from "../../auth/auth.types";
 import { csvRecords } from "../../common/csv";
 import { PrismaService } from "../../prisma/prisma.service";

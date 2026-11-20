@@ -1,4 +1,4 @@
-import type { HomeCollection, HomeCollectionStatus, StaffRole } from "@prisma/client";
+import type { HomeCollection, HomeCollectionStatus, StaffRole } from "../../generated/prisma/client";
 import { type FieldVisit, type HistoryEntry, type VisitState, canViewAddress, maskedAddress } from "@kiorly/field-visit";
 
 /**

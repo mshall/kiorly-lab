@@ -1,4 +1,4 @@
-import type { OrderSource } from "@prisma/client";
+import type { OrderSource } from "../generated/prisma/client";
 
 /** External sources emit LabOrderCreated / LabOrderStatusChanged to Kiorex (walk-in and referring-doctor orders do not). */
 export const EXTERNAL_SOURCES: readonly OrderSource[] = ["KIOREX_BOOKING", "KIORLY_CLINIC", "KIORLY_NURSE"];

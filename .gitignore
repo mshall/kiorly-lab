@@ -19,3 +19,6 @@ infra/**/.terraform
 infra/**/*.tfstate*
 infra/**/*.tfvars
 .tmp-openapi
+
+# Prisma 7 generated client (npm run prisma:generate)
+apps/api/src/generated/

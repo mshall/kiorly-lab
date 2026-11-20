@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
-import type { InvoiceStatus, PaymentMethod } from "@prisma/client";
+import type { InvoiceStatus, PaymentMethod } from "../../generated/prisma/client";
 import type { AuthUser } from "../../auth/auth.types";
 import { AuditService } from "../../audit/audit.service";
 import { PspAdapter } from "../../adapters/psp.adapter";

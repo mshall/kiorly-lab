@@ -1,6 +1,6 @@
 import { ForbiddenException, Inject, Injectable, UnauthorizedException } from "@nestjs/common";
 import { verifyKiorlyRequest } from "@kiorex/contracts";
-import type { IntegrationClient } from "@prisma/client";
+import type { IntegrationClient } from "../generated/prisma/client";
 import type { AuthedRequest } from "../auth/auth.types";
 import { open } from "../common/secret-box";
 import { PrismaService } from "../prisma/prisma.service";

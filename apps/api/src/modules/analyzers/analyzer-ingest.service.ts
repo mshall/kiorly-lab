@@ -1,6 +1,6 @@
 import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { createHash, timingSafeEqual } from "node:crypto";
-import type { AnalyzerMessageStatus, QcLevel } from "@prisma/client";
+import type { AnalyzerMessageStatus, QcLevel } from "../../generated/prisma/client";
 import { AuditService } from "../../audit/audit.service";
 import { PrismaService } from "../../prisma/prisma.service";
 import { QcService } from "../analysis-qc/qc.service";

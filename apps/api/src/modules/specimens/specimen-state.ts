@@ -1,4 +1,4 @@
-import type { CustodyEventType, SpecimenStatus } from "@prisma/client";
+import type { CustodyEventType, SpecimenStatus } from "../../generated/prisma/client";
 
 export type SpecimenAction = "collect" | "transport" | "receive" | "process" | "store" | "dispose" | "reject" | "retrieve";
 

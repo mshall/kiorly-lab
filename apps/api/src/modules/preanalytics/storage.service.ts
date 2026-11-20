@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
-import { Prisma, type StorageKind } from "@prisma/client";
+import { Prisma, type StorageKind } from "../../generated/prisma/client";
 import type { AuthUser } from "../../auth/auth.types";
 import { AuditService } from "../../audit/audit.service";
 import { D } from "../../common/db";

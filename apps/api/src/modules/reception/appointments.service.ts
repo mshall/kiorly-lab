@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from "@nestjs/common";
-import type { AppointmentStatus, Prisma } from "@prisma/client";
+import type { AppointmentStatus, Prisma } from "../../generated/prisma/client";
 import type { AuthUser } from "../../auth/auth.types";
 import { AuditService } from "../../audit/audit.service";
 import { resolveLabId } from "../../common/lab-scope";

@@ -1,4 +1,4 @@
-import type { OrderItemStatus, OrderStatus, SpecimenStatus } from "@prisma/client";
+import type { OrderItemStatus, OrderStatus, SpecimenStatus } from "../generated/prisma/client";
 
 export const ITEM_RANK: Record<OrderItemStatus, number> = { PENDING: 0, IN_PROGRESS: 1, RESULTED: 2, VALIDATED: 3, RELEASED: 4, CANCELLED: -1 };
 

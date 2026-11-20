@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from "@nestjs/common";
-import type { AnalyteValueType, LabSection, Sex } from "@prisma/client";
+import type { AnalyteValueType, LabSection, Sex } from "../../generated/prisma/client";
 import type { AuthUser } from "../../auth/auth.types";
 import { AuditService } from "../../audit/audit.service";
 import { D, type Db } from "../../common/db";

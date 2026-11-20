@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
 import type { INestApplicationContext } from "@nestjs/common";
-import type { Lab, StaffRole, Tenant } from "@prisma/client";
+import type { Lab, StaffRole, Tenant } from "../generated/prisma/client";
 import { AppModule } from "../app.module";
 import type { AuthUser } from "../auth/auth.types";
 import { loadEnv } from "../config/env";

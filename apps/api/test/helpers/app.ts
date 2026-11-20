@@ -2,7 +2,7 @@ import "reflect-metadata";
 import { randomBytes } from "node:crypto";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
-import type { StaffRole } from "@prisma/client";
+import type { StaffRole } from "../../src/generated/prisma/client";
 import { AppModule } from "../../src/app.module";
 import { configureApp } from "../../src/app.setup";
 import { loadEnv } from "../../src/config/env";

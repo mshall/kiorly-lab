@@ -1,6 +1,6 @@
 import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { randomBytes } from "node:crypto";
-import type { StaffRole } from "@prisma/client";
+import type { StaffRole } from "../../generated/prisma/client";
 import type { AuthUser, AuthedRequest } from "../../auth/auth.types";
 import { ROLE_PERMISSIONS, hasPermission, type Permission } from "../../auth/rbac";
 import { AuditService } from "../../audit/audit.service";

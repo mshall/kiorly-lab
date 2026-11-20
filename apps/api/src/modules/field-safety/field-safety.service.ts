@@ -1,5 +1,5 @@
 import { ConflictException, Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
-import type { HomeCollection, Prisma, SafetyAlert as SafetyAlertRow } from "@prisma/client";
+import type { HomeCollection, Prisma, SafetyAlert as SafetyAlertRow } from "../../generated/prisma/client";
 import { type SafetyAlert, type SafetyState, EGYPT_EMERGENCY_NUMBERS, answerSafetyPrompt, buildSafetyAlert, buildSos, deliverSafetyAlert, evaluateSafety } from "@kiorly/field-visit";
 import { MessagingAdapter } from "../../adapters/messaging.adapter";
 import { AuditService } from "../../audit/audit.service";

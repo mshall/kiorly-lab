@@ -1,4 +1,4 @@
-import type { Edition, LedgerAccount } from "@prisma/client";
+import type { Edition, LedgerAccount } from "../generated/prisma/client";
 import type { Db } from "../common/db";
 
 /**

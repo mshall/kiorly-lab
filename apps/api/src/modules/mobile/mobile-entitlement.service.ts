@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { Edition } from "@prisma/client";
+import type { Edition } from "../../generated/prisma/client";
 import { FeatureFlagsService } from "../../feature-flags/feature-flags.service";
 
 export const MOBILE_ENTITLEMENT_KEY = "mobile_staff_app" as const;

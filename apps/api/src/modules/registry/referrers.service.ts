@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
 import { createHash, randomBytes } from "node:crypto";
-import type { CommissionType, NotificationChannel, Prisma, ReferrerAccount, ReferrerKind } from "@prisma/client";
+import type { CommissionType, NotificationChannel, Prisma, ReferrerAccount, ReferrerKind } from "../../generated/prisma/client";
 import type { AuthUser } from "../../auth/auth.types";
 import { AuditService } from "../../audit/audit.service";
 import { D, type Db, round2 } from "../../common/db";

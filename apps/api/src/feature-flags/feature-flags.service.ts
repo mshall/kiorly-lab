@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit, Optional } from "@nestjs/common";
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "../generated/prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { ENTITLEMENT_KEYS, FLAG_DEFINITIONS, isKnownFlagKey } from "./feature-flag-keys";
 import { signControlPlaneRequest, verifySnapshot } from "@kiorex/contracts";

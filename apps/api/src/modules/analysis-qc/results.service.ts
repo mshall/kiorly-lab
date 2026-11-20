@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException, Optional, UnprocessableEntityException } from "@nestjs/common";
-import type { LabSection, Prisma, Result, ResultSource } from "@prisma/client";
+import type { LabSection, Prisma, Result, ResultSource } from "../../generated/prisma/client";
 import type { AuthUser } from "../../auth/auth.types";
 import { SIGNATORY_ROLES } from "../../auth/rbac";
 import { AuditService } from "../../audit/audit.service";

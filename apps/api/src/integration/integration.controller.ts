@@ -1,6 +1,6 @@
 import { BadRequestException, Controller, Get, Header, HttpCode, Inject, NotFoundException, Param, Post, Query, Req, StreamableFile } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
-import type { OrderSource } from "@prisma/client";
+import type { OrderSource } from "../generated/prisma/client";
 import { Public } from "../auth/decorators";
 import type { AuthedRequest } from "../auth/auth.types";
 import { z } from "../common/zod";

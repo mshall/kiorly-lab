@@ -1,4 +1,4 @@
-import type { Edition, StaffRole } from "@prisma/client";
+import type { Edition, StaffRole } from "../generated/prisma/client";
 
 export interface AuthUser {
   staffId: string;

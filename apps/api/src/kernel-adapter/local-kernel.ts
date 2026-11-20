@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { Edition } from "@prisma/client";
+import type { Edition } from "../generated/prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { D, round2, type Db } from "../common/db";
 import type { Capability, EntitlementsPort, LedgerPort, LedgerPostInput, PriceBookPort, PriceQuery } from "./ports";

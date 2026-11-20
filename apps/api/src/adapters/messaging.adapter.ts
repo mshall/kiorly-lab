@@ -1,5 +1,5 @@
 import { Inject, Injectable, Optional } from "@nestjs/common";
-import type { NotificationChannel, NotificationPurpose } from "@prisma/client";
+import type { NotificationChannel, NotificationPurpose } from "../generated/prisma/client";
 import { appConfig } from "../config/app-config";
 import { PrismaService } from "../prisma/prisma.service";
 import type { Db } from "../common/db";

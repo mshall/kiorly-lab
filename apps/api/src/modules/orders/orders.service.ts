@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, HttpException, Inject, Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
 import { createHash } from "node:crypto";
-import { Prisma, type OrderSource, type ReleaseChannel, type TestDefinition } from "@prisma/client";
+import { Prisma, type OrderSource, type ReleaseChannel, type TestDefinition } from "../../generated/prisma/client";
 import { buildTravelMatrix, isInCoverage } from "@kiorly/field-visit";
 import type { AuthUser } from "../../auth/auth.types";
 import { AuditService } from "../../audit/audit.service";

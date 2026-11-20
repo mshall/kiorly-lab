@@ -1,4 +1,4 @@
-import type { ResultFlag } from "@prisma/client";
+import type { ResultFlag } from "../generated/prisma/client";
 
 export interface IntervalLike {
   low: number | null;

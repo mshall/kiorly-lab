@@ -1,4 +1,4 @@
-import type { StaffRole } from "@prisma/client";
+import type { StaffRole } from "../generated/prisma/client";
 
 /** Permission catalogue (KX-07 roles). Tenant isolation is separate and not a permission (safety.lab.tenant_isolation). */
 export const PERMISSIONS = [

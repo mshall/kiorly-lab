@@ -1,6 +1,6 @@
 import { eventSource, isExternalSource } from "./order-source";
 import { Inject, Injectable } from "@nestjs/common";
-import type { OrderItemStatus } from "@prisma/client";
+import type { OrderItemStatus } from "../generated/prisma/client";
 import { OutboxService } from "../outbox/outbox.service";
 import { PrismaService } from "../prisma/prisma.service";
 import type { Db } from "./db";

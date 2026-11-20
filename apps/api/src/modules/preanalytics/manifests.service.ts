@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
 import { randomBytes } from "node:crypto";
-import type { ManifestKind, ManifestStatus, Prisma } from "@prisma/client";
+import type { ManifestKind, ManifestStatus, Prisma } from "../../generated/prisma/client";
 import type { AuthUser } from "../../auth/auth.types";
 import { AuditService } from "../../audit/audit.service";
 import { D, nextSequence, pad } from "../../common/db";

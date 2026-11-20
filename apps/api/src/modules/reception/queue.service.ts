@@ -1,5 +1,5 @@
 import { ConflictException, Inject, Injectable, NotFoundException } from "@nestjs/common";
-import type { Prisma, QueueStatus } from "@prisma/client";
+import type { Prisma, QueueStatus } from "../../generated/prisma/client";
 import type { AuthUser } from "../../auth/auth.types";
 import { AuditService } from "../../audit/audit.service";
 import { nextSequence, pad } from "../../common/db";

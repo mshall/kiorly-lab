@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, Inject, Injectable, Logger, NotFoundException, Optional, UnprocessableEntityException } from "@nestjs/common";
 import { MobilePushService } from "../../adapters/mobile-push.adapter";
-import type { InventoryCategory, InventoryLotStatus, Prisma } from "@prisma/client";
+import type { InventoryCategory, InventoryLotStatus, Prisma } from "../../generated/prisma/client";
 import type { AuthUser } from "../../auth/auth.types";
 import { AuditService } from "../../audit/audit.service";
 import { D, type Db, nextSequence, pad, round2 } from "../../common/db";

@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
-import type { CapaKind, DocCategory, MaintKind, NcArea, NcSeverity, NcStatus, Prisma } from "@prisma/client";
+import type { CapaKind, DocCategory, MaintKind, NcArea, NcSeverity, NcStatus, Prisma } from "../../generated/prisma/client";
 import type { AuthUser } from "../../auth/auth.types";
 import { AuditService } from "../../audit/audit.service";
 import { D, nextSequence, pad } from "../../common/db";

@@ -1,5 +1,5 @@
 import { ConflictException, HttpException, Inject, Injectable, NotFoundException } from "@nestjs/common";
-import type { HomeCollection, Prisma } from "@prisma/client";
+import type { HomeCollection, Prisma } from "../../generated/prisma/client";
 import { type FieldVisit, type VisitEvent, applyEvent } from "@kiorly/field-visit";
 import type { AuthUser } from "../../auth/auth.types";
 import { PrismaService } from "../../prisma/prisma.service";

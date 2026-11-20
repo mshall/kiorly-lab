@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import fc from "fast-check";
-import type { OrderItemStatus, SpecimenStatus } from "@prisma/client";
+import type { OrderItemStatus, SpecimenStatus } from "../generated/prisma/client";
 import { classifyResult, deltaPercent, pickInterval } from "./clinical-flags";
 import { channelConsented, hashNationalId, presentIdentifiers, twoIdentifiersOk } from "./identity";
 import { deriveOrderStatus } from "./order-status";

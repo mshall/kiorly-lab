@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import type { StaffRole } from "@prisma/client";
+import type { StaffRole } from "../generated/prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import type { Db } from "../common/db";
 

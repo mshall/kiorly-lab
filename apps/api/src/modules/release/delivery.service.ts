@@ -1,6 +1,6 @@
 import { ConflictException, Inject, Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
 import { createHash, randomBytes } from "node:crypto";
-import type { NotificationChannel } from "@prisma/client";
+import type { NotificationChannel } from "../../generated/prisma/client";
 import type { AuthUser } from "../../auth/auth.types";
 import { AuditService } from "../../audit/audit.service";
 import { MessagingAdapter } from "../../adapters/messaging.adapter";

@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { createHash, randomBytes } from "node:crypto";
-import type { AnalyzerProtocol, InstrumentKind, LabSection, QcLevel } from "@prisma/client";
+import type { AnalyzerProtocol, InstrumentKind, LabSection, QcLevel } from "../../generated/prisma/client";
 import type { AuthUser } from "../../auth/auth.types";
 import { AuditService } from "../../audit/audit.service";
 import { D, type Db } from "../../common/db";

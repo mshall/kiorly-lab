@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, ForbiddenException, HttpException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { createHash, createHmac, randomBytes, randomInt, timingSafeEqual } from "node:crypto";
-import type { ReleaseChannel } from "@prisma/client";
+import type { ReleaseChannel } from "../../generated/prisma/client";
 import type { AuthUser } from "../../auth/auth.types";
 import { SIGNATORY_ROLES } from "../../auth/rbac";
 import { AuditService } from "../../audit/audit.service";

@@ -1,6 +1,6 @@
 import { qrSvg } from "./qr";
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
-import { Prisma, type RejectionReason, type Specimen } from "@prisma/client";
+import { Prisma, type RejectionReason, type Specimen } from "../../generated/prisma/client";
 import type { AuthUser } from "../../auth/auth.types";
 import { AuditService } from "../../audit/audit.service";
 import { MessagingAdapter } from "../../adapters/messaging.adapter";
