@@ -74,3 +74,12 @@ All providers run on **mock adapters** today (`MODE=mock|real`, default `mock`).
 | Replay protection | in-process nonce cache | Shared nonce store (database or cache) for multi-instance deploys | NH-LB-021 |
 | Label printing | ZPL string today | Print server / printer driver, symbology sign-off | NH-LB-012/032 |
 | Maps / routing | nearest-neighbour stub | Routing provider adapter | NH-LB-031 |
+
+## Standalone-LIS additions (defaults shipped, human sign-off needed)
+- **NH-LB-040** ICD-10 hint list and suggested tests are a synthetic typeahead aid, not a coding system; replace with the market's licensed code set if needed.
+- **NH-LB-041** Antimicrobial breakpoints (CLSI/EUCAST) are not built in; microbiologist to confirm panels and the interpretation workflow (S/I/R entered by the bench).
+- **NH-LB-042** Retention default 7 days per specimen type (`RetentionRule`), storage temperature limits and the transport temperature range are placeholders pending the quality manager.
+- **NH-LB-043** Delivery templates (email / WhatsApp / SMS, AR + EN) for report links and recollection notices: `TODO_NEEDS_HUMAN_REPORT_DELIVERY`; consent wording for the doctor channel (`REFERRER_PORTAL`) pending counsel.
+- **NH-LB-044** Discount approval threshold (20% of list price needs `billing.pricing`), commission rules, credit-limit policy and payer coverage semantics are engineering defaults; finance owner to confirm.
+- **NH-LB-045** QC lot warning window (30 days), EQA z-score thresholds (|z| 2 / 3, ISO 13528 convention), delta-check defaults and the document review period (12 months) pending the lab director.
+- **NH-LB-046** Report footer legal wording and signature policy still placeholders in templates (see NH-LB-017); Arabic report layout needs a pathologist review of the bilingual template.

@@ -74,7 +74,7 @@ export async function seedBackOffice(c: Ctx): Promise<void> {
   const monthStart = (back: number) => new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - back, 1));
   for (let m = 0; m < 3; m++) {
     const d = monthStart(m);
-    for (const [cat, amt, vendor, ref] of [["RENT", 18000, "Nile Properties", `RENT-${ymd(d).slice(0, 7)}`], ["SALARIES", 64500, "Payroll", `PAY-${ymd(d).slice(0, 7)}`], ["UTILITIES", 5200 + m * 310, "Electricity & water", undefined], ["REAGENTS", 21000 - m * 1500, "MedSupply (demo)", undefined], ["MAINTENANCE", 2400, "Instrument service contract", undefined], ["MARKETING", 3000, "Local advertising", undefined]] as const)
+    for (const [cat, amt, vendor, ref] of [["RENT", 2400, "Nile Properties", `RENT-${ymd(d).slice(0, 7)}`], ["SALARIES", 3600, "Payroll", `PAY-${ymd(d).slice(0, 7)}`], ["UTILITIES", 520 + m * 31, "Electricity & water", undefined], ["REAGENTS", 900 - m * 60, "MedSupply (demo)", undefined], ["MAINTENANCE", 240, "Instrument service contract", undefined], ["MARKETING", 300, "Local advertising", undefined]] as const)
       await finance.createExpense(fin, { date: ymd(new Date(d.getTime() + (cat === "RENT" ? 0 : 4 * DAY))), category: cat, amount: amt, vendor, paidVia: cat === "UTILITIES" ? "CARD" : "BANK", reference: ref });
   }
   await finance.createExpense(fin, { date: ymd(today), category: "TRANSPORT", amount: 60, vendor: "Taxi (sample courier)", fromDrawer: true, note: "urgent specimen transfer" });

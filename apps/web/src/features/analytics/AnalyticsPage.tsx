@@ -6,7 +6,7 @@ import { api, download } from "@/lib/api";
 import { money, num, today } from "@/lib/format";
 import { useAuth } from "@/lib/auth";
 import { Button, Field, Input, Select, Table, Td } from "@/components/ui";
-import { BarChart, Donut } from "@/components/charts";
+import { BarChart, Donut, TrendChart } from "@/components/charts";
 import { EmptyState, Skeleton, Surface } from "@/brand/ui-kit";
 import { ErrorNote, PageHeader } from "@/components/common";
 
@@ -27,7 +27,8 @@ export function AnalyticsPage() {
   const r = rep.data;
   const cell = (c: any, v: unknown) => (v == null || v === "" ? "" : c.type === "money" ? money(v as number, me?.tenant.currency, i18n.language) : c.type === "percent" ? `${v}%` : c.type === "number" ? num(v) : c.type === "date" ? String(v).slice(0, 10) : String(v));
   const chart = r?.chart && r.rows.length ? (
-    r.chart.type === "pie" ? <Donut label={ar ? r.titleAr : r.title} data={r.rows.map((x: any) => ({ label: String(x[r.chart.x]), value: Number(x[r.chart.y[0]]) || 0 }))} />
+    r.chart.type === "line" && r.rows.length > 1 ? <TrendChart label={ar ? r.titleAr : r.title} points={r.rows.map((x: any) => ({ at: String(x[r.chart.x]), value: Number(x[r.chart.y[0]]) || 0 }))} height={220} />
+      : r.chart.type === "pie" ? <Donut label={ar ? r.titleAr : r.title} data={r.rows.map((x: any) => ({ label: String(x[r.chart.x]), value: Number(x[r.chart.y[0]]) || 0 }))} />
       : <BarChart label={ar ? r.titleAr : r.title} series={r.chart.y.map((k: string) => ar ? r.columns.find((c: any) => c.key === k)?.labelAr : r.columns.find((c: any) => c.key === k)?.label)} data={r.rows.map((x: any) => ({ label: String(x[r.chart.x]), values: r.chart.y.map((k: string) => Number(x[k]) || 0) }))} />
   ) : null;
   return (

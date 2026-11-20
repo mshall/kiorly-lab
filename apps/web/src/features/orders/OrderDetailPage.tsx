@@ -104,10 +104,10 @@ export function OrderDetailPage() {
                 ));
               })}
             </Table>
-            {(can("results.medical_validate") && d.items.some(() => (results.data ?? []).some((r) => r.status === "TECH_VALIDATED"))) || (can("reports.sign") && ready.data?.ready) || (ready.data && !ready.data.ready && can("reports.read")) ? (
+            {(can("results.medical_validate") && d.items.some(() => (results.data ?? []).some((r) => r.status === "TECH_VALIDATED"))) || (can("reports.sign") && ready.data?.ready && d.status !== "RELEASED") || (ready.data && !ready.data.ready && can("reports.read")) ? (
               <div className="flex flex-wrap items-center gap-2 border-t border-border/70 bg-muted/30 px-4 py-3">
                 {can("results.medical_validate") && d.items.some(() => (results.data ?? []).some((r) => r.status === "TECH_VALIDATED")) ? <Button onClick={() => medical.mutate()}>{t("order.medicalValidate")}</Button> : null}
-                {can("reports.sign") && ready.data?.ready ? <Button variant="pulse" onClick={() => sign.mutate()}>{t("order.sign")}</Button> : null}
+                {can("reports.sign") && ready.data?.ready && d.status !== "RELEASED" ? <Button variant="pulse" onClick={() => sign.mutate()}>{t("order.sign")}</Button> : null}
                 {ready.data && !ready.data.ready && can("reports.read") ? <p className="text-xs text-muted-foreground">{t("order.notReady", { n: ready.data.blockers.length })}</p> : null}
               </div>
             ) : null}

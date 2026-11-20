@@ -30,7 +30,7 @@ export function PatientProfilePage() {
   const consent = useMutation({ mutationFn: (b: { kind: string; granted: boolean }) => api(`/patients/${id}/consents`, { body: b }), onSuccess: () => { void qc.invalidateQueries({ queryKey: ["patient-profile", id] }); toast(t("common.saved")); } });
   if (prof.isLoading || !prof.data) return <div role="status" aria-busy="true" className="space-y-4"><Skeleton className="h-9 w-1/3" /><Skeleton className="h-40" /><Skeleton className="h-72" /></div>;
   const { patient: p, orders, stats, consents } = prof.data;
-  const series = trends.data ?? [];
+  const series = [...(trends.data ?? [])].sort((a, b) => Number(b.stats.abnormal > 0) - Number(a.stats.abnormal > 0) || b.stats.count - a.stats.count);
   const cur = series.find((s) => s.analyte.id === sel) ?? series[0];
   const tabs = [...(can("results.read") ? [{ id: "trends", label: t("pat.trends") }] : []), { id: "visits", label: t("pat.visitsTab") }, { id: "consent", label: t("pat.consentTab") }];
   return (
