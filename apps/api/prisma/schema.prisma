@@ -271,6 +271,9 @@ enum InvoiceStatus {
 enum PaymentMethod {
   CASH
   CARD
+  /// Bank transfer / cheque: used for B2B and insurance settlements.
+  TRANSFER
+  CHEQUE
 }
 
 enum PaymentStatus {
@@ -287,6 +290,7 @@ enum LedgerAccount {
   REVENUE
   VAT_PAYABLE
   REFUNDS
+  BANK
 }
 
 enum OutboxStatus {
@@ -1180,14 +1184,22 @@ model PriceListItem {
 
 /// KLBIZ01: payer contract / B2B account.
 model B2bAccount {
-  id               String   @id @default(cuid())
+  id               String    @id @default(cuid())
   orgId            String
   name             String
   priceListId      String?
-  paymentTermsDays Int      @default(30)
-  creditLimit      Decimal? @db.Decimal(14, 2)
-  active           Boolean  @default(true)
-  createdAt        DateTime @default(now())
+  paymentTermsDays Int       @default(30)
+  creditLimit      Decimal?  @db.Decimal(14, 2)
+  active           Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  /// Contract: CORPORATE | INSURANCE. discountPercent applies to every invoice; coveragePercent = share of the invoice the payer settles (the patient pays the rest).
+  kind             String    @default("CORPORATE")
+  discountPercent  Decimal   @default(0) @db.Decimal(5, 2)
+  coveragePercent  Decimal   @default(0) @db.Decimal(5, 2)
+  contractRef      String?
+  contractStart    DateTime? @db.Date
+  contractEnd      DateTime? @db.Date
+  billingEmail     String?
 
   priceList PriceList? @relation(fields: [priceListId], references: [id])
   orders    LabOrder[]
@@ -1206,7 +1218,14 @@ model Invoice {
   number         String
   status         InvoiceStatus @default(DRAFT)
   currency       String        @default("EGP")
+  /// subtotal = net of discounts, before VAT (revenue). grossSubtotal = sum of line list prices.
   subtotal       Decimal       @db.Decimal(14, 2)
+  grossSubtotal  Decimal       @default(0) @db.Decimal(14, 2)
+  discountTotal  Decimal       @default(0) @db.Decimal(14, 2)
+  discountReason String?
+  /// Part of the total the B2B/insurance payer settles (the rest is the patient's).
+  payerAmount    Decimal       @default(0) @db.Decimal(14, 2)
+  dueAt          DateTime?
   vatRatePercent Decimal       @db.Decimal(5, 2)
   vatTotal       Decimal       @db.Decimal(14, 2)
   total          Decimal       @db.Decimal(14, 2)
@@ -1231,6 +1250,7 @@ model InvoiceLine {
   testId         String?
   quantity       Int     @default(1)
   unitPrice      Decimal @db.Decimal(14, 2)
+  discountAmount Decimal @default(0) @db.Decimal(14, 2)
   vatRatePercent Decimal @db.Decimal(5, 2)
   vatAmount      Decimal @db.Decimal(14, 2)
   lineTotal      Decimal @db.Decimal(14, 2)
@@ -1253,6 +1273,11 @@ model Payment {
   pspRef         String?
   receivedBy     String
   createdAt      DateTime      @default(now())
+  /// PATIENT | PAYER (B2B / insurance settlement).
+  payer          String        @default("PATIENT")
+  refundedAmount Decimal       @default(0) @db.Decimal(14, 2)
+  /// Cheque / transfer reference.
+  reference      String?
 
   invoice Invoice @relation(fields: [invoiceId], references: [id])
 
@@ -2472,4 +2497,58 @@ model ReportDelivery {
   createdAt       DateTime            @default(now())
 
   @@index([orgId, reportVersionId])
+}
+
+// =========================================================== finance (M8) ====
+
+enum ExpenseCategory {
+  RENT
+  SALARIES
+  UTILITIES
+  REAGENTS
+  CONSUMABLES
+  EQUIPMENT
+  MAINTENANCE
+  TRANSPORT
+  MARKETING
+  PROFESSIONAL_FEES
+  OTHER
+}
+
+/// Partial/full refund of a payment (append-only; Payment.refundedAmount is the running total).
+model Refund {
+  id        String   @id @default(cuid())
+  orgId     String
+  labId     String
+  paymentId String
+  invoiceId String
+  amount    Decimal  @db.Decimal(14, 2)
+  reason    String?
+  createdBy String
+  createdAt DateTime @default(now())
+
+  @@index([orgId, createdAt])
+  @@index([paymentId])
+}
+
+/// Operating expense. fromDrawer = paid out of the cash drawer (reduces expected cash at close).
+model Expense {
+  id         String          @id @default(cuid())
+  orgId      String
+  labId      String
+  date       DateTime        @db.Date
+  category   ExpenseCategory @default(OTHER)
+  amount     Decimal         @db.Decimal(14, 2)
+  vendor     String?
+  /// CASH | BANK | CARD
+  paidVia    String          @default("CASH")
+  fromDrawer Boolean         @default(false)
+  reference  String?
+  note       String?
+  createdBy  String
+  createdAt  DateTime        @default(now())
+  voidedAt   DateTime?
+  voidedBy   String?
+
+  @@index([orgId, date])
 }

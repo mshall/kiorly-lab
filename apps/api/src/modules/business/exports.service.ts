@@ -3,6 +3,9 @@ import PDFDocument from "pdfkit";
 import { D } from "../../common/db";
 import { PrismaService } from "../../prisma/prisma.service";
 import { InsightsService } from "./insights.service";
+import { FinanceService } from "./finance.service";
+import { renderTablePdf } from "../../common/table-pdf";
+import type { AuthUser } from "../../auth/auth.types";
 
 /** CSV cell with RFC4180 quoting and spreadsheet-formula neutralisation (a leading = + - @ becomes text). */
 export function csvCell(v: unknown): string {
@@ -15,8 +18,9 @@ export const toCsv = (header: string[], rows: unknown[][]): string => [header, .
 
 const range = (from?: string, to?: string) => ({ gte: from ? new Date(from) : new Date(Date.now() - 30 * 86_400_000), lte: to ? new Date(to) : new Date() });
 
-export type ExportKind = "invoices" | "payments" | "orders" | "qc-runs" | "tat" | "results-summary";
-export const EXPORT_KINDS: readonly ExportKind[] = ["invoices", "payments", "orders", "qc-runs", "tat", "results-summary"];
+export type ExportKind = "invoices" | "payments" | "orders" | "qc-runs" | "tat" | "results-summary" | "aging" | "expenses" | "refunds" | "commissions" | "inventory-stock";
+export const EXPORT_KINDS: readonly ExportKind[] = ["invoices", "payments", "orders", "qc-runs", "tat", "results-summary", "aging", "expenses", "refunds", "commissions", "inventory-stock"];
+const mk = (header: string[], rows: unknown[][]) => ({ header, rows });
 
 /**
  * Accountant/lab exports (CSV). VAT appears as plain columns (rate, amount, total). Businesses hand these files to their own accountant
@@ -27,35 +31,69 @@ export class ExportsService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(InsightsService) private readonly insights: InsightsService,
+    @Inject(FinanceService) private readonly finance: FinanceService,
   ) {}
 
   async csv(orgId: string, kind: ExportKind, q: { from?: string; to?: string }): Promise<string> {
+    const t = await this.table(orgId, kind, q);
+    return toCsv(t.header, t.rows);
+  }
+
+  /** Same data as the CSV, as a printable PDF table. */
+  async pdf(orgId: string, kind: ExportKind, q: { from?: string; to?: string }): Promise<Buffer> {
+    const t = await this.table(orgId, kind, q);
+    const r = range(q.from, q.to);
+    return renderTablePdf({ title: kind.replace(/-/g, " ").replace(/^./, (c) => c.toUpperCase()), subtitle: `${r.gte.toISOString().slice(0, 10)} to ${r.lte.toISOString().slice(0, 10)}`, columns: t.header.map((h) => ({ key: h, label: h.replace(/_/g, " ") })), rows: t.rows.map((row) => Object.fromEntries(t.header.map((h, i) => [h, row[i]]))), landscape: t.header.length > 7 });
+  }
+
+  private async table(orgId: string, kind: ExportKind, q: { from?: string; to?: string }): Promise<{ header: string[]; rows: unknown[][] }> {
     const r = range(q.from, q.to);
     switch (kind) {
       case "invoices": {
         const rows = await this.prisma.invoice.findMany({ where: { orgId, createdAt: r }, include: { order: { select: { orderNumber: true } }, b2bAccount: { select: { name: true } } }, orderBy: { createdAt: "asc" } });
-        return toCsv(["number", "issued_at", "order", "account", "status", "currency", "subtotal", "vat_rate_percent", "vat_total", "total", "paid_total"], rows.map((i) => [i.number, i.issuedAt, i.order?.orderNumber, i.b2bAccount?.name, i.status, i.currency, D(i.subtotal), D(i.vatRatePercent), D(i.vatTotal), D(i.total), D(i.paidTotal)]));
+        return mk(["number", "issued_at", "order", "account", "status", "currency", "subtotal", "vat_rate_percent", "vat_total", "total", "paid_total"], rows.map((i) => [i.number, i.issuedAt, i.order?.orderNumber, i.b2bAccount?.name, i.status, i.currency, D(i.subtotal), D(i.vatRatePercent), D(i.vatTotal), D(i.total), D(i.paidTotal)]));
       }
       case "payments": {
         const rows = await this.prisma.payment.findMany({ where: { orgId, createdAt: r }, include: { invoice: { select: { number: true, currency: true } } }, orderBy: { createdAt: "asc" } });
-        return toCsv(["created_at", "invoice", "method", "status", "amount", "currency", "reference"], rows.map((p) => [p.createdAt, p.invoice.number, p.method, p.status, D(p.amount), p.invoice.currency, p.pspRef]));
+        return mk(["created_at", "invoice", "method", "status", "amount", "currency", "reference"], rows.map((p) => [p.createdAt, p.invoice.number, p.method, p.status, D(p.amount), p.invoice.currency, p.pspRef]));
       }
       case "orders": {
         const rows = await this.prisma.labOrder.findMany({ where: { orgId, createdAt: r }, include: { items: true }, orderBy: { createdAt: "asc" } });
-        return toCsv(["order_number", "created_at", "source", "status", "priority", "collection", "tests"], rows.map((o) => [o.orderNumber, o.createdAt, o.source, o.status, o.priority, o.collectionType, o.items.length]));
+        return mk(["order_number", "created_at", "source", "status", "priority", "collection", "tests"], rows.map((o) => [o.orderNumber, o.createdAt, o.source, o.status, o.priority, o.collectionType, o.items.length]));
       }
       case "qc-runs": {
         const rows = await this.prisma.qcRun.findMany({ where: { orgId, runAt: r }, include: { material: { include: { analyte: true } }, instrument: true }, orderBy: { runAt: "asc" } });
-        return toCsv(["run_at", "instrument", "analyte", "level", "lot", "value", "z_score", "status", "violated_rules"], rows.map((x) => [x.runAt, x.instrument.name, x.material.analyte.code, x.material.level, x.material.materialLot, D(x.value), D(x.zScore), x.status, x.violatedRules.join(" ")]));
+        return mk(["run_at", "instrument", "analyte", "level", "lot", "value", "z_score", "status", "violated_rules"], rows.map((x) => [x.runAt, x.instrument.name, x.material.analyte.code, x.material.level, x.material.materialLot, D(x.value), D(x.zScore), x.status, x.violatedRules.join(" ")]));
       }
       case "tat": {
         const t = await this.insights.tat(orgId, q);
-        return toCsv(["order", "test", "priority", "target_minutes", "elapsed_minutes", "percent", "status"], t.rows.map((x) => [x.orderNumber, x.test, x.priority, x.targetMinutes, x.elapsedMinutes, x.percent, x.status]));
+        return mk(["order", "test", "priority", "target_minutes", "elapsed_minutes", "percent", "status"], t.rows.map((x) => [x.orderNumber, x.test, x.priority, x.targetMinutes, x.elapsedMinutes, x.percent, x.status]));
       }
       case "results-summary": {
         const rows = await this.prisma.result.groupBy({ by: ["analyteId", "flag"], where: { orgId, enteredAt: r, status: { notIn: ["CORRECTED", "REJECTED"] } }, _count: true });
         const analytes = await this.prisma.analyte.findMany({ where: { orgId } });
-        return toCsv(["analyte", "flag", "count"], rows.map((x) => [analytes.find((a) => a.id === x.analyteId)?.code, x.flag, x._count]));
+        return mk(["analyte", "flag", "count"], rows.map((x) => [analytes.find((a) => a.id === x.analyteId)?.code, x.flag, x._count]));
+      }
+      case "aging": {
+        const a = await this.finance.aging({ orgId, labIds: [] } as unknown as AuthUser, {});
+        return mk(["type", "party", "invoice", "due_at", "days_overdue", "bucket", "outstanding"], a.invoices.map((x) => [x.kind, x.party, x.invoice, x.dueAt, x.daysOverdue, x.bucket, x.outstanding]));
+      }
+      case "expenses": {
+        const rows = await this.prisma.expense.findMany({ where: { orgId, date: { gte: r.gte, lte: r.lte }, voidedAt: null }, orderBy: { date: "asc" } });
+        return mk(["date", "category", "vendor", "paid_via", "from_drawer", "reference", "amount"], rows.map((e) => [e.date.toISOString().slice(0, 10), e.category, e.vendor, e.paidVia, e.fromDrawer, e.reference, D(e.amount)]));
+      }
+      case "refunds": {
+        const rows = await this.prisma.refund.findMany({ where: { orgId, createdAt: r }, orderBy: { createdAt: "asc" } });
+        const pays = await this.prisma.payment.findMany({ where: { id: { in: rows.map((x) => x.paymentId) } }, include: { invoice: { select: { number: true } } } });
+        return mk(["created_at", "invoice", "method", "amount", "reason"], rows.map((x) => { const p = pays.find((y) => y.id === x.paymentId); return [x.createdAt, p?.invoice.number, p?.method, D(x.amount), x.reason]; }));
+      }
+      case "commissions": {
+        const rows = await this.prisma.referrerLedgerEntry.findMany({ where: { orgId, account: "COMMISSION", createdAt: r }, include: { referrer: { select: { name: true } } }, orderBy: { createdAt: "asc" } });
+        return mk(["created_at", "referrer", "type", "amount", "memo"], rows.map((x) => [x.createdAt, x.referrer.name, x.type, D(x.amount), x.memo]));
+      }
+      case "inventory-stock": {
+        const items = await this.prisma.inventoryItem.findMany({ where: { orgId, active: true }, include: { lots: { where: { qtyOnHand: { gt: 0 } } } }, orderBy: { code: "asc" } });
+        return mk(["code", "name", "unit", "on_hand", "reorder_level", "avg_unit_cost", "value"], items.map((i) => { const q = i.lots.reduce((a, l) => a + D(l.qtyOnHand), 0); return [i.code, i.name, i.unit, q, D(i.reorderLevel), D(i.avgUnitCost), Math.round(q * D(i.avgUnitCost) * 100) / 100]; }));
       }
       default:
         throw new BadRequestException({ code: "UNKNOWN_EXPORT" });
