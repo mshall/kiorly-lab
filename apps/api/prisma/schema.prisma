@@ -802,14 +802,18 @@ model Instrument {
 
 /// Control material per analyte/level with target mean/SD (basis for Westgard evaluation).
 model QcMaterialLevel {
-  id          String    @id @default(cuid())
-  orgId       String
-  analyteId   String
-  level       QcLevel
-  materialLot String
-  targetMean  Decimal   @db.Decimal(14, 5)
-  targetSd    Decimal   @db.Decimal(14, 5)
-  expiresAt   DateTime? @db.Date
+  id           String      @id @default(cuid())
+  orgId        String
+  analyteId    String
+  level        QcLevel
+  materialLot  String
+  targetMean   Decimal     @db.Decimal(14, 5)
+  targetSd     Decimal     @db.Decimal(14, 5)
+  expiresAt    DateTime?   @db.Date
+  /// QC lot management: manufacturer, date opened, ACTIVE/RETIRED (a retired lot accepts no new runs).
+  manufacturer String?
+  openedAt     DateTime?   @db.Date
+  status       QcLotStatus @default(ACTIVE)
 
   analyte Analyte @relation(fields: [analyteId], references: [id])
   runs    QcRun[]
@@ -1928,4 +1932,246 @@ model HistoAddendum {
   histoCase HistoCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
 
   @@index([caseId])
+}
+
+// ============================================================ quality (M5) ====
+
+enum QcLotStatus {
+  ACTIVE
+  RETIRED
+}
+
+enum CalibrationStatus {
+  PASS
+  FAIL
+}
+
+enum EqaStatus {
+  ACCEPTABLE
+  WARNING
+  UNACCEPTABLE
+}
+
+enum MaintKind {
+  PREVENTIVE
+  CORRECTIVE
+  CLEANING
+  CALIBRATION
+  PARTS
+}
+
+enum NcArea {
+  PRE_ANALYTICAL
+  ANALYTICAL
+  POST_ANALYTICAL
+  EQUIPMENT
+  DOCUMENT
+  PERSONNEL
+  SAFETY
+  OTHER
+}
+
+enum NcSeverity {
+  MINOR
+  MAJOR
+  CRITICAL
+}
+
+enum NcStatus {
+  OPEN
+  INVESTIGATING
+  ACTION
+  VERIFIED
+  CLOSED
+}
+
+enum CapaKind {
+  CORRECTIVE
+  PREVENTIVE
+}
+
+enum CapaStatus {
+  OPEN
+  DONE
+  VERIFIED
+}
+
+enum DocCategory {
+  SOP
+  POLICY
+  FORM
+  MANUAL
+  WORK_INSTRUCTION
+}
+
+enum DocStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  SUPERSEDED
+}
+
+model CalibrationRecord {
+  id               String            @id @default(cuid())
+  orgId            String
+  instrumentId     String
+  analyteId        String?
+  calibratorLot    String
+  calibratorExpiry DateTime?         @db.Date
+  status           CalibrationStatus
+  slope            Decimal?          @db.Decimal(14, 6)
+  intercept        Decimal?          @db.Decimal(14, 6)
+  performedBy      String
+  performedAt      DateTime          @default(now())
+  nextDueAt        DateTime?
+  note             String?
+
+  @@index([orgId, instrumentId, performedAt])
+}
+
+/// Proficiency testing / external quality assessment result. z = (reported - assigned) / group SD.
+model EqaEvent {
+  id            String    @id @default(cuid())
+  orgId         String
+  scheme        String
+  cycle         String
+  sampleCode    String
+  analyteId     String
+  instrumentId  String?
+  reportedValue Decimal   @db.Decimal(14, 5)
+  assignedValue Decimal   @db.Decimal(14, 5)
+  groupSd       Decimal   @db.Decimal(14, 5)
+  zScore        Decimal   @db.Decimal(8, 3)
+  status        EqaStatus
+  note          String?
+  ncrId         String?
+  enteredBy     String
+  submittedAt   DateTime  @default(now())
+
+  @@index([orgId, analyteId, submittedAt])
+}
+
+model MaintenanceSchedule {
+  id            String    @id @default(cuid())
+  orgId         String
+  instrumentId  String
+  task          String
+  frequencyDays Int
+  lastDoneAt    DateTime?
+  nextDueAt     DateTime
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+
+  @@index([orgId, instrumentId, nextDueAt])
+}
+
+model MaintenanceLog {
+  id              String    @id @default(cuid())
+  orgId           String
+  instrumentId    String
+  scheduleId      String?
+  kind            MaintKind
+  performedBy     String
+  performedAt     DateTime  @default(now())
+  notes           String?
+  downtimeMinutes Int       @default(0)
+  partsReplaced   String?
+
+  @@index([orgId, instrumentId, performedAt])
+}
+
+/// Non-conformance report with root cause and CAPA actions.
+model Ncr {
+  id          String     @id @default(cuid())
+  orgId       String
+  number      String
+  title       String
+  description String
+  area        NcArea     @default(OTHER)
+  severity    NcSeverity @default(MINOR)
+  status      NcStatus   @default(OPEN)
+  /// MANUAL | QC | EQA | COMPLAINT | AUDIT | SPECIMEN | INSTRUMENT
+  source      String     @default("MANUAL")
+  relatedType String?
+  relatedId   String?
+  rootCause   String?
+  containment String?
+  raisedBy    String
+  closedBy    String?
+  closedAt    DateTime?
+  createdAt   DateTime   @default(now())
+
+  actions CapaAction[]
+
+  @@unique([orgId, number])
+  @@index([orgId, status])
+}
+
+model CapaAction {
+  id            String     @id @default(cuid())
+  orgId         String
+  ncrId         String
+  kind          CapaKind   @default(CORRECTIVE)
+  description   String
+  ownerId       String?
+  dueAt         DateTime?
+  status        CapaStatus @default(OPEN)
+  completedAt   DateTime?
+  effectiveness String?
+  verifiedBy    String?
+  createdAt     DateTime   @default(now())
+
+  ncr Ncr @relation(fields: [ncrId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, status, dueAt])
+}
+
+/// Document control (light): SOPs, policies, forms with versions, review/approval and read-and-understood acknowledgements.
+model QualityDocument {
+  id        String      @id @default(cuid())
+  orgId     String
+  code      String
+  title     String
+  category  DocCategory @default(SOP)
+  section   String?
+  ownerId   String?
+  active    Boolean     @default(true)
+  createdAt DateTime    @default(now())
+
+  versions QualityDocumentVersion[]
+
+  @@unique([orgId, code])
+}
+
+model QualityDocumentVersion {
+  id            String    @id @default(cuid())
+  orgId         String
+  documentId    String
+  version       Int
+  /// Markdown body.
+  body          String
+  status        DocStatus @default(DRAFT)
+  authoredBy    String
+  approvedBy    String?
+  approvedAt    DateTime?
+  effectiveFrom DateTime?
+  reviewDueAt   DateTime?
+  changeNote    String?
+  createdAt     DateTime  @default(now())
+
+  document QualityDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  acks     DocumentAck[]
+
+  @@unique([documentId, version])
+}
+
+model DocumentAck {
+  versionId String
+  orgId     String
+  staffId   String
+  ackedAt   DateTime @default(now())
+
+  version QualityDocumentVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@id([versionId, staffId])
 }

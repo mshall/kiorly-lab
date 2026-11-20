@@ -34,7 +34,6 @@ export class QcService {
     await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: active ? "instrument.activate" : "instrument.deactivate", entityType: "Instrument", entityId: id });
     return { id, active };
   }
-  /** Issues a bridge API key (shown once; only its hash is stored). */
   async setInstrumentSections(u: AuthUser, id: string, sections: LabSection[]) {
     const inst = await this.prisma.instrument.findFirst({ where: { id, orgId: u.orgId } });
     if (!inst) throw new NotFoundException({ code: "INSTRUMENT_NOT_FOUND" });
@@ -43,6 +42,7 @@ export class QcService {
     return row;
   }
 
+  /** Issues a bridge API key (shown once; only its hash is stored). */
   async issueApiKey(u: AuthUser, id: string) {
     const i = await this.prisma.instrument.findFirst({ where: { id, orgId: u.orgId } });
     if (!i) throw new NotFoundException({ code: "INSTRUMENT_NOT_FOUND" });
@@ -77,6 +77,7 @@ export class QcService {
       const mat = await tx.qcMaterialLevel.findFirst({ where: { id: b.materialId, orgId: u.orgId } });
       if (!mat) throw new NotFoundException({ code: "QC_MATERIAL_NOT_FOUND" });
       if (mat.expiresAt && mat.expiresAt < new Date()) throw new ConflictException({ code: "QC_MATERIAL_EXPIRED" });
+      if (mat.status === "RETIRED") throw new ConflictException({ code: "QC_MATERIAL_RETIRED" });
       const runAt = b.runAt ?? new Date();
       const z = zScore(b.value, D(mat.targetMean), D(mat.targetSd));
       const prior = await tx.qcRun.findMany({ where: { instrumentId: inst.id, materialId: mat.id }, orderBy: { runAt: "desc" }, take: 9 });

@@ -15,4 +15,5 @@ export const BOUNDED_CONTEXTS = [
   { dir: "preanalytics", name: "PreanalyticsModule", prefix: "KLSPC05", title: "Storage racks/freezers, retention & disposal, recollections, transport manifests and courier tracking", safetyPath: true },
   { dir: "microbiology", name: "MicrobiologyModule", prefix: "KLQC06", title: "Microbiology: culture & sensitivity with organisms, antibiotic panels, selective reporting", safetyPath: false },
   { dir: "histopathology", name: "HistopathologyModule", prefix: "KLQC07", title: "Histopathology and cytology basic reporting with pathologist sign-out and addenda", safetyPath: false },
+  { dir: "quality", name: "QualityModule", prefix: "KLQM", title: "Quality management: QC lots, calibration, EQA, maintenance, NCR/CAPA, document control", safetyPath: false },
 ] as const;
