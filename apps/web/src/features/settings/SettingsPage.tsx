@@ -118,7 +118,7 @@ export function SettingsPage() {
           <Card>
             <CardTitle>{t("set.clients")}</CardTitle>
             <div className="mb-3 flex gap-2"><Button size="sm" onClick={() => newClient.mutate("KIOREX_BOOKING")}>{t("set.newKiorexClient")}</Button><Button size="sm" variant="outline" onClick={() => newClient.mutate("KIORLY_CLINIC")}>{t("set.newClinicClient")}</Button></div>
-            {secret ? <div role="alert" className="mb-3 rounded-md bg-amber-50 p-3 text-xs text-amber-900"><div className="font-semibold">{t("set.secretOnce")}</div><div className="font-mono break-all">{secret.key}</div><div className="font-mono break-all">{secret.secret}</div></div> : null}
+            {secret ? <div role="alert" className="mb-3 rounded-md bg-[hsl(var(--warning)/0.12)] p-3 text-xs text-[hsl(var(--warning))]"><div className="font-semibold">{t("set.secretOnce")}</div><div className="font-mono break-all">{secret.key}</div><div className="font-mono break-all">{secret.secret}</div></div> : null}
             <Table head={[t("set.key"), t("set.source"), t("common.status")]}>{clients.data?.map((c) => <tr key={c.id}><Td className="font-mono text-xs">{c.key}</Td><Td>{c.source}</Td><Td>{c.active ? <Badge tone="ok">{t("set.active")}</Badge> : <Badge>{t("common.inactive")}</Badge>}</Td></tr>)}</Table>
           </Card>
           <Card>

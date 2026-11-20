@@ -40,14 +40,14 @@ export function ValidationPage() {
     <>
       <PageHeader title={t("valid.title")} sub={t("valid.sub")} />
       <Tabs value={stage} onChange={(v) => { setStage(v as "tech" | "medical"); setSel([]); }} tabs={[{ id: "tech", label: t("valid.tech") }, { id: "medical", label: t("valid.medical") }]} />
-      {stage === "medical" && !can("results.medical_validate") ? <p className="mb-3 rounded-md bg-amber-50 p-2 text-sm text-amber-900">{t("valid.signatoryOnly")}</p> : null}
+      {stage === "medical" && !can("results.medical_validate") ? <p className="mb-3 rounded-md bg-[hsl(var(--warning)/0.12)] p-2 text-sm text-[hsl(var(--warning))]">{t("valid.signatoryOnly")}</p> : null}
       {q.isLoading ? <Spinner /> : !rows.length ? <Empty>{t("valid.empty")}</Empty> : (
         <>
           <Table head={[allowed ? <input key="all" type="checkbox" aria-label="select all" checked={sel.length === rows.length} onChange={(e) => setSel(e.target.checked ? rows.map((r) => r.id) : [])} /> : "", t("orders.number"), t("orders.patient"), t("order.analyte"), t("order.result"), t("order.range"), t("valid.checks")]}>
             {rows.map((r) => {
               const blocked = stage === "tech" && ((r.source === "MANUAL" && !r.secondEntryBy));
               return (
-                <tr key={r.id} className={r.flag.startsWith("CRITICAL") ? "bg-red-50 dark:bg-red-950/30" : ""}>
+                <tr key={r.id} className={r.flag.startsWith("CRITICAL") ? "bg-[hsl(var(--danger-text)/0.12)] " : ""}>
                   <Td>{allowed ? <input type="checkbox" checked={sel.includes(r.id)} disabled={blocked} onChange={() => toggle(r.id)} aria-label={`select ${r.analyte.code}`} /> : null}</Td>
                   <Td><Link className="font-mono text-primary underline" to={`/orders/${r.orderItem.order.id}`}>{r.orderItem.order.orderNumber}</Link></Td>
                   <Td>{r.orderItem.order.patient.fullName}</Td>

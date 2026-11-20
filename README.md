@@ -63,3 +63,6 @@ Flags (`lab.module`, `lab.analyzer_interfaces`, `lab.home_collection`, `lab.kior
 ## Rules
 
 See `.cursor/rules/lab.mdc` and the workspace `CLAUDE.md`. Conventional Commits with KL IDs. No push to `main` without review; no AWS deploys until the founder says so.
+
+## Brand ("Kiorly by Kiorex")
+Palette, typography and logo come from the shared Kiorex brand kit (`_brand/` in the workspace), vendored into `apps/web/src/brand` (tokens, Tailwind preset, `KiorexLogo`, shared primitives in `ui-kit.tsx`: PageHeader, StatCard, StatusChip, EmptyState, FormField, Stepper, Skeleton, ThemeToggle). `brand-bridge.css` maps the shadcn-style HSL variables onto the brand tokens (light + designed dark; theme = light/dark/system via `kx-theme`). Jost + IBM Plex Sans Arabic are bundled with `@fontsource`. Never redraw the logo. Before/after screenshots: `_docs/ui-review/` (`node apps/web/scripts/ui-shots.mjs before|after`).

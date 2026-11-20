@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { KiorlyMark } from "@/brand/ui-kit";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -178,7 +179,7 @@ export function PhlebApp() {
     <div className="mx-auto min-h-screen max-w-md bg-background pb-24">
       <header className="sticky top-0 z-20 border-b border-border bg-card px-4 py-3">
         <div className="flex items-center gap-2">
-          <img src="/logo.svg" alt="" className="h-7 w-7" />
+          <KiorlyMark size={30} />
           <div className="flex-1 leading-tight"><div className="text-sm font-bold">{t("phleb.title")}</div><div className="text-xs text-muted-foreground">{me?.user.displayName}</div></div>
           <Badge tone={online ? "ok" : "warn"}>{online ? t("phleb.online") : <><CloudOff className="me-1 h-3 w-3" />{t("phleb.offline")}</>}</Badge>
           <Button variant="outline" size="sm" onClick={() => setLang(i18n.language === "ar" ? "en" : "ar")}>{t("app.lang")}</Button>
@@ -186,16 +187,16 @@ export function PhlebApp() {
         <div className="mt-2 flex items-center gap-2"><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label={t("common.date")} />{can("orders.read") ? <Link to="/" className="text-xs text-primary underline">{t("phleb.console")}</Link> : null}</div>
       </header>
       {pending > 0 || failed.length > 0 ? (
-        <div className="m-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900" role="status">
+        <div className="m-3 rounded-lg bg-[hsl(var(--warning)/0.12)] p-3 text-sm text-[hsl(var(--warning))]" role="status">
           <div className="flex items-center justify-between"><span>{t("phleb.queue", { n: pending })}</span><Button size="sm" variant="outline" onClick={() => void flush()}><RefreshCw className="h-3 w-3" />{t("phleb.syncNow")}</Button></div>
-          {failed.map((f) => <div key={f.id} className="mt-1 text-xs text-red-700">{f.path.split("/").pop()}: {f.error}</div>)}
+          {failed.map((f) => <div key={f.id} className="mt-1 text-xs text-[hsl(var(--danger-text))]">{f.path.split("/").pop()}: {f.error}</div>)}
           {failed.length ? <Button size="sm" variant="ghost" onClick={async () => { await clearFailed(); await refreshQueue(); }}>{t("phleb.dismiss")}</Button> : null}
         </div>
       ) : null}
-      {msg ? <p className="m-3 rounded-md bg-emerald-50 p-2 text-sm text-emerald-900">{msg}</p> : null}
-      {safetyMsg ? <p className={safetyMsg.tone === "ok" ? "m-3 rounded-md bg-emerald-50 p-2 text-sm text-emerald-900" : "m-3 rounded-md bg-red-50 p-2 text-sm text-red-800"} role="status">{safetyMsg.text}</p> : null}
+      {msg ? <p className="m-3 rounded-md bg-[hsl(var(--success)/0.12)] p-2 text-sm text-[hsl(var(--success))]">{msg}</p> : null}
+      {safetyMsg ? <p className={safetyMsg.tone === "ok" ? "m-3 rounded-md bg-[hsl(var(--success)/0.12)] p-2 text-sm text-[hsl(var(--success))]" : "m-3 rounded-md bg-[hsl(var(--danger-text)/0.12)] p-2 text-sm text-[hsl(var(--danger-text))]"} role="status">{safetyMsg.text}</p> : null}
       <main className="space-y-3 p-3">
-        {route.isLoading ? <Spinner /> : route.isError ? <p className="text-sm text-red-700">{t("phleb.loadError")}</p> : !route.data?.length ? <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">{t("phleb.noStops")}</p> : route.data.map((h: any, i: number) => (
+        {route.isLoading ? <Spinner /> : route.isError ? <p className="text-sm text-[hsl(var(--danger-text))]">{t("phleb.loadError")}</p> : !route.data?.length ? <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">{t("phleb.noStops")}</p> : route.data.map((h: any, i: number) => (
           <Card key={h.id} className="space-y-2">
             <div className="flex items-center gap-2"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{h.routeSequence ?? i + 1}</span><span className="flex-1 font-semibold">{h.order.patient.fullName}</span><StatusBadge value={h.status} /></div>
             <div className="text-xs text-muted-foreground">{new Date(h.slotStart).toISOString().slice(11, 16)}–{new Date(h.slotEnd).toISOString().slice(11, 16)} (UTC)</div>
@@ -210,19 +211,19 @@ export function PhlebApp() {
               </div>
             ) : null}
             {IN_FIELD.includes(h.status) ? (
-              <div className="space-y-2 rounded-lg border border-red-200 bg-red-50/60 p-2" role="region" aria-label={t("set.safety")}>
+              <div className="space-y-2 rounded-lg border border-[hsl(var(--danger-text)/0.3)] bg-[hsl(var(--danger-text)/0.6)] p-2" role="region" aria-label={t("set.safety")}>
                 {now > new Date(h.slotEnd).getTime() + PROMPT_AFTER_MS ? (
-                  <div className="rounded-md bg-amber-100 p-2 text-sm text-amber-900" role="alert">
+                  <div className="rounded-md bg-[hsl(var(--warning)/0.12)] p-2 text-sm text-[hsl(var(--warning))]" role="alert">
                     <p className="flex items-center gap-1 font-semibold"><AlertTriangle className="h-4 w-4" />{t("phleb.promptTitle")}</p>
                     <p className="text-xs">{t("phleb.promptBody")}</p>
                   </div>
-                ) : <p className="flex items-center gap-1 text-xs text-red-900"><ShieldAlert className="h-3 w-3" />{t("phleb.safetyActive")}</p>}
+                ) : <p className="flex items-center gap-1 text-xs text-[hsl(var(--danger-text))]"><ShieldAlert className="h-3 w-3" />{t("phleb.safetyActive")}</p>}
                 <div className="flex gap-2">
                   <Button variant="secondary" size="sm" className="flex-1" onClick={() => void imOk(h)}>{t("phleb.imOk")}</Button>
                   <Button variant="destructive" size="sm" className="flex-1" onClick={() => void sos(h)}>{t("phleb.sos")}</Button>
                   <Button variant="outline" size="sm" className="flex-1" onClick={() => { setUnsafe(h); setReason(UNSAFE_REASONS[0]); }}>{t("phleb.leaveUnsafe")}</Button>
                 </div>
-                <p className="text-xs text-red-900">{t("phleb.emergency")} · <a className="underline" href="tel:123">123</a> · <a className="underline" href="tel:122">122</a></p>
+                <p className="text-xs text-[hsl(var(--danger-text))]">{t("phleb.emergency")} · <a className="underline" href="tel:123">123</a> · <a className="underline" href="tel:122">122</a></p>
               </div>
             ) : null}
           </Card>
@@ -235,7 +236,7 @@ export function PhlebApp() {
             <Select className="mt-1" value={reason} onChange={(e) => setReason(e.target.value)}>{UNSAFE_REASONS.map((r) => <option key={r} value={r}>{t(`phleb.unsafeReasons.${r}`)}</option>)}</Select>
           </label>
           <Button variant="destructive" className="w-full" onClick={() => void leaveUnsafe()}>{t("phleb.leaveUnsafe")}</Button>
-          <p className="text-xs text-red-900">{t("phleb.emergency")}</p>
+          <p className="text-xs text-[hsl(var(--danger-text))]">{t("phleb.emergency")}</p>
         </div>
       </Modal>
       <Modal open={Boolean(stop)} onClose={() => setStop(null)} title={stop?.order.patient.fullName ?? ""}>
@@ -255,7 +256,7 @@ export function PhlebApp() {
                 <Button type="submit" variant="secondary">{t("common.add")}</Button>
                 {"BarcodeDetector" in window ? <Button type="button" variant="outline" onClick={() => void scanWithCamera()} aria-label={t("phleb.camera")}><ScanBarcode className="h-4 w-4" /></Button> : null}
               </form>
-              {scans.some((x) => !specimens.some((s) => s.barcode === x)) ? <p className="mt-1 text-xs text-red-700">{t("phleb.mismatch")}</p> : null}
+              {scans.some((x) => !specimens.some((s) => s.barcode === x)) ? <p className="mt-1 text-xs text-[hsl(var(--danger-text))]">{t("phleb.mismatch")}</p> : null}
             </div>
             <div>
               <p className="mb-1 text-sm font-semibold">3. {t("phleb.photo")}</p>

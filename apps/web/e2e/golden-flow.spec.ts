@@ -1,6 +1,6 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 
-const API = "http://127.0.0.1:3200/api/v1";
+const API = `${process.env.LAB_API_ORIGIN ?? "http://127.0.0.1:3200"}/api/v1`;
 const slug = `e2e${Date.now().toString(36)}`;
 
 async function post(r: APIRequestContext, path: string, token: string | null, data: unknown) {

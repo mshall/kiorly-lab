@@ -44,7 +44,7 @@ export function QcPage() {
     <>
       <PageHeader title={t("qc.title")} sub={t("qc.sub")} />
       {open.length > 0 ? (
-        <div role="alert" className="mb-4 rounded-lg border-s-4 border-red-500 bg-red-50 p-4 text-red-900 dark:bg-red-950 dark:text-red-100">
+        <div role="alert" className="mb-4 rounded-lg border-s-4 border-[hsl(var(--danger-text)/0.3)] bg-[hsl(var(--danger-text)/0.12)] p-4 text-[hsl(var(--danger-text))] ">
           <p className="font-semibold">{t("qc.blocked", { n: open.length })}</p>
           <p className="text-sm">{t("qc.blockedNote")}</p>
         </div>
@@ -64,9 +64,9 @@ export function QcPage() {
           </Card>
           <ErrorNote error={submit.error ?? sim.error} />
           {last ? (
-            <Card className={last.run.status === "FAIL" ? "ring-2 ring-red-500" : last.run.status === "WARNING" ? "ring-2 ring-amber-400" : ""}>
+            <Card className={last.run.status === "FAIL" ? "ring-2 ring-[hsl(var(--danger-text)/0.3)]" : last.run.status === "WARNING" ? "ring-2 ring-[hsl(var(--warning)/0.3)]" : ""}>
               <div className="flex flex-wrap items-center gap-2"><StatusBadge value={last.run.status} /><span className="text-sm">z = {Number(last.run.zScore).toFixed(2)}</span>{last.evaluation.violated.map((r: string) => <Badge key={r} tone="crit">{r}</Badge>)}{last.evaluation.warnings.map((r: string) => <Badge key={r} tone="warn">{r}</Badge>)}</div>
-              {last.blockId ? <p className="mt-2 text-sm font-medium text-red-700">{t("qc.blockOpened", { n: last.revokedResults })}</p> : null}
+              {last.blockId ? <p className="mt-2 text-sm font-medium text-[hsl(var(--danger-text))]">{t("qc.blockOpened", { n: last.revokedResults })}</p> : null}
             </Card>
           ) : null}
           <Card>
@@ -102,7 +102,7 @@ export function QcPage() {
       <Modal open={Boolean(clear)} onClose={() => setClear(null)} title={t("qc.clearTitle")}>
         <p className="mb-3 text-sm text-muted-foreground">{t("qc.clearBody")}</p>
         <Field label={t("qc.passingRun")}><Select value={runId} onChange={(e) => setRunId(e.target.value)}><option value="">-</option>{passing.map((r) => <option key={r.id} value={r.id}>{dt(r.runAt, i18n.language)} · {r.material.analyte.code} · {Number(r.value)}</option>)}</Select></Field>
-        {passing.length === 0 ? <p className="mt-2 text-xs text-amber-700">{t("qc.needPassingRun")}</p> : null}
+        {passing.length === 0 ? <p className="mt-2 text-xs text-[hsl(var(--warning))]">{t("qc.needPassingRun")}</p> : null}
         <Field label={t("qc.clearNote")} className="mt-3"><Input value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("qc.clearPlaceholder")} /></Field>
         <div className="mt-4 space-y-2"><ErrorNote error={doClear.error} /><Button disabled={!runId || note.trim().length < 10 || doClear.isPending} onClick={() => doClear.mutate()}>{t("qc.clear")}</Button></div>
       </Modal>

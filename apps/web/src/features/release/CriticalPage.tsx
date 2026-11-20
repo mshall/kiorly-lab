@@ -14,7 +14,7 @@ function Countdown({ to }: { to: string }) {
   const ms = new Date(to).getTime() - now;
   const m = Math.floor(Math.abs(ms) / 60000);
   const s = Math.floor((Math.abs(ms) % 60000) / 1000);
-  return <span className={ms < 0 ? "font-semibold text-red-700" : "font-mono"}>{ms < 0 ? t("crit.overdue", { m, s }) : `${m}:${String(s).padStart(2, "0")}`}</span>;
+  return <span className={ms < 0 ? "font-semibold text-[hsl(var(--danger-text))]" : "font-mono"}>{ms < 0 ? t("crit.overdue", { m, s }) : `${m}:${String(s).padStart(2, "0")}`}</span>;
 }
 
 /** KLCRIT01: critical-value alerts with acknowledgement window and escalation. There is no switch to disable any of this (ADR-025). */
@@ -38,7 +38,7 @@ export function CriticalPage() {
       {q.isLoading ? <Spinner /> : !q.data?.length ? <Empty>{t("crit.none")}</Empty> : (
         <Table head={[t("order.analyte"), t("common.status"), t("crit.deadline"), t("crit.level"), ""]}>
           {q.data.map((a) => (
-            <tr key={a.id} className={a.status === "ESCALATED" ? "bg-red-50 dark:bg-red-950/30" : ""}>
+            <tr key={a.id} className={a.status === "ESCALATED" ? "bg-[hsl(var(--danger-text)/0.12)] " : ""}>
               <Td>{a.result.analyte.nameEn} <FlagBadge flag={a.result.flag} /> {a.orderId ? <Link className="ms-2 text-xs text-primary underline" to={`/orders/${a.orderId}`}>{t("spec.order")}</Link> : null}</Td>
               <Td><StatusBadge value={a.status} /></Td>
               <Td><Countdown to={a.ackDeadlineAt} /></Td>

@@ -9,7 +9,7 @@ import { PageHeader, StatusBadge } from "@/components/common";
 
 function Stat({ label, value, to, tone }: { label: string; value: number | string; to?: string; tone?: "crit" | "warn" }) {
   const body = (
-    <Card className={tone === "crit" && Number(value) > 0 ? "ring-2 ring-red-400" : tone === "warn" && Number(value) > 0 ? "ring-2 ring-amber-300" : ""}>
+    <Card className={tone === "crit" && Number(value) > 0 ? "ring-2 ring-[hsl(var(--danger-text)/0.3)]" : tone === "warn" && Number(value) > 0 ? "ring-2 ring-[hsl(var(--warning)/0.3)]" : ""}>
       <div className="text-2xl font-bold">{value}</div>
       <div className="text-xs text-muted-foreground">{label}</div>
     </Card>

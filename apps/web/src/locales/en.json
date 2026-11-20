@@ -699,5 +699,11 @@
     "SAMPLE_MISSING_FOR_TEST": "A nurse sample is missing for one of the ordered tests.",
     "SAMPLE_UNMATCHED": "A nurse sample does not match any ordered test.",
     "COLLECTED_IN_FUTURE": "The collection time is in the future."
+  },
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
   }
 }

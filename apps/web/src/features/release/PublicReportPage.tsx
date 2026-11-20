@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { KiorlyBrand } from "@/brand/ui-kit";
 import { useParams } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -28,7 +29,7 @@ export function PublicReportPage() {
   });
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-4 p-4">
-      <div className="flex items-center justify-between"><div className="flex items-center gap-3"><img src="/logo.svg" alt="" className="h-9 w-9" /><h1 className="text-lg font-bold">{t("public.title")}</h1></div><Button variant="outline" size="sm" onClick={() => setLang(i18n.language === "ar" ? "en" : "ar")}>{t("app.lang")}</Button></div>
+      <div className="flex items-center justify-between"><div className="flex items-center gap-3"><KiorlyBrand height={34} /><h1 className="text-lg font-bold">{t("public.title")}</h1></div><Button variant="outline" size="sm" onClick={() => setLang(i18n.language === "ar" ? "en" : "ar")}>{t("app.lang")}</Button></div>
       <Card className="space-y-4">
         {info.isLoading ? <Spinner /> : info.isError ? <p>{t("public.invalid")}</p> : (
           <>

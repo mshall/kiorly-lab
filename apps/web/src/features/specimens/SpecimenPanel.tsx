@@ -55,7 +55,7 @@ export function SpecimenPanel({ specimenId, onChanged }: { specimenId: string; o
         {s.recollectOfId ? <Badge tone="warn">{t("spec.recollection")}</Badge> : null}
         <span className="text-sm text-muted-foreground">{s.order.patient.fullName}</span>
       </div>
-      {s.order.identityVerified === false && s.status === "PENDING_COLLECTION" ? <p className="rounded-md bg-amber-50 p-2 text-sm text-amber-900">{t("spec.identityFirst")}</p> : null}
+      {s.order.identityVerified === false && s.status === "PENDING_COLLECTION" ? <p className="rounded-md bg-[hsl(var(--warning)/0.12)] p-2 text-sm text-[hsl(var(--warning))]">{t("spec.identityFirst")}</p> : null}
       {next.length > 0 ? (
         <Card className="space-y-3">
           <Field label={t("spec.scanLabel")} hint={t("spec.scanHint")}>
@@ -85,7 +85,7 @@ export function SpecimenPanel({ specimenId, onChanged }: { specimenId: string; o
         <h4 className="mb-2 text-sm font-semibold">{t("spec.custody")}</h4>
         <ol className="space-y-1 border-s-2 border-border ps-4 text-sm">
           {s.custody.map((c: any) => (
-            <li key={c.id} className={c.type === "LABEL_MISMATCH_BLOCKED" ? "text-red-700" : ""}>
+            <li key={c.id} className={c.type === "LABEL_MISMATCH_BLOCKED" ? "text-[hsl(var(--danger-text))]" : ""}>
               <span className="font-medium">{t(`spec.event.${c.type}`)}</span>
               <span className="text-muted-foreground"> · {dt(c.occurredAt, i18n.language)}{c.temperatureC != null ? ` · ${c.temperatureC}°C` : ""}{c.note ? ` · ${c.note}` : ""}</span>
             </li>

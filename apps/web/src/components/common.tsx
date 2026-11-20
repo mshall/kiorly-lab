@@ -2,17 +2,10 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ApiError } from "@/lib/api";
 import { Badge, type Tone } from "@/components/ui";
+import { PageHeader as KitPageHeader } from "@/brand/ui-kit";
 
 export function PageHeader({ title, sub, actions }: { title: string; sub?: string; actions?: ReactNode }) {
-  return (
-    <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-      <div>
-        <h1 className="text-xl font-semibold sm:text-2xl">{title}</h1>
-        {sub ? <p className="mt-1 text-sm text-muted-foreground">{sub}</p> : null}
-      </div>
-      <div className="flex flex-wrap gap-2">{actions}</div>
-    </div>
-  );
+  return <KitPageHeader title={title} description={sub} actions={actions} />;
 }
 
 const STATUS_TONE: Record<string, Tone> = {
@@ -46,7 +39,7 @@ export function ErrorNote({ error }: { error: unknown }) {
   const code = e instanceof ApiError ? e.code : "UNKNOWN";
   const extra = e instanceof ApiError && e.body?.key ? ` (${e.body.key})` : "";
   return (
-    <div role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-950 dark:text-red-200">
+    <div role="alert" className="rounded-md bg-[hsl(var(--danger-text)/0.12)] px-3 py-2 text-sm text-[hsl(var(--danger-text))] ">
       {t(`errors.${code}`, { defaultValue: t("errors.generic", { code }) })}
       {extra}
     </div>

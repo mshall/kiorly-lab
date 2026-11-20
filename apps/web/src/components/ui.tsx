@@ -2,19 +2,21 @@ import { createContext, useCallback, useContext, useEffect, useState, type Butto
 import { cva, type VariantProps } from "class-variance-authority";
 import { X } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { EmptyState } from "@/brand/ui-kit";
+import { PulseLine } from "@/brand/components";
 
 /** shadcn/ui-style primitives (hand-written, same token scheme as the Kiorly Clinical OS palette). */
-const button = cva("inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50", {
+const button = cva("inline-flex items-center justify-center gap-2 rounded-lg text-sm font-medium transition-[background-color,box-shadow,transform] duration-150 ease-[var(--kx-ease-standard)] active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50", {
   variants: {
     variant: {
-      default: "bg-primary text-primary-foreground hover:bg-primary/90",
+      default: "bg-primary text-primary-foreground shadow-[var(--kx-shadow-1)] hover:bg-[var(--kx-primary-hover)]",
       secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-      outline: "border border-border bg-card hover:bg-accent",
+      outline: "border border-input bg-card shadow-[var(--kx-shadow-1)] hover:bg-accent",
       ghost: "hover:bg-accent",
       destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-      pulse: "bg-pulse text-white hover:bg-pulse/90",
+      pulse: "bg-primary text-primary-foreground shadow-[var(--kx-shadow-1)] hover:bg-[var(--kx-primary-hover)]",
     },
-    size: { default: "h-10 px-4", sm: "h-8 px-3 text-xs", lg: "h-12 px-6 text-base", icon: "h-9 w-9" },
+    size: { default: "h-10 px-4", sm: "h-9 px-3 text-xs", lg: "h-12 px-6 text-base", icon: "h-10 w-10" },
   },
   defaultVariants: { variant: "default", size: "default" },
 });
@@ -22,7 +24,7 @@ export function Button({ className, variant, size, ...p }: ButtonHTMLAttributes<
   return <button type="button" className={cn(button({ variant, size }), className)} {...p} />;
 }
 
-const field = "w-full rounded-md border border-input bg-card px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50";
+const field = "w-full rounded-lg border border-input bg-card px-3 text-sm shadow-[var(--kx-shadow-1)] transition-[border-color,box-shadow] duration-150 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50";
 export const Input = ({ className, ...p }: InputHTMLAttributes<HTMLInputElement>) => <input className={cn(field, "h-10", className)} {...p} />;
 export const Textarea = ({ className, ...p }: TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea className={cn(field, "py-2", className)} {...p} />;
 export const Select = ({ className, ...p }: SelectHTMLAttributes<HTMLSelectElement>) => <select className={cn(field, "h-10", className)} {...p} />;
@@ -40,17 +42,24 @@ export function Field({ label, children, hint, className }: { label: string; chi
   );
 }
 
-export const Card = ({ className, ...p }: React.HTMLAttributes<HTMLDivElement>) => <div className={cn("rounded-lg bg-card p-4 shadow-sm ring-1 ring-border", className)} {...p} />;
+export const Card = ({ className, ...p }: React.HTMLAttributes<HTMLDivElement>) => <div className={cn("rounded-xl border border-border/80 bg-card p-4 shadow-[var(--kx-shadow-1)]", className)} {...p} />;
 export const CardTitle = ({ className, ...p }: React.HTMLAttributes<HTMLHeadingElement>) => <h3 className={cn("mb-3 text-sm font-semibold", className)} {...p} />;
 
-const tones = { ok: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200", warn: "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200", crit: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200", info: "bg-accent text-accent-foreground", muted: "bg-muted text-muted-foreground", pulse: "bg-pulse/15 text-pulse" } as const;
+const tones = {
+  ok: "bg-[hsl(var(--success)/0.12)] text-[hsl(var(--success))] ring-1 ring-inset ring-[hsl(var(--success)/0.25)]",
+  warn: "bg-[hsl(var(--warning)/0.14)] text-[hsl(var(--warning))] ring-1 ring-inset ring-[hsl(var(--warning)/0.3)]",
+  crit: "bg-[hsl(var(--danger-text)/0.12)] text-[hsl(var(--danger-text))] ring-1 ring-inset ring-[hsl(var(--danger-text)/0.28)]",
+  info: "bg-[hsl(var(--info)/0.12)] text-[hsl(var(--info))] ring-1 ring-inset ring-[hsl(var(--info)/0.25)]",
+  muted: "bg-muted text-muted-foreground ring-1 ring-inset ring-border",
+  pulse: "bg-accent text-accent-foreground ring-1 ring-inset ring-primary/25",
+} as const;
 export type Tone = keyof typeof tones;
 export const Badge = ({ tone = "muted", className, ...p }: React.HTMLAttributes<HTMLSpanElement> & { tone?: Tone }) => (
-  <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium", tones[tone], className)} {...p} />
+  <span className={cn("inline-flex min-h-6 items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium", tones[tone], className)} {...p} />
 );
 
-export const Spinner = () => <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" role="status" aria-label="loading" />;
-export const Empty = ({ children }: { children: ReactNode }) => <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">{children}</div>;
+export const Spinner = () => <PulseLine size={14} loop label="loading" />;
+export const Empty = ({ children }: { children: ReactNode }) => <EmptyState compact title={children} />;
 
 export function Modal({ open, onClose, title, children, wide }: { open: boolean; onClose: () => void; title: string; children: ReactNode; wide?: boolean }) {
   useEffect(() => {
@@ -61,8 +70,8 @@ export function Modal({ open, onClose, title, children, wide }: { open: boolean;
   }, [open, onClose]);
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={title} onClick={onClose}>
-      <div className={cn("max-h-[92vh] w-full overflow-auto rounded-t-xl bg-card p-5 shadow-xl sm:rounded-xl", wide ? "sm:max-w-3xl" : "sm:max-w-lg")} onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--kx-overlay)] backdrop-blur-[2px] p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={title} onClick={onClose}>
+      <div className={cn("max-h-[92vh] w-full overflow-auto rounded-t-2xl bg-card p-5 shadow-[var(--kx-shadow-4)] sm:rounded-2xl", wide ? "sm:max-w-3xl" : "sm:max-w-lg")} onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">{title}</h2>
           <Button variant="ghost" size="icon" onClick={onClose} aria-label="close"><X className="h-4 w-4" /></Button>
@@ -87,17 +96,17 @@ export function Tabs({ tabs, value, onChange }: { tabs: { id: string; label: str
 
 export function Table({ head, children, className }: { head: ReactNode[]; children: ReactNode; className?: string }) {
   return (
-    <div className={cn("overflow-x-auto rounded-lg ring-1 ring-border", className)}>
+    <div className={cn("kx-sticky-head overflow-x-auto rounded-xl border border-border/80 shadow-[var(--kx-shadow-1)]", className)}>
       <table className="w-full text-sm">
-        <thead className="bg-muted text-xs text-muted-foreground">
-          <tr>{head.map((h, i) => <th key={i} className="px-3 py-2 text-start font-medium">{h}</th>)}</tr>
+        <thead className="bg-muted/60 text-xs uppercase tracking-wide text-muted-foreground rtl:normal-case rtl:tracking-normal">
+          <tr>{head.map((h, i) => <th key={i} className="px-3 py-2.5 text-start font-semibold">{h}</th>)}</tr>
         </thead>
         <tbody className="divide-y divide-border bg-card">{children}</tbody>
       </table>
     </div>
   );
 }
-export const Td = ({ className, ...p }: React.TdHTMLAttributes<HTMLTableCellElement>) => <td className={cn("px-3 py-2 align-middle", className)} {...p} />;
+export const Td = ({ className, ...p }: React.TdHTMLAttributes<HTMLTableCellElement>) => <td className={cn("px-3 py-2.5 align-middle", className)} {...p} />;
 
 // ---- toasts
 interface Toast { id: number; msg: string; tone: Tone }
@@ -114,7 +123,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastCtx.Provider value={push}>
       {children}
       <div className="pointer-events-none fixed inset-x-0 bottom-4 z-[60] flex flex-col items-center gap-2 px-4" aria-live="polite">
-        {items.map((t) => <div key={t.id} className={cn("pointer-events-auto rounded-md px-4 py-2 text-sm shadow-lg", tones[t.tone])}>{t.msg}</div>)}
+        {items.map((t) => <div key={t.id} className={cn("pointer-events-auto rounded-lg px-4 py-2.5 text-sm font-medium shadow-[var(--kx-shadow-3)]", tones[t.tone])}>{t.msg}</div>)}
       </div>
     </ToastCtx.Provider>
   );
