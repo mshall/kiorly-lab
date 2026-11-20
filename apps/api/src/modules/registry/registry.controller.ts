@@ -4,6 +4,7 @@ import { CurrentUser, Perm, Public } from "../../auth/decorators";
 import type { AuthUser } from "../../auth/auth.types";
 import { ZBody, z } from "../../common/zod";
 import { ReportsService } from "../release/reports.service";
+import { TemplatesService } from "../release/templates.service";
 import { PatientRegistryService } from "./patient-registry.service";
 import { ReferrersService } from "./referrers.service";
 
@@ -34,6 +35,7 @@ export class RegistryController {
     @Inject(PatientRegistryService) private readonly patients: PatientRegistryService,
     @Inject(ReferrersService) private readonly referrers: ReferrersService,
     @Inject(ReportsService) private readonly reports: ReportsService,
+    @Inject(TemplatesService) private readonly templates: TemplatesService,
   ) {}
 
   // ---- patients
@@ -43,6 +45,7 @@ export class RegistryController {
   @ApiBearerAuth() @Get("patients/:id/profile") @Perm("patients.read") profile(@CurrentUser() u: AuthUser, @Param("id") id: string) { return this.patients.profile(u, id); }
   @ApiBearerAuth() @Get("patients/:id/history") @Perm("results.read") history(@CurrentUser() u: AuthUser, @Param("id") id: string, @Query() q: { analyteId?: string; from?: string; to?: string }) { return this.patients.history(u, id, q); }
   @ApiBearerAuth() @Get("patients/:id/trends") @Perm("results.read") trends(@CurrentUser() u: AuthUser, @Param("id") id: string, @Query("analyteId") analyteId?: string) { return this.patients.trends(u, id, analyteId); }
+  @ApiBearerAuth() @Get("patients/:id/cumulative.pdf") @Perm("results.read") @Header("Content-Type", "application/pdf") async cumulative(@CurrentUser() u: AuthUser, @Param("id") id: string, @Query("analyteId") analyteId?: string) { return new StreamableFile(await this.patients.cumulativePdf(u, id, analyteId, (labId) => this.templates.resolve(u.orgId, labId))); }
   @ApiBearerAuth() @Post("patients/:id/merge") @Perm("patients.merge") @ZBody(Merge) merge(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof Merge>) { return this.patients.merge(u, id, b.targetId); }
   @ApiBearerAuth() @Get("patients/:id/consents") @Perm("patients.read") consents(@CurrentUser() u: AuthUser, @Param("id") id: string) { return this.patients.consents(u, id); }
   @ApiBearerAuth() @Post("patients/:id/consents") @Perm("patients.write") @ZBody(Consent) addConsent(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof Consent>) { return this.patients.addConsent(u, id, b); }

@@ -2413,3 +2413,63 @@ model StockCountLine {
 
   @@unique([countId, lotId])
 }
+
+// ========================================================= reporting (M7) ====
+
+enum ReportLanguage {
+  AR
+  EN
+  BILINGUAL
+}
+
+enum DeliveryStatus {
+  SENT
+  FAILED
+}
+
+/// Report layout/branding per lab: language mode, header/footer text, accent colour, logo, QR verification code. A signed report is rendered once
+/// with the template active at signing time and stored; changing a template never alters a signed report.
+model ReportTemplate {
+  id             String         @id @default(cuid())
+  orgId          String
+  labId          String?
+  name           String
+  language       ReportLanguage @default(BILINGUAL)
+  headerTitle    String?
+  headerSubtitle String?
+  footerText     String?
+  accentColor    String         @default("#3730A3")
+  showQr         Boolean        @default(true)
+  showRanges     Boolean        @default(true)
+  logo           Bytes?
+  logoType       String?
+  isDefault      Boolean        @default(false)
+  active         Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @default(now()) @updatedAt
+
+  @@unique([orgId, name])
+  @@index([orgId, labId])
+}
+
+/// Mock/real delivery of a released report link to the patient or the referring doctor (email / WhatsApp / SMS). Never carries result values.
+model ReportDelivery {
+  id              String              @id @default(cuid())
+  orgId           String
+  reportVersionId String
+  orderId         String
+  /// PATIENT | REFERRER
+  recipientType   String
+  channel         NotificationChannel
+  /// Masked recipient (e.g. +2010****111, a***@x.com).
+  recipientMasked String
+  status          DeliveryStatus
+  notificationId  String?
+  error           String?
+  attempt         Int                 @default(1)
+  trigger         String              @default("MANUAL")
+  createdBy       String
+  createdAt       DateTime            @default(now())
+
+  @@index([orgId, reportVersionId])
+}

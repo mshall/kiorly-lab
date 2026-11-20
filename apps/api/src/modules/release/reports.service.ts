@@ -14,6 +14,8 @@ import { OutboxService } from "../../outbox/outbox.service";
 import { PrismaService } from "../../prisma/prisma.service";
 import { qcBlockers } from "../analysis-qc/qc-gate";
 import { renderReportPdf, type ReportModel } from "./report-pdf";
+import { DeliveryService } from "./delivery.service";
+import { TemplatesService } from "./templates.service";
 
 /** Contract enum (kiorex-contracts LabResultReleased.channels) for each internal release channel. */
 export const CONTRACT_CHANNEL: Record<ReleaseChannel, "PATIENT_LINK" | "KIOREX_VAULT" | "KIORLY_CLINIC" | "PRINTED" | null> = {
@@ -36,6 +38,8 @@ export class ReportsService {
     @Inject(OutboxService) private readonly outbox: OutboxService,
     @Inject(OrderStatusService) private readonly orderStatus: OrderStatusService,
     @Inject(MessagingAdapter) private readonly messaging: MessagingAdapter,
+    @Inject(TemplatesService) private readonly templates: TemplatesService,
+    @Inject(DeliveryService) private readonly delivery: DeliveryService,
   ) {}
 
   // ------------------------------------------------------------ readiness
@@ -98,14 +102,16 @@ export class ReportsService {
       include: { analyte: true, orderItem: { include: { test: true } } }, orderBy: [{ orderItem: { createdAt: "asc" } }],
     });
     const collected = order.specimens.map((s) => s.collectedAt).filter(Boolean).sort()[0];
+    const reportId = `rep_${randomBytes(12).toString("hex")}`;
+    const template = await this.templates.resolve(u.orgId, order.labId, `${appConfig.publicBaseUrl()}/verify/${reportId}`);
     const flagShort = (f: string) => ({ NORMAL: "", LOW: "L", HIGH: "H", CRITICAL_LOW: "LL", CRITICAL_HIGH: "HH", ABNORMAL: "A" })[f] ?? f;
     return {
-      reportId: `rep_${randomBytes(12).toString("hex")}`, version, labName: lab.name, licenceNo: lab.licenceNo, orderNumber: order.orderNumber ?? order.id,
+      reportId, template, version, labName: lab.name, licenceNo: lab.licenceNo, orderNumber: order.orderNumber ?? order.id,
       accessions: order.specimens.filter((s) => s.status !== "REJECTED" && !s.parentSpecimenId).map((s) => s.accessionNumber),
       patient: { name: order.patient.fullName, sex: order.patient.sex, dateOfBirth: order.patient.dateOfBirth?.toISOString().slice(0, 10) ?? null },
       collectedAt: collected ? collected.toISOString() : null, signedBy: u.displayName, signatoryLicenceNo: u.signatoryLicenceNo ?? "", signedAt: new Date().toISOString(), correctionReason: reason,
       lines: results.map((r) => ({
-        test: r.orderItem.test.nameEn, analyte: r.analyte.nameEn, value: r.valueNumeric != null ? D(r.valueNumeric).toFixed(r.analyte.precision) : (r.valueText ?? ""), unit: r.unit ?? "",
+        test: r.orderItem.test.nameEn, testAr: r.orderItem.test.nameAr, analyteAr: r.analyte.nameAr, analyte: r.analyte.nameEn, value: r.valueNumeric != null ? D(r.valueNumeric).toFixed(r.analyte.precision) : (r.valueText ?? ""), unit: r.unit ?? "",
         range: r.refLow != null || r.refHigh != null ? `${r.refLow != null ? D(r.refLow) : ""} - ${r.refHigh != null ? D(r.refHigh) : ""}` : "", flag: flagShort(r.flag),
       })),
     };
@@ -182,7 +188,18 @@ export class ReportsService {
       return { reportId: rv.id, version: rv.version, channels: [...new Set(allChannels)], secureLink, newlyReleased: recs.map((r) => r.channel) };
     });
     void tenant;
+    // referrer delivery preferences (consent-checked, best effort: never fails the release)
+    await this.delivery.autoDeliverToReferrer(u, rv.id);
     return out;
+  }
+
+  /** Public QR verification: proves a report version exists and whether a newer version supersedes it. No patient data. */
+  async verifyPublic(reportId: string) {
+    const rv = await this.prisma.reportVersion.findUnique({ where: { id: reportId }, include: { order: { select: { labId: true } } } });
+    if (!rv) throw new NotFoundException({ code: "REPORT_NOT_FOUND" });
+    const latest = await this.prisma.reportVersion.findFirst({ where: { orderId: rv.orderId }, orderBy: { version: "desc" } });
+    const lab = await this.prisma.lab.findUnique({ where: { id: rv.order.labId }, select: { name: true } });
+    return { valid: true, lab: lab?.name ?? null, version: rv.version, signedAt: rv.signedAt, superseded: Boolean(latest && latest.version > rv.version), latestVersion: latest?.version ?? rv.version, contentHashPrefix: rv.contentHash.slice(0, 12) };
   }
 
   // ----------------------------------------------------------------- reads

@@ -6,6 +6,8 @@ import { D, nextSequence, pad } from "../../common/db";
 import { page } from "../../common/pagination";
 import { PrismaService } from "../../prisma/prisma.service";
 import { clusterDuplicates } from "./duplicates";
+import { renderCumulativePdf } from "./cumulative-pdf";
+import type { ReportTemplateView } from "../release/report-pdf";
 
 export interface PatientPatch {
   fullName?: string; dateOfBirth?: string | null; sex?: Sex; phone?: string | null; email?: string | null; address?: string | null; city?: string | null;
@@ -97,6 +99,19 @@ export class PatientRegistryService {
       })
       .filter((g) => g.points.length > 0)
       .sort((a, b) => b.stats.count - a.stats.count);
+  }
+
+  /** Cumulative PDF of validated/released results (per analyte table + trend chart), in the lab's template language. */
+  async cumulativePdf(u: AuthUser, id: string, analyteId: string | undefined, resolveTemplate: (labId: string) => Promise<ReportTemplateView | undefined>): Promise<Buffer> {
+    const p = await this.mustGet(u.orgId, id);
+    const groups = await this.trends(u, id, analyteId);
+    const lab = await this.prisma.lab.findFirst({ where: { orgId: u.orgId, ...(u.labIds.length ? { id: { in: u.labIds } } : {}) }, orderBy: { createdAt: "asc" } });
+    const template = lab ? await resolveTemplate(lab.id) : undefined;
+    await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "patient.cumulative_report", entityType: "PatientRef", entityId: id });
+    return renderCumulativePdf({
+      labName: lab?.name ?? "Lab", patient: { name: p.fullName, sex: p.sex, dateOfBirth: p.dateOfBirth?.toISOString().slice(0, 10) ?? null, mrn: p.mrn }, generatedAt: new Date().toISOString().slice(0, 16).replace("T", " "), template,
+      groups: groups.map((g) => ({ analyte: { code: g.analyte.code, nameEn: g.analyte.nameEn, nameAr: g.analyte.nameAr, unit: g.analyte.unit }, points: g.points.map((x) => ({ at: new Date(x.at).toISOString(), value: x.value as number, flag: x.flag, refLow: x.refLow, refHigh: x.refHigh, orderNumber: x.orderNumber })) })),
+    });
   }
 
   // ------------------------------------------------------- duplicates & merge
