@@ -4,6 +4,7 @@ import type { StaffRole } from "@prisma/client";
 import { AppModule } from "../app.module";
 import type { AuthUser } from "../auth/auth.types";
 import { loadEnv } from "../config/env";
+import { assertDemoSeedAllowed } from "../common/demo-seed-guard";
 import { AdminService } from "../modules/admin/admin.service";
 import { StarterCatalogueService } from "../modules/admin/starter-catalogue.service";
 import { BillingService } from "../modules/business/billing.service";
@@ -50,7 +51,7 @@ async function ensureDevNurseClient(prisma: PrismaService, orgId: string) {
 }
 
 async function main() {
-  if (process.env.NODE_ENV === "production") throw new Error("refusing to seed demo data in production");
+  assertDemoSeedAllowed("Kiorly Lab base demo tenant (demo-lab)");
   loadEnv();
   const app = await NestFactory.createApplicationContext(AppModule, { logger: ["error"] });
   const prisma = app.get(PrismaService);

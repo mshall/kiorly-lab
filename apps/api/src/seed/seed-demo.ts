@@ -4,6 +4,10 @@ import type { StaffRole } from "@prisma/client";
 import { AppModule } from "../app.module";
 import type { AuthUser } from "../auth/auth.types";
 import { loadEnv } from "../config/env";
+import { assertDemoSeedAllowed } from "../common/demo-seed-guard";
+import nurseLabSpec from "./demo-nurse-lab.json";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 import { BillingService } from "../modules/business/billing.service";
 import { HomeCollectionService } from "../modules/orders/home-collection.service";
 import { OrdersService } from "../modules/orders/orders.service";
@@ -31,7 +35,7 @@ const HIGH: Record<string, number> = { HB: 15.9, WBC: 11.8, PLT: 410, GLU: 164, 
 const PEOPLE: [string, string, "M" | "F", string][] = [["Hoda Mahmoud", "1989-03-14", "F", "+201000001001"], ["Samir Ali Nassar", "1986-07-02", "M", "+201000001002"], ["Karim Mostafa", "1984-11-21", "M", "+201000001003"], ["Nourhan Fathy", "1995-01-30", "F", "+201000001004"], ["Mahmoud El-Sayed", "1972-05-09", "M", "+201000001005"], ["Mariam Adel", "1993-09-17", "F", "+201000001006"], ["Omar Hegazy", "1997-12-03", "M", "+201000001007"], ["Dalia Ibrahim", "1988-04-25", "F", "+201000001008"], ["Tarek Zaki", "1990-08-11", "M", "+201000001009"], ["Heba Salah", "1991-02-19", "F", "+201000001010"], ["Youssef Ramadan", "2000-06-06", "M", "+201000001011"], ["Rana Khaled", "1985-10-28", "F", "+201000001012"]];
 
 async function main() {
-  if (process.env.NODE_ENV === "production") throw new Error("refusing to seed demo data in production");
+  assertDemoSeedAllowed("Kiorly Lab (demo-lab tenant)");
   loadEnv();
   if (process.argv.includes("--reset")) console.log("lab demo: --reset cannot remove released reports / QC runs / audit (append-only by design); re-running idempotently. Full wipe = recreate the kiorly_lab database.");
   const app = await NestFactory.createApplicationContext(AppModule, { logger: ["error"] });
@@ -50,12 +54,12 @@ async function main() {
     const tests = await prisma.testDefinition.findMany({ where: { orgId: org }, select: { code: true } });
     const has = (c: string) => tests.some((t) => t.code === c);
 
-    if (await prisma.patientRef.count({ where: { orgId: org, fullName: { contains: "(DEMO)" } } })) { console.log("Lab demo seed: demo patients already present, nothing to do."); return; }
+    const alreadySeeded = (await prisma.patientRef.count({ where: { orgId: org, fullName: { contains: "(DEMO)" } } })) > 0;
 
     // QC history on the analyzers: 20 more days, in control (no Westgard flag), so the Levey-Jennings charts are populated
     const analyzers = await prisma.instrument.findMany({ where: { orgId: org, kind: "ANALYZER" } });
     let t = 987654321; const rng = () => ((t = (t * 1664525 + 1013904223) >>> 0) / 0x1_0000_0000);
-    for (let day = 20; day >= 2; day--) for (const inst of analyzers) for (const m of await prisma.qcMaterialLevel.findMany({ where: { orgId: org } })) {
+    if (!alreadySeeded) for (let day = 20; day >= 2; day--) for (const inst of analyzers) for (const m of await prisma.qcMaterialLevel.findMany({ where: { orgId: org } })) {
       const z = (day % 2 ? 1 : -1) * Math.min(0.9, rng());
       await qc.submitRun({ orgId: org, staffId: tech.staffId }, { instrumentId: inst.id, materialId: m.id, value: Number(m.targetMean) + z * Number(m.targetSd), runAt: new Date(Date.now() - day * DAY - Math.floor(rng() * 3_600_000)) }).catch(() => {});
     }
@@ -65,7 +69,7 @@ async function main() {
       const [name, dob, sex, ph] = PEOPLE[i % PEOPLE.length];
       return (await orders.create(users.RECEPTION, { patient: { fullName: `${name} (DEMO)`, dateOfBirth: dob, sex, phone: ph }, testCodes: codes.filter(has), identifiersChecked: ["dateOfBirth", "phone"], consentChannels: [...consent], referringDoctorName: "Dr Tamer Shawky (DEMO)", referringDoctorPhone: "+201000003101", ...extra } as any)).order;
     };
-    const advance = async (o: any, to: "collected" | "received" | "processing") => { for (const s of o.specimens) { await spec.transition(users.RECEPTION, s.id, "collect", { scannedBarcode: s.barcode }); if (to === "collected") continue; await spec.transition(tech, s.id, "receive", { scannedBarcode: s.barcode }); if (to === "received") continue; await spec.transition(tech, s.id, "process", { scannedBarcode: s.barcode }); } };
+    const advance = async (o: any, to: "collected" | "received" | "processing", preCollected = false) => { for (const s of o.specimens) { if (!preCollected) await spec.transition(users.RECEPTION, s.id, "collect", { scannedBarcode: s.barcode }); if (to === "collected") continue; await spec.transition(tech, s.id, "receive", { scannedBarcode: s.barcode }); if (to === "received") continue; await spec.transition(tech, s.id, "process", { scannedBarcode: s.barcode }); } };
     const enter = async (o: any, values: Record<string, number>, validate: "none" | "tech" | "medical") => {
       const full = await orders.get(org, o.id);
       for (const it of full.items) { const td = await prisma.testDefinition.findUniqueOrThrow({ where: { id: it.testId }, include: { analytes: { include: { analyte: true } } } });
@@ -76,6 +80,48 @@ async function main() {
     let k = 0; const done: Record<string, number> = {};
     const bump = (s: string) => { done[s] = (done[s] ?? 0) + 1; };
     const safe = async (label: string, f: () => Promise<void>) => { try { await f(); bump(label); } catch (e: any) { console.warn(`${label}:`, String(e.message ?? e).slice(0, 140)); } };
+
+    // ── KNLAB01: samples collected by a Kiorly Nurse at a home visit and handed to this lab (source KIORLY_NURSE, sourceRef = the clinic order id) ──
+    // The clinic seed created the matching ClinicalOrder + LabSampleCollection (same ids); the Kiorex seed relays and pushes this lab's status back.
+    const nurseOrders = async () => {
+      const nsys = { orgId: org, staffId: "system:kiorly_nurse", labIds: [], marketCode: "EG", system: true } as any;
+      const day0 = new Date(); day0.setUTCHours(0, 0, 0, 0);
+      const at = (o: { off: number; hour: number; min?: number }) => new Date(day0.getTime() + o.off * DAY + o.hour * 3_600_000 + (o.min ?? 0) * 60_000).toISOString();
+      const handoff: Record<string, unknown> = {};
+      for (const o of nurseLabSpec.orders) {
+        if (o.labTarget === "REFUSED") { handoff[o.id] = { sourceRef: o.id, state: "REFUSED", refusalCode: (o as any).refusalCode }; bump("nurse-refused"); continue; }
+        await safe(`nurse-${o.labTarget.toLowerCase()}`, async () => {
+          const r = await orders.create(nsys, {
+            source: "KIORLY_NURSE", sourceRef: o.id, patient: { fullName: `${o.patient.fullName} (DEMO)`, dateOfBirth: o.patient.dateOfBirth, sex: o.patient.sex as "M" | "F", phone: o.patient.phone, externalId: o.patient.ref },
+            testCodes: o.tests.filter(has), identifiersChecked: o.identifiersChecked.map((k: string) => ({ FULL_NAME: "fullName", DATE_OF_BIRTH: "dateOfBirth", PHONE: "phone" } as Record<string, string>)[k]), consentChannels: ["KIORLY_NURSE_IMPORT", "KIOREX_VAULT"] as any,
+            referringDoctorName: o.prescriber,
+            nurseCollection: { visitRef: o.visitKey, collectorRef: `demo_nurse_${o.nurse}`, collectorName: o.collectorName, collectedAt: at(o.collected), handedOverAt: at(o.handedOver), temperatureC: o.temperatureC, consentToken: `${nurseLabSpec.consentTokenPrefix}${o.key}`, samples: o.tubes },
+          } as any);
+          const ord = r.order as any;
+          let report: { reportId?: string; version?: number; secureLink?: string; signedAt?: string } = {};
+          if (r.created && (o.labTarget === "RELEASED" || o.labTarget === "AWAITING_VALIDATION")) {
+            await advance(ord, "processing", true);
+            await enter(ord, NORMAL, o.labTarget === "RELEASED" ? "medical" : "tech");
+            if (o.labTarget === "RELEASED") {
+              const rep = await reports.sign(users.AUTHORIZED_SIGNATORY, ord.id); const rel = await reports.release(users.RECEPTION, rep.id, ["KIOREX_VAULT"]);
+              report = { reportId: rel.reportId, version: rel.version, secureLink: rel.secureLink, signedAt: (rep as any).signedAt?.toISOString?.() ?? new Date().toISOString() };
+            }
+          }
+          const full = await prisma.labOrder.findUniqueOrThrow({ where: { id: ord.id }, select: { id: true, orderNumber: true, status: true } });
+          if (!r.created) { const rv = await prisma.reportVersion.findFirst({ where: { orderId: ord.id }, orderBy: { version: "desc" } }); if (rv) { report = { reportId: rv.id, version: rv.version, signedAt: rv.signedAt.toISOString() };
+            // seed-all --reset / {"reset":true}: re-issue the secure link (the plaintext token is only known at creation) so the clinic mirror gets a working one
+            if (process.env.DEMO_REISSUE_LINKS === "true" && o.labTarget === "RELEASED") report.secureLink = (await reports.release(users.RECEPTION, rv.id, ["KIOREX_VAULT"])).secureLink; } }
+          handoff[o.id] = { sourceRef: o.id, state: o.labTarget, labOrderId: full.id, orderNumber: full.orderNumber, status: full.status, ...report };
+        });
+      }
+      // hand-off for the Kiorex seed (local: a file; AWS: the Lambda response is passed to the Kiorex seed as DEMO_HANDOFF_JSON)
+      const file = process.env.DEMO_HANDOFF_FILE;
+      if (file) { mkdirSync(dirname(file), { recursive: true }); writeFileSync(file, JSON.stringify({ generatedAt: new Date().toISOString(), nurseLab: handoff }, null, 2)); }
+      console.log(`DEMO_HANDOFF ${JSON.stringify({ nurseLab: handoff })}`);
+    };
+    // outbox events produced by the seed describe demo state Kiorex already holds (or the Kiorex seed relays itself): never push them
+    const markSent = () => prisma.$executeRawUnsafe(`UPDATE "OutboxEvent" SET status='SENT', "sentAt"=now() WHERE "orgId"='${org}' AND status<>'SENT' AND "occurredAt" >= now() - interval '30 minutes'`).catch(() => {});
+    if (alreadySeeded) { await nurseOrders(); await markSent(); console.log("Lab demo seed: demo patients already present; nurse-collected orders ensured."); return; }
 
     for (let i = 0; i < 6; i++) await safe("awaiting-collection", async () => { const o = await mkOrder(k++, COMBOS[i % COMBOS.length]); await spread(o, i % 3); });
     for (let i = 0; i < 3; i++) await safe("collected", async () => { const o = await mkOrder(k++, COMBOS[i]); await advance(o, "collected"); await spread(o, 1 + i); });
@@ -107,8 +153,9 @@ async function main() {
       if (st === "RESULT_RELEASED") { await enter(r, NORMAL, "medical"); const rep = await reports.sign(users.AUTHORIZED_SIGNATORY, r.id); await reports.release(users.RECEPTION, rep.id, ["KIOREX_VAULT"]).catch((e: any) => console.warn("kiorex release:", e.message)); }
       if (st === "REJECTED") await orders.cancel?.(users.RECEPTION, r.id, "Slot unavailable (DEMO)").catch(() => {});
     });
+    await nurseOrders();
     // outbox events produced above describe demo state Kiorex already holds: never push them
-    await prisma.$executeRawUnsafe(`UPDATE "OutboxEvent" SET status='SENT', "sentAt"=now() WHERE "orgId"='${org}' AND status<>'SENT' AND "occurredAt" >= now() - interval '30 minutes'`).catch(() => {});
+    await markSent();
     console.log(`Lab demo seed OK — ${JSON.stringify(done)}; orders total ${await prisma.labOrder.count({ where: { orgId: org } })}`);
   } finally { await app.close(); }
 }
