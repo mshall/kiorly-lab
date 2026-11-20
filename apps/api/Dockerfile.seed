@@ -1,7 +1,7 @@
 # One-shot idempotent migrate + seed image for the NON-PRODUCTION Lambdas of kiorly-lab (Q10 Part B; handler demo-seed.handler / index.handler).
 # Compiled seeds only: plain `node dist/seed/seed-demo.js` at run time, no ts-node/tsx. Build from the repo root:
-#   docker build -f apps/api/Dockerfile.seed --build-context contracts=../kiorex-contracts -t kiorly-lab-seed .
-# (`@kiorex/contracts` is a file: dependency on ../kiorex-contracts/dist-pack until it is published; the named build context supplies the tarball.)
+#   docker build -f apps/api/Dockerfile.seed -t kiorly-lab-seed .
+# (`@kiorex/contracts` is a file: dependency on the tarball committed in vendor/; no extra build context needed.)
 FROM public.ecr.aws/lambda/nodejs:22 AS build
 RUN dnf install -y openssl ca-certificates && dnf clean all
 WORKDIR /repo
@@ -10,7 +10,6 @@ COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
 COPY packages ./packages
 COPY vendor ./vendor
-COPY --from=contracts dist-pack /kiorex-contracts/dist-pack
 RUN npm ci && npm install -g prisma@6.19.3
 COPY apps/api ./apps/api
 WORKDIR /repo/apps/api
