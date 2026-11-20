@@ -5,7 +5,7 @@ import { buildTravelMatrix, isInCoverage } from "@kiorly/field-visit";
 import type { AuthUser } from "../../auth/auth.types";
 import { AuditService } from "../../audit/audit.service";
 import { D, type Db, nextSequence, pad, round2 } from "../../common/db";
-import { IDENTIFIER_KINDS, presentIdentifiers, twoIdentifiersOk } from "../../common/identity";
+import { IDENTIFIER_KINDS, NURSE_INTAKE_IDENTIFIER_KINDS, presentIdentifiers, twoIdentifiersOk } from "../../common/identity";
 import { OrderStatusService } from "../../common/order-status.service";
 import { eventSource, isExternalSource } from "../../common/order-source";
 import { page } from "../../common/pagination";
@@ -125,7 +125,7 @@ export class OrdersService {
     const n = input.nurseCollection;
     if (!n) throw new BadRequestException({ code: "NURSE_COLLECTION_REQUIRED" });
     if (!n.consentToken?.trim()) throw new UnprocessableEntityException({ code: "CONSENT_REQUIRED", message: "a patient consent token is required for nurse-collected samples" });
-    if (!input.identifiersChecked?.length) throw new UnprocessableEntityException({ code: "TWO_IDENTIFIERS_REQUIRED", allowed: IDENTIFIER_KINDS });
+    if (!input.identifiersChecked?.length) throw new UnprocessableEntityException({ code: "TWO_IDENTIFIERS_REQUIRED", allowed: NURSE_INTAKE_IDENTIFIER_KINDS });
     const skew = Date.now() + 5 * 60_000;
     const collected = Date.parse(n.collectedAt);
     if (Number.isNaN(collected)) throw new BadRequestException({ code: "COLLECTED_AT_INVALID" });
@@ -182,7 +182,9 @@ export class OrdersService {
     const checked = input.identifiersChecked ?? [];
     let identityVerified = false;
     if (checked.length) {
-      if (!twoIdentifiersOk(checked, presentIdentifiers(patient))) throw new UnprocessableEntityException({ code: "TWO_IDENTIFIERS_REQUIRED", allowed: IDENTIFIER_KINDS });
+      const nurse = source === "KIORLY_NURSE";
+      const kinds = nurse ? NURSE_INTAKE_IDENTIFIER_KINDS : IDENTIFIER_KINDS;
+      if (!twoIdentifiersOk(checked, nurse ? [...presentIdentifiers(patient), "fullName"] : presentIdentifiers(patient), kinds)) throw new UnprocessableEntityException({ code: "TWO_IDENTIFIERS_REQUIRED", allowed: kinds });
       identityVerified = true;
     }
     let consent = input.consentChannels ?? [];

@@ -1252,7 +1252,7 @@ model IntegrationClient {
   orgId            String
   key              String   @unique
   secretEnc        String
-  /// KIOREX_BOOKING | KIORLY_CLINIC
+  /// KIOREX_BOOKING | KIORLY_CLINIC | KIORLY_NURSE
   source           String
   active           Boolean  @default(true)
   createdAt        DateTime @default(now())

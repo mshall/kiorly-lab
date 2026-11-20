@@ -10,7 +10,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { IntegrationAuthService } from "./integration-auth.service";
 import { IntegrationCatalogueService } from "./integration-catalogue.service";
 
-/** Inbound order shape for Kiorex bookings and Kiorly Clinic lab-order handoff. PROPOSED contract addition (NH-LB-025): not yet in @kiorex/contracts. */
+/** Inbound order shape for Kiorex bookings, Kiorly Clinic lab-order handoff and Kiorly Nurse samples: `InboundLabOrder` of kiorly-lab.v1.openapi.json (kiorex-contracts 1.6.0, strict; the Nurse fields are the ratified optional additions). */
 export const InboundOrder = z.object({
   sourceRef: z.string().min(1).max(120),
   labId: z.string().optional(),
@@ -21,9 +21,9 @@ export const InboundOrder = z.object({
   referringDoctor: z.object({ name: z.string().optional(), ref: z.string().optional(), phone: z.string().optional() }).strict().optional(),
   collection: z.object({ type: z.enum(["IN_LAB", "HOME"]), address: z.string().optional(), districtId: z.string().optional(), windowStart: z.string().optional(), windowEnd: z.string().optional(), geo: z.object({ lat: z.number(), lng: z.number() }).optional(), contactPhone: z.string().optional() }).strict().optional(),
   consentChannels: z.array(z.enum(["PRINTED", "PATIENT_LINK_OTP", "KIORLY_CLINIC_IMPORT", "KIORLY_NURSE_IMPORT", "KIOREX_VAULT"])).optional(),
-  /** KLORD05: two identifiers the nurse verified at collection (kinds, e.g. dateOfBirth + phone). Required with `nurseCollection`. */
+  /** KLORD05 (contracts 1.6.0): kinds of the two identifiers the nurse verified at collection (e.g. DATE_OF_BIRTH + PHONE). Required with `nurseCollection`. */
   identifiersChecked: z.array(z.string()).optional(),
-  /** KLORD05 / KNLAB01 (PROPOSED additive, NH-LB-034): a sample the nurse already collected. Accepted only from a KIORLY_NURSE client. */
+  /** KLORD05 / KNLAB01 (ratified in contracts 1.6.0, schema `NurseCollection`): a sample the nurse already collected. Accepted only from a KIORLY_NURSE client. */
   nurseCollection: z.object({
     visitRef: z.string().min(1).max(120),
     collectorRef: z.string().min(1).max(120),

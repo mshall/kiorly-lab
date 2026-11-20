@@ -42,6 +42,13 @@ async function ensureDevKiorexClient(prisma: PrismaService, orgId: string) {
   await prisma.integrationClient.upsert({ where: { key: d.clientKey }, create: { key: d.clientKey, ...data }, update: data });
 }
 
+/** DEV registration of the KIORLY_NURSE source Kiorex relays with (kiorex-contracts PARTNER_DEV_DEFAULTS.labNurse; local only, idempotent). KNLAB01. */
+async function ensureDevNurseClient(prisma: PrismaService, orgId: string) {
+  const d = PARTNER_DEV_DEFAULTS.labNurse;
+  const data = { orgId, secretEnc: seal(d.clientSecret), source: "KIORLY_NURSE", active: true };
+  await prisma.integrationClient.upsert({ where: { key: d.clientKey }, create: { key: d.clientKey, ...data }, update: data });
+}
+
 async function main() {
   if (process.env.NODE_ENV === "production") throw new Error("refusing to seed demo data in production");
   loadEnv();
@@ -50,6 +57,7 @@ async function main() {
   const existing = await prisma.tenant.findUnique({ where: { slug: SLUG } });
   if (existing) {
     await ensureDevKiorexClient(prisma, existing.id);
+    await ensureDevNurseClient(prisma, existing.id);
     console.log(`demo tenant "${SLUG}" already exists: dev Kiorex client ${PARTNER_DEV_DEFAULTS.lab.clientKey} ensured`);
     await app.close();
     return;
@@ -161,12 +169,13 @@ async function main() {
   await prisma.b2bAccount.create({ data: { orgId: tenant.id, name: "Demo Insurance Co", priceListId: pl.id, paymentTermsDays: 45 } });
   const admin = app.get(AdminService);
   await ensureDevKiorexClient(prisma, tenant.id);
+  await ensureDevNurseClient(prisma, tenant.id);
   const cl = await admin.createClient(users.OWNER, "KIORLY_CLINIC");
   await prisma.integrationClient.update({ where: { id: cl.id }, data: { key: "kl_dev_clinic", secretEnc: seal("dev_clinic_secret_change_me") } });
 
   console.log(`seeded demo tenant "${SLUG}" (org ${tenant.id}).`);
   console.log(`dev login: POST /api/v1/auth/dev-login {"orgSlug":"${SLUG}","email":"<role>@${SLUG}.test"} with owner|director|signatory|tech|phleb|reception|manager`);
-  console.log("integration dev clients: kl_dev_kiorex / dev_kiorex_secret_change_me, kl_dev_clinic / dev_clinic_secret_change_me (local only)");
+  console.log("integration dev clients: kl_dev_kiorex / dev_kiorex_secret_change_me, kl_dev_clinic / dev_clinic_secret_change_me, kl_dev_nurse / dev_nurse_secret_change_me (KIORLY_NURSE, relayed by Kiorex; local only)");
   await app.close();
 }
 

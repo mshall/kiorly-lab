@@ -4,10 +4,13 @@ import { validateEnvelope, validateEvent } from "@kiorex/contracts";
 import type { LabOrderPlacedData } from "@kiorex/contracts";
 import { type Lab, type TestApp, NORMAL, bootApp, call, enterAndTechValidate, makeLab, qcPass } from "./helpers/app";
 import { type Client, post } from "./helpers/hmac";
+import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { labOrderPlacedToInbound, NurseHandoffError } from "../src/integration/nurse-handoff";
+import { InboundOrder } from "../src/integration/integration.controller";
 
 /**
- * KNLAB01 / KLORD05 end to end: Kiorly Nurse visit -> LabOrderPlaced (kiorex-contracts 1.5.0) -> Kiorex relay -> Kiorly Lab inbound order
+ * KNLAB01 / KLORD05 end to end: Kiorly Nurse visit -> LabOrderPlaced (kiorex-contracts 1.6.0) -> Kiorex relay -> Kiorly Lab inbound order
  * (existing integration endpoints) -> chain of custody from the nurse's collection time -> receipt by scan -> results -> release on the
  * Kiorly Nurse import channel (KLCRIT02) -> nurse fetches the report. Also KLORD02 (source) and KLCRIT02 (channel) additions.
  */
@@ -28,32 +31,68 @@ describe("KNLAB01 nurse-collected samples (KLORD05, KLORD02, KLCRIT02)", () => {
   const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000).toISOString();
 
   /** The LabOrderPlaced a Kiorly Nurse tenant would emit (validated against the published contract), mapped by the relay. */
-  function handoff(over: { items?: LabOrderPlacedData["items"]; samples?: { label: string; specimenType: string; container?: string }[]; collectedAt?: string; handedOverAt?: string | null; consentToken?: string; identifiers?: string[]; ref?: string } = {}) {
+  function handoff(over: { items?: LabOrderPlacedData["items"]; samples?: { label: string; specimenType: string; container?: string }[]; collectedAt?: string; handedOverAt?: string | null; consentToken?: string; identifiers?: NonNullable<LabOrderPlacedData["identifiersChecked"]>; ref?: string } = {}) {
     const n = ++seq;
     const orderId = over.ref ?? `nurse_ord_${Date.now().toString(36)}_${n}`;
     const data: LabOrderPlacedData = {
       orderId, encounterId: `enc_${n}`, clinicId: "nurse_tenant_1", patientRef: `pat_${n}`, orderingClinicianId: "dr_ref_1", consentToken: over.consentToken ?? "consent-token-abcdef123456",
       orderedAt: minutesAgo(180), items: over.items ?? [{ code: "CBC", nameEn: "Complete blood count" }, { code: "GLU", nameEn: "Fasting glucose" }], preferredLabId: lab.labId,
-    };
-    const envelope = { eventId: `evt_${orderId}`, type: "LabOrderPlaced", aggregateType: "LabOrder", aggregateId: orderId, target: "KIOREX", occurredAt: new Date().toISOString(), data };
-    assert.equal(validateEvent("LabOrderPlaced", envelope).valid, true, "the source event is contract-valid");
-    const body = labOrderPlacedToInbound(data, {
+      originEdition: "NURSE", prescriberName: "Dr Hesham Nabil", identifiersChecked: over.identifiers ?? ["dateOfBirth", "phone"],
       patient: { fullName: "Mona Nurse Patient", dateOfBirth: "1985-02-02", sex: "F", phone: `+2010000${String(10000 + n)}`, preferredLocale: "ar" },
-      identifiersChecked: over.identifiers ?? ["dateOfBirth", "phone"],
-      collection: {
+      nurseCollection: {
         visitRef: `visit_${n}`, collectorRef: "nurse_mona_1", collectorName: "Nurse Mona", collectedAt: over.collectedAt ?? minutesAgo(95), temperatureC: 23.5,
         ...(over.handedOverAt === null ? {} : { handedOverAt: over.handedOverAt ?? minutesAgo(60) }),
         samples: over.samples ?? [{ label: `NSV${n}A`, specimenType: "Whole blood", container: "EDTA (lavender)" }, { label: `NSV${n}B`, specimenType: "Serum", container: "Serum gel (yellow)" }],
       },
-    });
+    };
+    const envelope = { eventId: `evt_${orderId}`, type: "LabOrderPlaced", aggregateType: "LabOrder", aggregateId: orderId, target: "KIOREX", occurredAt: new Date().toISOString(), data };
+    // the schema (rightly) demands >= 2 identifier kinds and a valid tube label: the negative cases below break exactly those rules on purpose
+    if (!over.identifiers && !over.samples) assert.equal(validateEvent("LabOrderPlaced", envelope).valid, true, "the source event is contract-valid");
+    const body = labOrderPlacedToInbound(data);
     return { orderId, body };
   }
 
   it("the mapper refuses events that cannot be placed (no consent token, item without a catalogue code)", () => {
-    const base = { orderId: "o", clinicId: "c", patientRef: "p", consentToken: "t", orderedAt: new Date().toISOString(), items: [{ nameEn: "X" }] } as LabOrderPlacedData;
-    const ctx = { patient: { fullName: "A B" }, identifiersChecked: ["phone", "dateOfBirth"], collection: { visitRef: "v", collectorRef: "n", collectedAt: new Date().toISOString(), samples: [] } };
-    assert.throws(() => labOrderPlacedToInbound(base, ctx), (e: unknown) => e instanceof NurseHandoffError && e.code === "ITEM_CODE_REQUIRED");
-    assert.throws(() => labOrderPlacedToInbound({ ...base, consentToken: "" }, ctx), (e: unknown) => e instanceof NurseHandoffError && e.code === "CONSENT_TOKEN_REQUIRED");
+    const base = { orderId: "o", clinicId: "c", patientRef: "p", consentToken: "t", orderedAt: new Date().toISOString(), items: [{ nameEn: "X" }], patient: { fullName: "A B" }, identifiersChecked: ["phone", "dateOfBirth"], nurseCollection: { visitRef: "v", collectorRef: "n", collectedAt: new Date().toISOString(), samples: [{ label: "TUBE-1", specimenType: "BLOOD" }] } } as LabOrderPlacedData;
+    const code = (d: LabOrderPlacedData) => { try { labOrderPlacedToInbound(d); return "OK"; } catch (e) { return e instanceof NurseHandoffError ? e.code : "OTHER"; } };
+    assert.equal(code(base), "ITEM_CODE_REQUIRED");
+    assert.equal(code({ ...base, items: [{ code: "CBC", nameEn: "X" }], consentToken: "" }), "CONSENT_TOKEN_REQUIRED");
+    assert.equal(code({ ...base, items: [{ code: "CBC", nameEn: "X" }], nurseCollection: undefined }), "NURSE_COLLECTION_REQUIRED");
+    assert.equal(code({ ...base, items: [{ code: "CBC", nameEn: "X" }], patient: undefined }), "PATIENT_REQUIRED");
+    assert.equal(code({ ...base, items: [{ code: "CBC", nameEn: "X" }] }), "OK");
+  });
+
+  it("the relay body and the lab's zod validator both conform to the ratified strict contract InboundLabOrder (kiorly-lab.v1.openapi.json 0.3.0)", () => {
+    const req = createRequire(createRequire(__filename).resolve("@kiorex/contracts/package.json")); // the Ajv the contracts package itself uses
+    const spec = JSON.parse(readFileSync(req.resolve("@kiorex/contracts/openapi/kiorly-lab.v1.openapi.json"), "utf8"));
+    const AjvCls = req("ajv"); const fmt = req("ajv-formats");
+    const ajv = new (AjvCls.default ?? AjvCls)({ strict: false, allErrors: true });
+    (fmt.default ?? fmt)(ajv);
+    const fix = (n: any): any => (Array.isArray(n) ? n.map(fix) : n && typeof n === "object" ? Object.fromEntries(Object.entries(n).map(([k, v]) => [k, k === "$ref" ? String(v).replace("#/components/schemas/", "#/$defs/") : fix(v)])) : n);
+    const defs = fix(spec.components.schemas);
+    const validate = ajv.compile({ ...defs.InboundLabOrder, $defs: defs });
+    for (const vault of [false, true]) {
+      const body = handoff().body;
+      const withVault = { ...body, consentChannels: vault ? ["KIORLY_NURSE_IMPORT", "KIOREX_VAULT"] : body.consentChannels };
+      assert.equal(validate(withVault), true, JSON.stringify(validate.errors));
+      assert.equal(InboundOrder.safeParse(withVault).success, true, "the lab's own validator accepts what the contract accepts");
+    }
+    // strictness is preserved: an unknown field is refused by both, and districtId is the only collection addition
+    assert.equal(validate({ ...handoff().body, surprise: 1 }), false);
+    assert.equal(InboundOrder.safeParse({ ...handoff().body, surprise: 1 }).success, false);
+    assert.equal(validate({ sourceRef: "x", patient: { fullName: "A B" }, collection: { type: "HOME", districtId: "nasr-city" } }), true);
+    assert.equal(validate({ sourceRef: "x", patient: { fullName: "A B" }, collection: { type: "HOME", extra: 1 } }), false);
+    assert.equal(InboundOrder.safeParse({ sourceRef: "x", patient: { fullName: "A B" }, collection: { type: "HOME", districtId: "nasr-city" } }).success, true);
+  });
+
+  it("fullName is an accepted identifier kind for nurse intake (name + date of birth matched by the nurse), never for the doorstep/desk flows", async () => {
+    const ok = await post(t, nurse, "/integration/v1/orders", handoff({ identifiers: ["fullName", "dateOfBirth"] }).body);
+    assert.equal(ok.status, 200, JSON.stringify(ok.body));
+    const one = await post(t, nurse, "/integration/v1/orders", handoff({ identifiers: ["fullName", "fullName"] }).body);
+    assert.equal(one.status, 422, "two identical kinds are one identifier");
+    const unknown = await post(t, nurse, "/integration/v1/orders", handoff({ identifiers: ["fullName", "shoeSize" as never] }).body);
+    assert.equal(unknown.status, 422);
+    assert.deepEqual(unknown.body.allowed, ["dateOfBirth", "phone", "nationalId", "externalId", "fullName"]);
   });
 
   it("accepts a nurse-collected order: source KIORLY_NURSE, specimens arrive collected/in transit, custody starts at the NURSE's collection time", async () => {
