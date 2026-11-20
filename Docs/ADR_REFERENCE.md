@@ -31,9 +31,10 @@ Binding decisions from KX-01 that shape this repo. ADR numbers are used in commi
 | `safety.lab.consent_enforcement` | Result release channels require consent | KLORD03, KLCRIT02 | Service (KPRX01 / KLCRIT02) |
 | `safety.lab.tenant_isolation` | Tenant isolation and authorization | KX-08 §09 | orgId on every table + guard (F07); schema smoke test asserts orgId |
 | `safety.lab.privileged_mfa` | Privileged MFA on production | KX-08 §09 | Auth guard (F07) |
+| `safety.lab.collector_safety` | Phlebotomist safety timer, SOS, unsafe-abort (never a no-show) and home-address masking | KLORD04, HVSAF01/02, BR52, BR61 | `modules/field-safety/` on `@kiorly/field-visit` (never flags/plan/env; `home-safety.e2e.test.ts`, LB-SS06) |
 
 Also not flags per KX-08 §09: Rx safety checks, encounter sign-off/audit, record view/print/export for the tenant, privileged MFA on production, tenant isolation and authorization, breach-response tooling.
 
 ## Adding a flag (checklist)
 
-1. Not a safety control (check the table above). 2. Key `lab.<name>`, ships ON, with a dependency on `lab.module` where sensible. 3. Register in the Kiorex registry (needs human). 4. Add to `feature-flag-keys.ts` and `packages/shared`. 5. Write the OFF contract test (403 FEATURE_DISABLED {key,scope}). 6. Never place `@RequiresFlag` in a safety-path directory (`specimens, analysis-qc, release, critical`).
+1. Not a safety control (check the table above). 2. Key `lab.<name>`, ships ON, with a dependency on `lab.module` where sensible. 3. Register in the Kiorex registry (needs human). 4. Add to `feature-flag-keys.ts` and `packages/shared`. 5. Write the OFF contract test (403 FEATURE_DISABLED {key,scope}). 6. Never place `@RequiresFlag` in a safety-path directory (`specimens, analysis-qc, release, critical, field-safety`).

@@ -484,6 +484,109 @@
         ]
       }
     },
+    "/api/v1/labs/{id}/coverage": {
+      "put": {
+        "operationId": "AdminController_coverage",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "districtIds": {
+                    "minItems": 1,
+                    "maxItems": 200,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 2,
+                      "maxLength": 80
+                    }
+                  },
+                  "maxTravelMinutes": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 600
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "startDistrictId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 80
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "travelMatrix": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 600
+                          }
+                        }
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "districtIds"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/settings": {
       "get": {
         "operationId": "AdminController_settings",
@@ -529,6 +632,52 @@
                     "type": "integer",
                     "minimum": 1,
                     "maximum": 168
+                  },
+                  "safetyContactName": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 120
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "safetyContactPhone": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 6,
+                        "maxLength": 24
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "homeBufferBeforeMin": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 180
+                  },
+                  "homeBufferAfterMin": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 180
+                  },
+                  "homeDailyCap": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 50
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 },
                 "additionalProperties": false
@@ -622,8 +771,13 @@
                     "type": "string",
                     "enum": [
                       "KIOREX_BOOKING",
-                      "KIORLY_CLINIC"
+                      "KIORLY_CLINIC",
+                      "KIORLY_NURSE"
                     ]
+                  },
+                  "kiorexBaseUrl": {
+                    "type": "string",
+                    "format": "uri"
                   }
                 },
                 "required": [
@@ -1435,6 +1589,7 @@
                         "PRINTED",
                         "PATIENT_LINK_OTP",
                         "KIORLY_CLINIC_IMPORT",
+                        "KIORLY_NURSE_IMPORT",
                         "KIOREX_VAULT"
                       ]
                     }
@@ -1448,6 +1603,11 @@
                       "address": {
                         "type": "string",
                         "minLength": 5
+                      },
+                      "districtId": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 80
                       },
                       "contactPhone": {
                         "type": "string"
@@ -1611,6 +1771,7 @@
                         "PRINTED",
                         "PATIENT_LINK_OTP",
                         "KIORLY_CLINIC_IMPORT",
+                        "KIORLY_NURSE_IMPORT",
                         "KIOREX_VAULT"
                       ]
                     }
@@ -1867,6 +2028,111 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "geostamp": {
+                    "type": "object",
+                    "properties": {
+                      "lat": {
+                        "type": "number",
+                        "minimum": -90,
+                        "maximum": 90
+                      },
+                      "lng": {
+                        "type": "number",
+                        "minimum": -180,
+                        "maximum": 180
+                      },
+                      "districtId": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "lat",
+                      "lng"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "orders"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/home-collections/{id}/arrive": {
+      "post": {
+        "operationId": "OrdersController_arrive",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "geostamp": {
+                    "type": "object",
+                    "properties": {
+                      "lat": {
+                        "type": "number",
+                        "minimum": -90,
+                        "maximum": 90
+                      },
+                      "lng": {
+                        "type": "number",
+                        "minimum": -180,
+                        "maximum": 180
+                      },
+                      "districtId": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "lat",
+                      "lng"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "geostamp"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -2727,6 +2993,190 @@
         },
         "tags": [
           "specimens"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/home-collections/{id}/safety/answer": {
+      "post": {
+        "operationId": "FieldSafetyController_answer",
+        "summary": "\"I'm OK\" - answers the safety prompt (timer re-arms)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "field-safety"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/home-collections/{id}/sos": {
+      "post": {
+        "operationId": "FieldSafetyController_sos",
+        "summary": "One-tap SOS: live location to the safety contact; response carries 123 / 122",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "lat": {
+                    "type": "number",
+                    "minimum": -90,
+                    "maximum": 90
+                  },
+                  "lng": {
+                    "type": "number",
+                    "minimum": -180,
+                    "maximum": 180
+                  }
+                },
+                "required": [
+                  "lat",
+                  "lng"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "field-safety"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/home-collections/{id}/leave-unsafe": {
+      "post": {
+        "operationId": "FieldSafetyController_leave",
+        "summary": "Leave visit - unsafe (never a no-show, BR61)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "enum": [
+                      "THREAT_OR_AGGRESSION",
+                      "UNSAFE_ENVIRONMENT",
+                      "ANIMAL",
+                      "OTHER"
+                    ]
+                  },
+                  "geostamp": {
+                    "type": "object",
+                    "properties": {
+                      "lat": {
+                        "type": "number",
+                        "minimum": -90,
+                        "maximum": 90
+                      },
+                      "lng": {
+                        "type": "number",
+                        "minimum": -180,
+                        "maximum": 180
+                      },
+                      "districtId": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "lat",
+                      "lng"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "field-safety"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/home-collections/safety/alerts": {
+      "get": {
+        "operationId": "FieldSafetyController_alerts",
+        "summary": "Safety alerts raised for this organisation (delivery outcome, SLA)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "field-safety"
         ],
         "security": [
           {
@@ -4019,6 +4469,7 @@
                         "PRINTED",
                         "PATIENT_LINK_OTP",
                         "KIORLY_CLINIC_IMPORT",
+                        "KIORLY_NURSE_IMPORT",
                         "KIOREX_VAULT"
                       ]
                     }
@@ -4922,6 +5373,71 @@
         ]
       }
     },
+    "/api/v1/integration/v1/labs": {
+      "get": {
+        "operationId": "IntegrationController_labs",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "integration"
+        ]
+      }
+    },
+    "/api/v1/integration/v1/tests": {
+      "get": {
+        "operationId": "IntegrationController_tests",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "integration"
+        ]
+      }
+    },
+    "/api/v1/integration/v1/tests/quote": {
+      "post": {
+        "operationId": "IntegrationController_quote",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "integration"
+        ]
+      }
+    },
+    "/api/v1/integration/v1/labs/{labId}/slots": {
+      "get": {
+        "operationId": "IntegrationController_slots",
+        "parameters": [
+          {
+            "name": "labId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "integration"
+        ]
+      }
+    },
     "/api/v1/integration/v1/orders": {
       "post": {
         "operationId": "IntegrationController_create",
@@ -4963,6 +5479,29 @@
     "/api/v1/integration/v1/orders/{sourceRef}/cancel": {
       "post": {
         "operationId": "IntegrationController_cancel",
+        "parameters": [
+          {
+            "name": "sourceRef",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "integration"
+        ]
+      }
+    },
+    "/api/v1/integration/v1/orders/{sourceRef}/custody": {
+      "get": {
+        "operationId": "IntegrationController_custody",
         "parameters": [
           {
             "name": "sourceRef",

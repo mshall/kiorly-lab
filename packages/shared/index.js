@@ -63,6 +63,12 @@ const SAFETY_CONTROLS = [
     "name": "PRIVILEGED_MFA",
     "description": "Privileged MFA on production",
     "requirements": "KX-08 §09"
+  },
+  {
+    "id": "safety.lab.collector_safety",
+    "name": "COLLECTOR_SAFETY",
+    "description": "Phlebotomist safety timer, SOS, unsafe-abort (never a no-show) and home-address masking",
+    "requirements": "KLORD04, HVSAF01/02, BR52, BR61"
   }
 ];
 module.exports = { PRODUCT_KEY, FLAG_KEYS, SAFETY_CONTROLS };

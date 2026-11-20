@@ -15,7 +15,7 @@ Part of Kiorly by Kiorex. Works standalone; talks to Kiorex only over HMAC REST 
 
 | Path | What |
 |---|---|
-| `apps/api` | NestJS 10 + Prisma 6. Modules: `catalogue`, `orders` (patients, consent, home collection), `specimens` (accession, labels, custody), `analysis-qc` (instruments, Westgard QC, results, validation), `analyzers` (ASTM E1394 / HL7 v2 parsers, bridge, simulator), `critical`, `release` (signed report versions, PDF, secure link), `business` (price lists, invoices, payments, TAT, exports), `admin` (auth session, onboarding, staff/RBAC) |
+| `apps/api` | NestJS 10 + Prisma 6. Modules: `catalogue`, `orders` (patients, consent, home collection, nurse-collected samples), `field-safety` (home-collection lifecycle on `@kiorly/field-visit`, safety timer, SOS, unsafe-abort), `specimens` (accession, labels, custody), `analysis-qc` (instruments, Westgard QC, results, validation), `analyzers` (ASTM E1394 / HL7 v2 parsers, bridge, simulator), `critical`, `release` (signed report versions, PDF, secure link), `business` (price lists, invoices, payments, TAT, exports), `admin` (auth session, onboarding, staff/RBAC) |
 | `apps/api/src/kernel-adapter` | Seam for `@kiorly/commerce-kernel` (not published yet): entitlements, price book, ledger. Local implementation behind three provider tokens |
 | `apps/api/src/{adapters,outbox,integration}` | Mock/real adapters (messaging, storage, PSP), transactional outbox + HMAC dispatcher, inbound HMAC endpoints, flag webhook |
 | `apps/api/prisma` | Schema (FROZEN-v1) + migrations `0001_draft_init`, `0002_freeze_v1` (DB triggers/CHECKs for the safety controls) |
