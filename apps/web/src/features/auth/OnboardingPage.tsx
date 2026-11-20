@@ -7,13 +7,13 @@ import { useAuth } from "@/lib/auth";
 import { setLang } from "@/lib/i18n";
 import { Button, Field, Input } from "@/components/ui";
 import { ErrorNote } from "@/components/common";
-import { KiorlyBrand, ThemeToggle, Surface, kcn } from "@/brand/ui-kit";
+import { KiorlyBrandLockup, KxControlPair, LanguageToggle, ThemeToggle, Surface, kcn } from "@/brand/ui-kit";
 
 const EDITIONS = ["LITE", "PRO", "CHAIN"] as const;
 
 /** Self-serve onboarding (dev/pilot). Disabled with 403 FEATURE_DISABLED when `lab.module` is OFF in Kiorex. */
 export function OnboardingPage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { login } = useAuth();
   const nav = useNavigate();
   const [f, setF] = useState({ name: "", slug: "", labName: "", labCode: "", ownerName: "", ownerEmail: "", edition: "PRO", loadStarterCatalogue: true });
@@ -35,8 +35,8 @@ export function OnboardingPage() {
   return (
     <main id="main" className="mx-auto max-w-2xl px-4 py-8 sm:py-12">
       <div className="mb-6 flex items-center justify-between gap-3">
-        <KiorlyBrand height={40} />
-        <div className="flex items-center gap-2"><ThemeToggle labels={{ theme: t("theme.label"), light: t("theme.light"), dark: t("theme.dark"), system: t("theme.system") }} /><Button variant="outline" size="sm" className="h-10" onClick={() => setLang(i18n.language === "ar" ? "en" : "ar")}>{t("app.lang")}</Button></div>
+        <KiorlyBrandLockup height={40} />
+        <KxControlPair><ThemeToggle labels={{ theme: t("theme.label"), light: t("theme.light"), dark: t("theme.dark"), system: t("theme.system") }} /><LanguageToggle onChange={setLang} /></KxControlPair>
       </div>
       <h1 className="text-2xl font-semibold tracking-tight">{t("onboarding.title")}</h1>
       <p className="mb-6 mt-1 text-sm text-muted-foreground">{t("onboarding.sub")}</p>

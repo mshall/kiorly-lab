@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { KiorlyMark } from "@/brand/ui-kit";
+import { KiorlyMark, LanguageToggle, ThemeToggle } from "@/brand/ui-kit";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -51,7 +51,7 @@ async function sendQueued(c: QueuedCall) {
  * Every write is queued with an Idempotency-Key and replayed when the connection returns; the route is cached for offline use.
  */
 export function PhlebApp() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { me, can } = useAuth();
   const qc = useQueryClient();
   const [date, setDate] = useState(today());
@@ -182,7 +182,7 @@ export function PhlebApp() {
           <KiorlyMark size={30} />
           <div className="flex-1 leading-tight"><div className="text-sm font-bold">{t("phleb.title")}</div><div className="text-xs text-muted-foreground">{me?.user.displayName}</div></div>
           <Badge tone={online ? "ok" : "warn"}>{online ? t("phleb.online") : <><CloudOff className="me-1 h-3 w-3" />{t("phleb.offline")}</>}</Badge>
-          <Button variant="outline" size="sm" onClick={() => setLang(i18n.language === "ar" ? "en" : "ar")}>{t("app.lang")}</Button>
+          <ThemeToggle labels={{ theme: t("theme.label"), light: t("theme.light"), dark: t("theme.dark"), system: t("theme.system") }} /><LanguageToggle onChange={setLang} />
         </div>
         {route.data?.length ? <div className="mt-2" aria-hidden="true"><div className="h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${Math.round((route.data.filter((h: any) => h.status === "COLLECTED").length / route.data.length) * 100)}%` }} /></div></div> : null}
         <div className="mt-2 flex items-center gap-2"><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label={t("common.date")} />{can("orders.read") ? <Link to="/" className="shrink-0 whitespace-nowrap text-xs font-medium text-primary underline">{t("phleb.console")}</Link> : null}</div>

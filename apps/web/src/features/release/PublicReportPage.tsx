@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Download, FileText, Lock, ShieldCheck } from "lucide-react";
-import { EmptyState, KiorlyBrand, Skeleton, Stepper, Surface, ThemeToggle } from "@/brand/ui-kit";
+import { EmptyState, KiorlyBrandLockup, KxControlPair, LanguageToggle, Skeleton, Stepper, Surface, ThemeToggle } from "@/brand/ui-kit";
 import { useParams } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -19,7 +19,7 @@ async function pub<T>(path: string, method = "GET", body?: unknown): Promise<T> 
 /** Patient secure link (KLCRIT02): OTP-gated download of the signed report. Shows no clinical data before verification. */
 export function PublicReportPage() {
   const { token = "" } = useParams();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [otp, setOtp] = useState("");
   const [sent, setSent] = useState(false);
   const [wait, setWait] = useState(0);
@@ -35,8 +35,8 @@ export function PublicReportPage() {
   return (
     <main id="main" className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-5 px-4 py-8">
       <div className="flex items-center justify-between gap-3">
-        <KiorlyBrand height={38} />
-        <div className="flex items-center gap-2"><ThemeToggle labels={{ theme: t("theme.label"), light: t("theme.light"), dark: t("theme.dark"), system: t("theme.system") }} /><Button variant="outline" size="sm" className="h-10" onClick={() => setLang(i18n.language === "ar" ? "en" : "ar")}>{t("app.lang")}</Button></div>
+        <KiorlyBrandLockup height={38} />
+        <KxControlPair><ThemeToggle labels={{ theme: t("theme.label"), light: t("theme.light"), dark: t("theme.dark"), system: t("theme.system") }} /><LanguageToggle onChange={setLang} /></KxControlPair>
       </div>
       <Surface className="space-y-5 p-6 shadow-[var(--kx-shadow-3)]">
         <div className="flex items-center gap-3"><span className="grid size-11 place-items-center rounded-xl bg-accent text-accent-foreground"><FileText aria-hidden className="size-5" /></span><div><h1 className="text-lg font-semibold leading-tight">{t("public.title")}</h1>{info.data ? <p className="text-xs text-muted-foreground">{t("ux.public.secure")}</p> : null}</div></div>

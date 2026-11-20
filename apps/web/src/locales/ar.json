@@ -2,7 +2,8 @@
   "app": {
     "product": "كيورلي لاب",
     "docTitle": "كيورلي لاب من كيوريكس",
-    "lang": "English"
+    "lang": "English",
+    "tagline": "إدارة المختبرات"
   },
   "nav": {
     "dashboard": "لوحة التحكم",
@@ -1714,5 +1715,10 @@
       "finance": "المالية",
       "inventory": "المخزون"
     }
+  },
+  "lang": {
+    "label": "اللغة",
+    "english": "الإنجليزية",
+    "arabic": "العربية"
   }
 }

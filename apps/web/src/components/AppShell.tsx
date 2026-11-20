@@ -5,10 +5,10 @@ import { Activity, AlertTriangle, BadgeCheck, BarChart3, BookOpen, BriefcaseMedi
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { applyTenantDefault, setLang, type Lang } from "@/lib/i18n";
+import { applyTenantDefault, setLang } from "@/lib/i18n";
 import { cn } from "@/lib/cn";
 import { Badge, Button } from "@/components/ui";
-import { KiorlyBrand, ThemeToggle } from "@/brand/ui-kit";
+import { KiorlyBrandLockup, KxControlPair, LanguageToggle, ThemeToggle } from "@/brand/ui-kit";
 
 const NAV_GROUPS = [
   { key: "front", items: [
@@ -45,22 +45,21 @@ const NAV_GROUPS = [
 ] as const;
 
 export function AppShell() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { me, can, logout, flagOn } = useAuth();
   const [open, setOpen] = useState(false);
   const nav = useNavigate();
-  const next: Lang = i18n.language === "ar" ? "en" : "ar";
   useEffect(() => { applyTenantDefault(me?.tenant.defaultLocale); }, [me?.tenant.defaultLocale]);
   const alerts = useQuery({ queryKey: ["critical-count"], queryFn: () => api<any[]>("/critical-alerts"), enabled: can("critical.read"), refetchInterval: 30_000 });
   const openAlerts = alerts.data?.length ?? 0;
   return (
     <div className="flex min-h-screen">
-      <aside className={cn("fixed inset-y-0 start-0 z-40 w-64 shrink-0 border-e border-border bg-card p-4 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto transition-transform lg:translate-x-0", open ? "translate-x-0" : "max-lg:-translate-x-full max-lg:rtl:translate-x-full")}>
+      <aside className={cn("fixed inset-y-0 start-0 z-40 w-64 shrink-0 border-e border-border bg-card p-4 lg:sticky lg:top-0 lg:h-screen overflow-y-auto transition-transform lg:translate-x-0", open ? "translate-x-0" : "max-lg:-translate-x-full max-lg:rtl:translate-x-full")}>
         <div className="mb-6 border-b border-border pb-4">
-          <KiorlyBrand height={40} />
-          <div className="mt-2 text-sm font-semibold leading-tight">{t("app.product")}</div>
-          <div className="truncate text-xs text-muted-foreground">{me?.tenant.name}</div>
+          <KiorlyBrandLockup height={40} />
+          <div className="mt-2 truncate text-xs text-muted-foreground">{me?.tenant.name}</div>
         </div>
+        <div className="mb-4 lg:hidden"><KxControlPair><ThemeToggle labels={{ theme: t("theme.label"), light: t("theme.light"), dark: t("theme.dark"), system: t("theme.system") }} /><LanguageToggle onChange={setLang} /></KxControlPair></div>
         <nav className="space-y-4" aria-label="main">
           {NAV_GROUPS.map((g) => {
             const items = g.items.filter((n) => can(n.perm));
@@ -89,11 +88,12 @@ export function AppShell() {
         <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-card/90 px-4 py-2.5 backdrop-blur">
           <Button variant="ghost" size="icon" className="lg:hidden" aria-label="menu" onClick={() => setOpen(true)}><Menu className="h-5 w-5" /></Button>
           <div className="flex-1" />
-          {!flagOn("lab.module") ? <Badge tone="warn">{t("shell.moduleOff")}</Badge> : null}
-          <Badge tone={me?.tenant.integrationMode === "STANDALONE" ? "muted" : "info"} title={t("set.mode")}>{me?.tenant.integrationMode === "STANDALONE" ? t("shell.standalone") : t("shell.integrated")}</Badge>
-          <Badge tone="info"><Microscope className="me-1 h-3 w-3" />{me?.tenant.edition}</Badge>
-          <ThemeToggle labels={{ theme: t("theme.label"), light: t("theme.light"), dark: t("theme.dark"), system: t("theme.system") }} />
-          <Button variant="outline" size="sm" className="h-10 shrink-0" onClick={() => setLang(next)}>{t("app.lang")}</Button>
+          <div className="hidden items-center gap-3 sm:flex">
+            {!flagOn("lab.module") ? <Badge tone="warn">{t("shell.moduleOff")}</Badge> : null}
+            <Badge tone={me?.tenant.integrationMode === "STANDALONE" ? "muted" : "info"} title={t("set.mode")}>{me?.tenant.integrationMode === "STANDALONE" ? t("shell.standalone") : t("shell.integrated")}</Badge>
+            <Badge tone="info"><Microscope className="me-1 h-3 w-3" />{me?.tenant.edition}</Badge>
+          </div>
+          <KxControlPair><ThemeToggle labels={{ theme: t("theme.label"), light: t("theme.light"), dark: t("theme.dark"), system: t("theme.system") }} /><LanguageToggle onChange={setLang} /></KxControlPair>
           <div className="hidden text-end text-xs sm:block">
             <div className="font-medium">{me?.user.displayName}</div>
             <div className="text-muted-foreground">{me ? t(`role.${me.user.role}`) : ""}</div>

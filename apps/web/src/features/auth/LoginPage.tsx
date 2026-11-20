@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { KiorlyBrand, KiorlyFootText, Pulse, ThemeToggle, Surface, Skeleton, kcn } from "@/brand/ui-kit";
+import { KiorlyBrandLockup, KiorlyFootText, KxControlPair, LanguageToggle, Pulse, ThemeToggle, Surface, Skeleton, kcn } from "@/brand/ui-kit";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -35,7 +35,7 @@ export function LoginPage() {
       <aside className="relative hidden overflow-hidden p-12 text-white lg:flex lg:flex-col lg:justify-between" style={{ background: "linear-gradient(145deg,#3730A3 0%,#2B2680 55%,#0A4F7A 100%)" }}>
         <div aria-hidden className="pointer-events-none absolute -end-24 -top-24 size-96 rounded-full bg-white/5" />
         <div aria-hidden className="pointer-events-none absolute -bottom-32 -start-20 size-[28rem] rounded-full bg-white/5" />
-        <div className="relative w-fit"><KiorexLogo variant="lockup" product="lab" lang={i18n.language} tone="inverse" height={48} /></div>
+        <div className="relative w-fit"><KiorexLogo variant="lockup" product="lab" lang={i18n.language} tone="inverse" height={48} /><p data-kx-tagline className="mt-1 text-xs text-white/70">{t("app.tagline")}</p></div>
         <div className="relative max-w-md space-y-6">
           <h2 className="text-balance text-3xl font-semibold leading-tight">{t("ux.login.headline")}</h2>
           <ul className="space-y-4">
@@ -47,9 +47,9 @@ export function LoginPage() {
       <main id="main" className="flex flex-col justify-center gap-6 px-4 py-10 sm:px-10">
         <div className="mx-auto w-full max-w-md">
           <div className="mb-6 flex items-center justify-between gap-3">
-            <div className="lg:hidden"><KiorlyBrand height={40} /></div>
+            <div className="lg:hidden"><KiorlyBrandLockup height={40} /></div>
             <div className="hidden lg:block" />
-            <div className="flex items-center gap-2"><ThemeToggle labels={{ theme: t("theme.label"), light: t("theme.light"), dark: t("theme.dark"), system: t("theme.system") }} /><Button variant="outline" size="sm" className="h-10" onClick={() => setLang(i18n.language === "ar" ? "en" : "ar")}>{t("app.lang")}</Button></div>
+            <KxControlPair><ThemeToggle labels={{ theme: t("theme.label"), light: t("theme.light"), dark: t("theme.dark"), system: t("theme.system") }} /><LanguageToggle onChange={setLang} /></KxControlPair>
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">{t("app.product")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{t("auth.devNote")}</p>

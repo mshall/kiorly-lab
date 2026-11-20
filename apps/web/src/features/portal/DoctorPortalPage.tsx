@@ -5,9 +5,9 @@ import { useTranslation } from "react-i18next";
 import { FileText, Lock } from "lucide-react";
 import { ApiError } from "@/lib/api";
 import { dt } from "@/lib/format";
-import { setLang, type Lang } from "@/lib/i18n";
+import { setLang } from "@/lib/i18n";
 import { Badge, Button, Table, Td } from "@/components/ui";
-import { EmptyState, KiorlyBrand, Skeleton, Surface } from "@/brand/ui-kit";
+import { EmptyState, KiorlyBrandLockup, KxControlPair, LanguageToggle, Skeleton, Surface, ThemeToggle } from "@/brand/ui-kit";
 import { StatusBadge } from "@/components/common";
 
 async function pub<T>(path: string): Promise<T> {
@@ -31,10 +31,9 @@ export function DoctorPortalPage() {
       if (res.ok) window.open(URL.createObjectURL(await res.blob()), "_blank", "noopener");
     } finally { setBusy(null); }
   };
-  const next: Lang = i18n.language === "ar" ? "en" : "ar";
   return (
     <div className="mx-auto min-h-screen max-w-4xl p-4 sm:p-8">
-      <header className="mb-6 flex items-center justify-between gap-3"><KiorlyBrand height={36} /><Button variant="outline" size="sm" onClick={() => setLang(next)}>{t("app.lang")}</Button></header>
+      <header className="mb-6 flex items-center justify-between gap-3"><KiorlyBrandLockup height={36} /><KxControlPair><ThemeToggle labels={{ theme: t("theme.label"), light: t("theme.light"), dark: t("theme.dark"), system: t("theme.system") }} /><LanguageToggle onChange={setLang} /></KxControlPair></header>
       {q.isLoading ? <Skeleton className="h-64" /> : q.isError ? <EmptyState tone="error" title={t("portal.invalid")} description={t("portal.invalidHint")} /> : (
         <>
           <h1 className="text-2xl font-semibold" dir="auto">{q.data.referrer.name}</h1>
@@ -66,7 +65,7 @@ export function VerifyReportPage() {
   return (
     <div className="mx-auto grid min-h-screen max-w-md place-items-center p-6">
       <Surface className="w-full space-y-3 p-6 text-center">
-        <KiorlyBrand height={34} className="mx-auto" />
+        <KiorlyBrandLockup height={34} className="flex flex-col items-center" />
         {q.isLoading ? <Skeleton className="h-24" /> : q.isError ? <EmptyState tone="error" title={t("portal.verifyInvalid")} /> : (
           <>
             <Badge tone={q.data.superseded ? "warn" : "ok"} className="text-sm">{q.data.superseded ? t("portal.verifySuperseded", { v: q.data.latestVersion }) : t("portal.verifyOk")}</Badge>
