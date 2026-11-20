@@ -166,7 +166,7 @@ export class CatalogueService {
 
   // -------------------------------------------------- reference intervals
   listIntervals(orgId: string, analyteId: string) {
-    return this.prisma.referenceInterval.findMany({ where: { orgId, analyteId }, orderBy: [{ sex: "asc" }, { ageMinDays: "asc" }, { version: "desc" }] });
+    return this.prisma.referenceInterval.findMany({ where: { orgId, analyteId }, orderBy: [{ sex: "asc" }, { ageMinDays: "asc" }, { version: "desc" }] }).then((rows) => rows.map((r) => ({ ...r, low: r.low == null ? null : D(r.low), high: r.high == null ? null : D(r.high) })));
   }
 
   /** KLQC03: versioned, never edited in place — closes the prior version and inserts version+1. */

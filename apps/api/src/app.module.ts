@@ -15,6 +15,7 @@ import { EntitlementGuard } from "./kernel-adapter/entitlement.guard";
 import { KernelModule } from "./kernel-adapter/kernel.module";
 import { AdminModule } from "./modules/admin/admin.module";
 import { AnalysisQcModule } from "./modules/analysis-qc/analysis-qc.module";
+import { AnalyticsModule } from "./modules/analytics/analytics.module";
 import { AnalyzersModule } from "./modules/analyzers/analyzers.module";
 import { BusinessModule } from "./modules/business/business.module";
 import { CatalogueModule } from "./modules/catalogue/catalogue.module";
@@ -36,7 +37,7 @@ import { PrismaModule } from "./prisma/prisma.module";
 @Module({
   imports: [
     PrismaModule, AuthModule, AuditModule, OutboxModule, AdaptersModule, KernelModule, CoreModule, FeatureFlagsModule, HealthModule,
-    AdminModule, CatalogueModule, OrdersModule, SpecimensModule, AnalysisQcModule, AnalyzersModule, CriticalModule, FieldSafetyModule, ReleaseModule, BusinessModule, RegistryModule, ReceptionModule, PreanalyticsModule, MicrobiologyModule, HistopathologyModule, QualityModule, InventoryModule, IntegrationModule,
+    AdminModule, CatalogueModule, OrdersModule, SpecimensModule, AnalysisQcModule, AnalyzersModule, CriticalModule, FieldSafetyModule, ReleaseModule, BusinessModule, RegistryModule, ReceptionModule, PreanalyticsModule, MicrobiologyModule, HistopathologyModule, QualityModule, InventoryModule, AnalyticsModule, IntegrationModule,
   ],
   providers: [
     // order matters: authenticate first, then flag, then plan entitlement

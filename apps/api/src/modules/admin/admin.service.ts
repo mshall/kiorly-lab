@@ -54,7 +54,7 @@ export class AdminService {
     const labs = await this.prisma.lab.findMany({ where: { orgId: u.orgId, ...(u.labIds.length ? { id: { in: u.labIds } } : {}) }, select: { id: true, name: true, code: true } });
     return {
       user: { id: u.staffId, displayName: u.displayName, role: u.role, signatory: Boolean(u.signatoryLicenceNo) },
-      tenant: { id: tenant.id, name: tenant.name, edition: tenant.edition, marketCode: tenant.marketCode, currency: tenant.currency, vatRatePercent: Number(tenant.vatRatePercent) },
+      tenant: { id: tenant.id, name: tenant.name, edition: tenant.edition, marketCode: tenant.marketCode, currency: tenant.currency, vatRatePercent: Number(tenant.vatRatePercent), integrationMode: tenant.integrationMode, defaultLocale: tenant.defaultLocale },
       labs,
       permissions: ROLE_PERMISSIONS[u.role],
       flags: Object.fromEntries(FEATURE_FLAG_KEYS_FOR_UI.map((k) => [k, this.flags.evaluate(k, { orgId: u.orgId, market: u.marketCode })])),
@@ -69,7 +69,7 @@ export class AdminService {
     assertFlagOn(this.flags, "lab.module", { market: b.marketCode ?? "EG" });
     if (await this.prisma.tenant.findUnique({ where: { slug: b.slug } })) throw new ConflictException({ code: "SLUG_TAKEN" });
     const out = await this.prisma.$transaction(async (tx) => {
-      const t = await tx.tenant.create({ data: { name: b.name, slug: b.slug, edition: b.edition ?? "LITE", marketCode: b.marketCode ?? "EG" } });
+      const t = await tx.tenant.create({ data: { name: b.name, slug: b.slug, edition: b.edition ?? "LITE", marketCode: b.marketCode ?? "EG", integrationMode: "STANDALONE" } });
       const lab = await tx.lab.create({ data: { orgId: t.id, name: b.labName, code: b.labCode.toUpperCase() } });
       const owner = await tx.staffUser.create({ data: { orgId: t.id, email: b.ownerEmail.toLowerCase(), displayName: b.ownerName, role: "OWNER", signatoryLicenceNo: b.signatoryLicenceNo } });
       await tx.priceList.create({ data: { orgId: t.id, name: "Standard", isDefault: true, currency: t.currency } });
@@ -129,6 +129,14 @@ export class AdminService {
   listLabs(orgId: string) {
     return this.prisma.lab.findMany({ where: { orgId }, orderBy: { createdAt: "asc" } });
   }
+  async updateLab(u: AuthUser, id: string, b: { name?: string; address?: string | null; licenceNo?: string | null; appointmentCapacity?: number; appointmentSlotMinutes?: number; openingHour?: number; closingHour?: number }) {
+    if (!(await this.prisma.lab.findFirst({ where: { id, orgId: u.orgId } }))) throw new NotFoundException({ code: "LAB_NOT_FOUND" });
+    const cur = await this.prisma.lab.findUniqueOrThrow({ where: { id } });
+    if ((b.openingHour ?? cur.openingHour) >= (b.closingHour ?? cur.closingHour)) throw new BadRequestException({ code: "OPENING_HOURS_INVALID" });
+    const row = await this.prisma.lab.update({ where: { id }, data: b });
+    await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "lab.update", entityType: "Lab", entityId: id, meta: { fields: Object.keys(b) } });
+    return row;
+  }
   async createLab(u: AuthUser, b: { name: string; code: string; address?: string; licenceNo?: string }) {
     const count = await this.prisma.lab.count({ where: { orgId: u.orgId } });
     if (count >= 1 && !EDITION_CAPABILITIES[u.edition].includes("multi_branch")) throw new HttpException({ code: "PLAN_REQUIRED", capability: "multi_branch", edition: u.edition }, 402);
@@ -141,9 +149,9 @@ export class AdminService {
   // -------------------------------------------------------------- settings
   async getSettings(orgId: string) {
     const t = await this.prisma.tenant.findUniqueOrThrow({ where: { id: orgId } });
-    return { name: t.name, edition: t.edition, marketCode: t.marketCode, currency: t.currency, vatRatePercent: Number(t.vatRatePercent), referringDoctorStatements: t.referringDoctorStatements, qcValidityHours: t.qcValidityHours, safetyContactName: t.safetyContactName, safetyContactPhone: t.safetyContactPhone, homeBufferBeforeMin: t.homeBufferBeforeMin, homeBufferAfterMin: t.homeBufferAfterMin, homeDailyCap: t.homeDailyCap };
+    return { integrationMode: t.integrationMode, defaultLocale: t.defaultLocale, name: t.name, edition: t.edition, marketCode: t.marketCode, currency: t.currency, vatRatePercent: Number(t.vatRatePercent), referringDoctorStatements: t.referringDoctorStatements, qcValidityHours: t.qcValidityHours, safetyContactName: t.safetyContactName, safetyContactPhone: t.safetyContactPhone, homeBufferBeforeMin: t.homeBufferBeforeMin, homeBufferAfterMin: t.homeBufferAfterMin, homeDailyCap: t.homeDailyCap };
   }
-  async updateSettings(u: AuthUser, b: { name?: string; vatRatePercent?: number; referringDoctorStatements?: boolean; qcValidityHours?: number; safetyContactName?: string | null; safetyContactPhone?: string | null; homeBufferBeforeMin?: number; homeBufferAfterMin?: number; homeDailyCap?: number | null }) {
+  async updateSettings(u: AuthUser, b: { integrationMode?: "STANDALONE" | "INTEGRATED"; defaultLocale?: "ar" | "en"; name?: string; vatRatePercent?: number; referringDoctorStatements?: boolean; qcValidityHours?: number; safetyContactName?: string | null; safetyContactPhone?: string | null; homeBufferBeforeMin?: number; homeBufferAfterMin?: number; homeDailyCap?: number | null }) {
     const t = await this.prisma.tenant.update({ where: { id: u.orgId }, data: b });
     await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "settings.update", entityType: "Tenant", entityId: u.orgId, meta: { fields: Object.keys(b) } });
     return this.getSettings(t.id);
@@ -164,8 +172,8 @@ export class AdminService {
   }
 
   // ----------------------------------------------------------------- audit
-  auditLogs(orgId: string, q: { entityType?: string; actorId?: string; action?: string; limit?: string; offset?: string }) {
-    return this.prisma.auditLog.findMany({ where: { orgId, ...(q.entityType ? { entityType: q.entityType } : {}), ...(q.actorId ? { actorId: q.actorId } : {}), ...(q.action ? { action: { contains: q.action } } : {}) }, orderBy: { at: "desc" }, ...page(q, 500) });
+  auditLogs(orgId: string, q: { entityType?: string; entityId?: string; actorId?: string; action?: string; from?: string; to?: string; limit?: string; offset?: string }) {
+    return this.prisma.auditLog.findMany({ where: { orgId, ...(q.entityId ? { entityId: q.entityId } : {}), ...(q.from || q.to ? { at: { ...(q.from ? { gte: new Date(q.from) } : {}), ...(q.to ? { lte: new Date(q.to) } : {}) } } : {}), ...(q.entityType ? { entityType: q.entityType } : {}), ...(q.actorId ? { actorId: q.actorId } : {}), ...(q.action ? { action: { contains: q.action } } : {}) }, orderBy: { at: "desc" }, ...page(q, 500) });
   }
 
   /** Dev inbox for mocked messaging (MESSAGING_MODE=mock). */

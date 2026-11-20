@@ -17,4 +17,5 @@ export const BOUNDED_CONTEXTS = [
   { dir: "histopathology", name: "HistopathologyModule", prefix: "KLQC07", title: "Histopathology and cytology basic reporting with pathologist sign-out and addenda", safetyPath: false },
   { dir: "quality", name: "QualityModule", prefix: "KLQM", title: "Quality management: QC lots, calibration, EQA, maintenance, NCR/CAPA, document control", safetyPath: false },
   { dir: "inventory", name: "InventoryModule", prefix: "KLINV", title: "Inventory: reagents and consumables, lots/expiry, FEFO consumption per test, suppliers, POs, goods receipt, stock counts, cost per test", safetyPath: false },
+  { dir: "analytics", name: "AnalyticsModule", prefix: "KLBIZ04", title: "Statistics and report library: workload, TAT, positivity, revenue per test/referrer/branch, quality, inventory", safetyPath: false },
 ] as const;

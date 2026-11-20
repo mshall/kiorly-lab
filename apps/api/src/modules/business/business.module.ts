@@ -8,5 +8,5 @@ import { ExportsService } from "./exports.service";
 import { InsightsService } from "./insights.service";
 
 /** KLBIZ bounded context: price lists, B2B, invoices (VAT lines only), payments (mock PSP), cash close, TAT, exports. */
-@Module({ imports: [CatalogueModule, RegistryModule], controllers: [BusinessController], providers: [BillingService, InsightsService, ExportsService, FinanceService], exports: [BillingService, InsightsService] })
+@Module({ imports: [CatalogueModule, RegistryModule], controllers: [BusinessController], providers: [BillingService, InsightsService, ExportsService, FinanceService], exports: [BillingService, InsightsService, FinanceService] })
 export class BusinessModule {}

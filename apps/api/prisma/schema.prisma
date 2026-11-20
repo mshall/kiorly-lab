@@ -37,6 +37,11 @@ enum Edition {
   CHAIN
 }
 
+enum IntegrationMode {
+  STANDALONE
+  INTEGRATED
+}
+
 enum StaffRole {
   OWNER
   LAB_DIRECTOR
@@ -302,27 +307,32 @@ enum OutboxStatus {
 // ------------------------------------------------------- tenancy / staff ----
 
 model Tenant {
-  id                        String   @id @default(cuid())
-  externalOrgId             String?  @unique
+  id                        String          @id @default(cuid())
+  externalOrgId             String?         @unique
   name                      String
-  edition                   Edition  @default(LITE)
-  marketCode                String   @default("EG")
-  slug                      String?  @unique
-  currency                  String   @default("EGP")
+  edition                   Edition         @default(LITE)
+  marketCode                String          @default("EG")
+  slug                      String?         @unique
+  currency                  String          @default("EGP")
   /// Market-pack VAT line rate (percent). NEEDS_HUMAN (NH-LB-004): engineering default 0; shown on invoices/exports only.
-  vatRatePercent            Decimal  @default(0) @db.Decimal(5, 2)
+  vatRatePercent            Decimal         @default(0) @db.Decimal(5, 2)
   /// NH-LB-003: referring-doctor statements only where counsel confirms they are lawful. Off by default.
-  referringDoctorStatements Boolean  @default(false)
+  referringDoctorStatements Boolean         @default(false)
+  /// STANDALONE: no external service is contacted or accepted (no outbox events, integration endpoints refuse). INTEGRATED: optional Kiorly Clinic / Kiorex / Nurse links.
+  /// Existing tenants default to INTEGRATED (unchanged behaviour); new self-serve tenants start STANDALONE.
+  integrationMode           IntegrationMode @default(INTEGRATED)
+  /// UI / report default language.
+  defaultLocale             String          @default("ar")
   /// QC coverage window for a result (hours). NEEDS_HUMAN (NH-LB-005): pathologist to confirm.
-  qcValidityHours           Int      @default(24)
+  qcValidityHours           Int             @default(24)
   /// HVSAF: organisation safety contact for phlebotomist alerts (safety control, never a flag). Required before a collector can leave.
   safetyContactName         String?
   safetyContactPhone        String?
   /// HVCFG01/03: travel buffers around a home collection (minutes, default 30/30) and the optional daily cap per phlebotomist.
-  homeBufferBeforeMin       Int      @default(30)
-  homeBufferAfterMin        Int      @default(30)
+  homeBufferBeforeMin       Int             @default(30)
+  homeBufferAfterMin        Int             @default(30)
   homeDailyCap              Int?
-  createdAt                 DateTime @default(now())
+  createdAt                 DateTime        @default(now())
 
   labs  Lab[]
   staff StaffUser[]

@@ -44,6 +44,9 @@ export class OutboxService {
         if (!envelope[k]) throw new BadRequestException({ code: "EVENT_ENVELOPE_INVALID", field: k });
       }
     }
+    // standalone tenants talk to no external service: the event is validated (same code path) but never stored
+    const mode = await db.tenant.findUnique({ where: { id: e.orgId }, select: { integrationMode: true } });
+    if (mode?.integrationMode === "STANDALONE") return id;
     const existing = await db.outboxEvent.findUnique({ where: { id } });
     if (existing) return existing.id;
     await db.outboxEvent.create({

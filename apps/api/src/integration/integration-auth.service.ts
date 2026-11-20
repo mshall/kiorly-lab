@@ -1,4 +1,4 @@
-import { Inject, Injectable, UnauthorizedException } from "@nestjs/common";
+import { ForbiddenException, Inject, Injectable, UnauthorizedException } from "@nestjs/common";
 import { verifyKiorlyRequest } from "@kiorex/contracts";
 import type { IntegrationClient } from "@prisma/client";
 import type { AuthedRequest } from "../auth/auth.types";
@@ -23,6 +23,9 @@ export class IntegrationAuthService {
     const key = hdr("x-kiorly-client-key");
     const client = key ? await this.prisma.integrationClient.findUnique({ where: { key } }) : null;
     if (!client || !client.active) throw new UnauthorizedException({ code: "INVALID_CLIENT" });
+    // standalone labs accept no external orders and expose no results to partner systems
+    const tenant = await this.prisma.tenant.findUnique({ where: { id: client.orgId }, select: { integrationMode: true } });
+    if (tenant?.integrationMode === "STANDALONE") throw new ForbiddenException({ code: "INTEGRATION_DISABLED", message: "this lab runs in standalone mode" });
     const v = verifyKiorlyRequest({ headers: req.headers, method: req.method, path: req.originalUrl, body: req.rawBody ?? "", secret: open(client.secretEnc) });
     if (!v.ok) throw new UnauthorizedException({ code: "INVALID_SIGNATURE", reason: v.reason });
     const nonce = hdr("x-kiorly-nonce")!;

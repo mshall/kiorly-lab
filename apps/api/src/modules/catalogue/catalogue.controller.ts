@@ -1,12 +1,15 @@
-import { Body, Controller, Get, Inject, Param, Post, Put, Query } from "@nestjs/common";
+import { Body, Controller, Get, Header, Inject, Param, Post, Put, Query } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser, Perm } from "../../auth/decorators";
 import type { AuthUser } from "../../auth/auth.types";
 import { RequiresFlag } from "../../feature-flags/requires-flag.guard";
 import { ZBody, z } from "../../common/zod";
 import { CatalogueService } from "./catalogue.service";
+import { CatalogueImportService } from "./catalogue-import.service";
 
 const num = z.coerce.number();
+const ImportBody = z.object({ kind: z.enum(["analytes", "tests"]), csv: z.string().min(5).max(2_000_000), dryRun: z.boolean().optional() }).strict();
+const RenameUnit = z.object({ from: z.string().min(1).max(20), to: z.string().min(1).max(20) }).strict();
 const Section = z.enum(["GENERAL", "HEMATOLOGY", "CHEMISTRY", "IMMUNOLOGY", "SEROLOGY", "COAGULATION", "URINALYSIS", "MICROBIOLOGY", "HISTOPATHOLOGY", "CYTOLOGY", "MOLECULAR"]);
 const AnalyteBody = z.object({
   code: z.string().min(1).max(32), nameEn: z.string().min(1), nameAr: z.string().optional(), unit: z.string().optional(), precision: z.number().int().min(0).max(6).optional(), analyzerCodes: z.array(z.string()).optional(),
@@ -26,7 +29,15 @@ const IntervalBody = z.object({ sex: z.enum(["M", "F", "OTHER", "UNKNOWN"]).null
 @ApiBearerAuth()
 @Controller("catalogue")
 export class CatalogueController {
-  constructor(@Inject(CatalogueService) private readonly svc: CatalogueService) {}
+  constructor(
+    @Inject(CatalogueService) private readonly svc: CatalogueService,
+    @Inject(CatalogueImportService) private readonly imp: CatalogueImportService,
+  ) {}
+
+  @Get("import-template/:kind") @Perm("catalogue.read") @Header("Content-Type", "text/csv; charset=utf-8") template(@Param("kind") kind: string) { return this.imp.template(kind === "tests" ? "tests" : "analytes"); }
+  @Post("import") @Perm("catalogue.write") @RequiresFlag("lab.module") @ZBody(ImportBody) import(@CurrentUser() u: AuthUser, @Body() b: z.infer<typeof ImportBody>) { return this.imp.import(u, b.kind, b.csv, b.dryRun ?? true); }
+  @Get("units") @Perm("catalogue.read") units(@CurrentUser() u: AuthUser) { return this.imp.units(u.orgId); }
+  @Put("units/rename") @Perm("catalogue.write") @ZBody(RenameUnit) renameUnit(@CurrentUser() u: AuthUser, @Body() b: z.infer<typeof RenameUnit>) { return this.imp.renameUnit(u, b.from, b.to); }
 
   @Get("analytes") @Perm("catalogue.read") analytes(@CurrentUser() u: AuthUser) { return this.svc.listAnalytes(u.orgId); }
   @Post("analytes") @Perm("catalogue.write") @RequiresFlag("lab.module") @ZBody(AnalyteBody) createAnalyte(@CurrentUser() u: AuthUser, @Body() b: z.infer<typeof AnalyteBody>) { return this.svc.createAnalyte(u, b); }

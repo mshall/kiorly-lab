@@ -69,7 +69,7 @@ describe("golden flow: order -> accession -> custody -> QC -> results -> validat
     const text = JSON.stringify(ev.payload);
     assert.ok(!/13\.5|"values"|"results"/.test(text), "no raw values in the event");
     t.outbox.transport.received.clear();
-    const d1 = await t.outbox.dispatchDue(new Date(Date.now() + 1000));
+    const d1 = await t.outbox.dispatchDue(new Date(Date.now() + 1000), 5000); // the shared test DB holds pending events of earlier suites
     assert.ok(d1.sent >= 1);
     const received = t.outbox.transport.received.get(ev.id);
     assert.ok(received, "mock Kiorex receiver accepted the event");
