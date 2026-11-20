@@ -58,6 +58,9 @@ export interface CreateOrderInput {
   referringDoctorRef?: string;
   referringDoctorPhone?: string;
   referrerId?: string;
+  clinicalInfo?: string;
+  icdCodes?: string[];
+  fastingConfirmed?: boolean;
   priority?: "ROUTINE" | "URGENT" | "STAT";
   collectionType?: "IN_LAB" | "HOME";
   b2bAccountId?: string;
@@ -199,7 +202,7 @@ export class OrdersService {
       data: {
         orgId, labId, patientId: patient.id, source, sourceRef: input.sourceRef, status: "AWAITING_COLLECTION", orderNumber,
         identityVerified, identifiersChecked: identityVerified ? [...new Set(checked)] : [],
-        referringDoctorName: referrer?.name ?? input.referringDoctorName, referringDoctorRef: input.referringDoctorRef, referringDoctorPhone: referrer?.phone ?? input.referringDoctorPhone, referrerId: referrer?.id,
+        referringDoctorName: referrer?.name ?? input.referringDoctorName, referringDoctorRef: input.referringDoctorRef, referringDoctorPhone: referrer?.phone ?? input.referringDoctorPhone, referrerId: referrer?.id, clinicalInfo: input.clinicalInfo, icdCodes: [...new Set(input.icdCodes ?? [])], fastingConfirmed: input.fastingConfirmed,
         consentShareChannels: consent, consentCapturedAt: consent.length ? new Date() : null,
         priority: input.priority ?? "ROUTINE", collectionType: source === "KIORLY_NURSE" ? "NURSE_VISIT" : (input.collectionType ?? "IN_LAB"), b2bAccountId: input.b2bAccountId, createdBy: actor.staffId,
         items: { create: items.map((i) => ({ testId: i.test.id, price: i.price, packageCode: i.packageCode })) },
@@ -306,6 +309,8 @@ export class OrdersService {
         throw new ConflictException({ code: "ORDER_NOT_CANCELLABLE", message: "work has started on this order" });
       }
       await tx.orderItem.updateMany({ where: { orderId }, data: { status: "CANCELLED" } });
+      const rev = await tx.labOrder.update({ where: { id: orderId }, data: { cancelReason: reason ?? null, cancelledAt: new Date(), cancelledBy: u.staffId, revision: { increment: 1 } } });
+      await tx.orderRevision.create({ data: { orgId: u.orgId, orderId, revision: rev.revision, changedBy: u.staffId, changes: { status: { from: o.status, to: "CANCELLED" } }, reason: reason ?? null } });
       if (o.homeCollection && ["REQUESTED", "SCHEDULED"].includes(o.homeCollection.status)) {
         await tx.homeCollection.update({ where: { id: o.homeCollection.id }, data: { status: "CANCELLED" } });
         if (o.homeCollection.slotId) await tx.$executeRaw`UPDATE "CollectionSlot" SET booked = GREATEST(booked - 1, 0) WHERE id = ${o.homeCollection.slotId}`;

@@ -23,7 +23,7 @@ const Arrive = z.object({ geostamp: Geo }).strict();
 export const OrderBody = z.object({
   labId: z.string().optional(), patientId: z.string().optional(), patient: PatientBody.optional(),
   testCodes: z.array(z.string()).optional(), packageCodes: z.array(z.string()).optional(),
-  source: z.enum(["WALK_IN", "REFERRING_DOCTOR"]).optional(), referringDoctorName: z.string().optional(), referringDoctorRef: z.string().optional(), referringDoctorPhone: z.string().optional(), referrerId: z.string().optional(),
+  source: z.enum(["WALK_IN", "REFERRING_DOCTOR"]).optional(), referringDoctorName: z.string().optional(), referringDoctorRef: z.string().optional(), referringDoctorPhone: z.string().optional(), referrerId: z.string().optional(), clinicalInfo: z.string().max(1000).optional(), icdCodes: z.array(z.string().regex(/^[A-Z]\d{2}(\.\d{1,4})?$/)).max(10).optional(), fastingConfirmed: z.boolean().optional(),
   priority: z.enum(["ROUTINE", "URGENT", "STAT"]).optional(), collectionType: z.enum(["IN_LAB", "HOME"]).optional(), b2bAccountId: z.string().optional(),
   identifiersChecked: z.array(z.string()).optional(), consentChannels: Channels.optional(), homeCollection: HomeBody.optional(), accession: z.enum(["AUTO", "DEFER"]).optional(),
 }).strict();

@@ -317,20 +317,25 @@ model Tenant {
 
 /// A lab site (branch). Accession numbers are unique per Lab.
 model Lab {
-  id                String   @id @default(cuid())
-  orgId             String
-  name              String
-  licenceNo         String?
-  address           String?
+  id                     String   @id @default(cuid())
+  orgId                  String
+  name                   String
+  licenceNo              String?
+  address                String?
   /// Prefix of accession numbers for this lab.
-  code              String   @default("LAB")
-  createdAt         DateTime @default(now())
+  code                   String   @default("LAB")
+  createdAt              DateTime @default(now())
+  /// Reception appointments: capacity per slot and opening hours (UTC hours, simple model).
+  appointmentCapacity    Int      @default(4)
+  appointmentSlotMinutes Int      @default(30)
+  openingHour            Int      @default(8)
+  closingHour            Int      @default(20)
   /// HVBK01 (@kiorly/field-visit zones): districts this lab collects in. Empty = no restriction configured yet (NH-LB-034).
-  coverageDistricts String[] @default([])
-  maxTravelMinutes  Int?
-  startDistrictId   String?
+  coverageDistricts      String[] @default([])
+  maxTravelMinutes       Int?
+  startDistrictId        String?
   /// Nested { fromDistrict: { toDistrict: minutes } } travel matrix.
-  travelMatrix      Json?
+  travelMatrix           Json?
 
   tenant Tenant @relation(fields: [orgId], references: [id])
 
@@ -556,6 +561,16 @@ model LabOrder {
   referringDoctorPhone String?
   /// Directory entry of the referring doctor/clinic (commission, delivery preferences).
   referrerId           String?
+  /// Clinical context for the pathologist (free text, PHI) and ICD-10 hints; fasting state captured at the desk.
+  clinicalInfo         String?
+  icdCodes             String[]         @default([])
+  fastingConfirmed     Boolean?
+  cancelReason         String?
+  cancelledAt          DateTime?
+  cancelledBy          String?
+  /// Incremented on every audited edit (OrderRevision).
+  revision             Int              @default(0)
+  appointmentId        String?
   createdBy            String
   createdAt            DateTime         @default(now())
 
@@ -1388,4 +1403,86 @@ model ReferrerLedgerEntry {
 
   @@unique([referrerId, type, invoiceId])
   @@index([orgId, referrerId, createdAt])
+}
+
+// ======================================================= order entry (M2) ====
+
+enum AppointmentStatus {
+  BOOKED
+  CHECKED_IN
+  COMPLETED
+  NO_SHOW
+  CANCELLED
+}
+
+enum QueueStatus {
+  WAITING
+  CALLED
+  SERVING
+  DONE
+  SKIPPED
+  CANCELLED
+}
+
+/// Walk-in / package / home-visit appointment (separate from home-collection slots; those stay in CollectionSlot).
+model Appointment {
+  id          String            @id @default(cuid())
+  orgId       String
+  labId       String
+  patientId   String?
+  patientName String
+  phone       String?
+  startsAt    DateTime
+  endsAt      DateTime
+  /// WALK_IN | PACKAGE | HOME | FOLLOW_UP
+  kind        String            @default("WALK_IN")
+  testCodes   String[]          @default([])
+  packageCode String?
+  fasting     Boolean           @default(false)
+  status      AppointmentStatus @default(BOOKED)
+  note        String?
+  orderId     String?
+  createdBy   String
+  createdAt   DateTime          @default(now())
+  checkedInAt DateTime?
+
+  @@index([orgId, labId, startsAt])
+}
+
+/// Reception queue / token display. Code is per lab per day (A001 routine, S001 STAT/urgent priority lane).
+model QueueTicket {
+  id            String      @id @default(cuid())
+  orgId         String
+  labId         String
+  businessDate  DateTime    @db.Date
+  seq           Int
+  code          String
+  priority      String      @default("ROUTINE")
+  patientName   String?
+  counter       String?
+  status        QueueStatus @default(WAITING)
+  orderId       String?
+  appointmentId String?
+  calledAt      DateTime?
+  servedAt      DateTime?
+  doneAt        DateTime?
+  createdAt     DateTime    @default(now())
+
+  @@unique([labId, businessDate, code])
+  @@index([orgId, labId, businessDate, status])
+}
+
+/// Visible edit history of an order (audit log keeps ids only; this keeps field-level from/to for non-identity fields).
+model OrderRevision {
+  id        String   @id @default(cuid())
+  orgId     String
+  orderId   String
+  revision  Int
+  changedBy String
+  changes   Json
+  reason    String?
+  at        DateTime @default(now())
+
+  @@unique([orderId, revision])
+  @@index([orgId, orderId])
 }

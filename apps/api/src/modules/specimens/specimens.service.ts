@@ -1,3 +1,4 @@
+import { qrSvg } from "./qr";
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
 import { Prisma, type RejectionReason, type Specimen } from "@prisma/client";
 import type { AuthUser } from "../../auth/auth.types";
@@ -155,13 +156,23 @@ export class SpecimensService {
   async label(orgId: string, id: string) {
     const s = await this.get(orgId, id);
     const tests = s.order.items.filter((i) => i.specimenId === s.id).map((i) => i.test.code);
+    const fasting = s.order.items.some((i) => i.specimenId === s.id && i.test.fastingRequired);
+    const qrPayload = `KLB|${s.accessionNumber}|${s.barcode}|${s.order.orderNumber ?? ""}`.slice(0, 100);
     return {
+      fasting, priority: s.order.priority, qrPayload, qrSvg: qrSvg(qrPayload),
       specimenId: s.id, accessionNumber: s.accessionNumber, barcode: s.barcode, symbology: "CODE128", specimenType: s.specimenType, container: s.container,
       patientName: s.order.patient.fullName, dateOfBirth: s.order.patient.dateOfBirth, orderNumber: s.order.orderNumber, tests,
       svg: code128bSvg(s.barcode),
       /** Printer-agnostic ZPL for thermal label printers (NH-LB-012 pending the chosen printer). */
-      zpl: `^XA^FO30,20^BY2^BCN,70,Y,N,N^FD${s.barcode}^FS^FO30,120^A0N,24,24^FD${tests.join(",")}^FS^XZ`,
+      zpl: `^XA^FO30,20^BY2^BCN,70,Y,N,N^FD${s.barcode}^FS^FO30,120^A0N,24,24^FD${tests.join(",")}^FS^FO330,20^BQN,2,4^FDMA,${qrPayload}^FS${fasting ? "^FO30,150^A0N,22,22^FDFASTING^FS" : ""}^XZ`,
     };
+  }
+
+  /** All labels of an order (1D Code 128 + 2D QR + ZPL), for a single print job. */
+  async orderLabels(orgId: string, orderId: string) {
+    const ids = await this.prisma.specimen.findMany({ where: { orgId, orderId, status: { not: "REJECTED" } }, orderBy: { createdAt: "asc" }, select: { id: true } });
+    if (!ids.length && !(await this.prisma.labOrder.findFirst({ where: { id: orderId, orgId }, select: { id: true } }))) throw new NotFoundException({ code: "ORDER_NOT_FOUND" });
+    return Promise.all(ids.map((i) => this.label(orgId, i.id)));
   }
 
   async markPrinted(u: AuthUser, id: string) {

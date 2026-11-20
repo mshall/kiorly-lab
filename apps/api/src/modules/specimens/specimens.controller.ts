@@ -23,6 +23,7 @@ export class SpecimensController {
   @Get("specimens/:id") @Perm("specimens.read") get(@CurrentUser() u: AuthUser, @Param("id") id: string) { return this.svc.get(u.orgId, id); }
   @Get("specimens/:id/custody") @Perm("specimens.read") custody(@CurrentUser() u: AuthUser, @Param("id") id: string) { return this.svc.custodyChain(u.orgId, id); }
   @Get("specimens/:id/label") @Perm("specimens.read") label(@CurrentUser() u: AuthUser, @Param("id") id: string) { return this.svc.label(u.orgId, id); }
+  @Get("orders/:orderId/labels") @Perm("specimens.read") orderLabels(@CurrentUser() u: AuthUser, @Param("orderId") orderId: string) { return this.svc.orderLabels(u.orgId, orderId); }
   @Post("specimens/:id/label/print") @Perm("specimens.label") print(@CurrentUser() u: AuthUser, @Param("id") id: string) { return this.svc.markPrinted(u, id); }
 
   @Post("orders/:orderId/accession") @Perm("specimens.label") @ZBody(Accession) accession(@CurrentUser() u: AuthUser, @Param("orderId") orderId: string, @Body() b: z.infer<typeof Accession>) { return this.svc.accessionOrder(u, orderId, b.accessionNumber); }
