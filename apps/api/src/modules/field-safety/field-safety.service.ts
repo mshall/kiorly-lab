@@ -120,7 +120,7 @@ export class FieldSafetyService implements OnModuleInit, OnModuleDestroy {
     await this.prisma.safetyAlert.update({
       where: { id: row.id },
       data: {
-        delivered: result.delivered, deliveredAt: result.delivered ? new Date() : null, latencyMs: result.latencyMs, withinSla: result.withinSla,
+        delivered: result.delivered, deliveredAt: result.delivered ? new Date() : null, latencyMs: Math.min(Math.round(result.latencyMs), 2_147_483_647), withinSla: result.withinSla,
         attempts: [...prev, ...result.attempts] as unknown as Prisma.InputJsonValue,
       },
     });
