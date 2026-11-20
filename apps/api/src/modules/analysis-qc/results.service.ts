@@ -12,6 +12,7 @@ import { CatalogueService } from "../catalogue/catalogue.service";
 import { CriticalService } from "../critical/critical.service";
 import { ANALYZABLE } from "../specimens/specimen-state";
 import { qcBlockers } from "./qc-gate";
+import { InventoryService } from "../inventory/inventory.service";
 import { evalFormula, formulaInputs } from "./formula";
 
 export interface EnterInput {
@@ -47,6 +48,7 @@ export class ResultsService {
     @Inject(CatalogueService) private readonly catalogue: CatalogueService,
     @Inject(CriticalService) private readonly critical: CriticalService,
     @Inject(OrderStatusService) private readonly orderStatus: OrderStatusService,
+    @Inject(InventoryService) private readonly inventory: InventoryService,
   ) {}
 
   // ------------------------------------------------------------- entry
@@ -142,6 +144,8 @@ export class ResultsService {
       await this.audit.record({ orgId: i.orgId, actorId: i.actor, action: "result.enter", entityType: "Result", entityId: row.id, meta: { source: i.source, flag, qcRunId: qc?.id ?? null } }, tx);
       if (isCriticalFlag(flag)) await this.critical.raise(tx, row, item.order);
       await this.autoVerify(tx, row);
+      // reagent consumption: once per order item run (first result) and once per rerun; FEFO; never blocks the bench
+      if (i.source !== "CALCULATED" && !i.supersedes) await this.inventory.consumeForRun(tx, { orgId: i.orgId, labId: sp.labId, testId: item.testId, refType: "RUN", refId: rerun ? `rerun:${rerun.id}` : `item:${item.id}`, by: i.actor });
       if (i.source !== "CALCULATED") await this.recomputeDerived(tx, item.orderId, i.actor);
       await this.orderStatus.refreshItem(tx, item.id);
       await this.orderStatus.refreshOrder(tx, item.orderId);

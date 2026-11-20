@@ -2175,3 +2175,241 @@ model DocumentAck {
 
   @@id([versionId, staffId])
 }
+
+// ========================================================== inventory (M6) ====
+
+enum InventoryCategory {
+  REAGENT
+  CONSUMABLE
+  CALIBRATOR
+  CONTROL
+  GENERAL
+}
+
+enum InventoryLotStatus {
+  ACTIVE
+  QUARANTINE
+  EXPIRED
+  DEPLETED
+}
+
+enum MovementType {
+  RECEIPT
+  CONSUMPTION
+  ADJUSTMENT
+  COUNT_VARIANCE
+  DISPOSAL
+}
+
+enum PoStatus {
+  DRAFT
+  SENT
+  PARTIAL
+  RECEIVED
+  CANCELLED
+}
+
+enum StockCountStatus {
+  OPEN
+  COMPLETED
+}
+
+model Supplier {
+  id               String   @id @default(cuid())
+  orgId            String
+  name             String
+  contactName      String?
+  phone            String?
+  email            String?
+  address          String?
+  leadTimeDays     Int      @default(7)
+  paymentTermsDays Int      @default(30)
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+
+  items InventoryItem[]
+  pos   PurchaseOrder[]
+
+  @@unique([orgId, name])
+}
+
+model InventoryItem {
+  id           String            @id @default(cuid())
+  orgId        String
+  code         String
+  name         String
+  nameAr       String?
+  category     InventoryCategory @default(REAGENT)
+  /// Stock unit (mL, test, box, pcs).
+  unit         String            @default("pcs")
+  reorderLevel Decimal           @default(0) @db.Decimal(14, 3)
+  reorderQty   Decimal           @default(0) @db.Decimal(14, 3)
+  supplierId   String?
+  storageTemp  String?
+  /// Weighted average cost per stock unit (updated at each receipt) and the last paid cost.
+  avgUnitCost  Decimal           @default(0) @db.Decimal(14, 4)
+  lastUnitCost Decimal?          @db.Decimal(14, 4)
+  active       Boolean           @default(true)
+  createdAt    DateTime          @default(now())
+
+  supplier Supplier?           @relation(fields: [supplierId], references: [id])
+  lots     InventoryLot[]
+  rules    ConsumptionRule[]
+  poLines  PurchaseOrderLine[]
+
+  @@unique([orgId, code])
+}
+
+model InventoryLot {
+  id          String             @id @default(cuid())
+  orgId       String
+  itemId      String
+  labId       String
+  lotNumber   String
+  expiryDate  DateTime?          @db.Date
+  qtyReceived Decimal            @db.Decimal(14, 3)
+  qtyOnHand   Decimal            @db.Decimal(14, 3)
+  unitCost    Decimal            @default(0) @db.Decimal(14, 4)
+  location    String?
+  status      InventoryLotStatus @default(ACTIVE)
+  receivedAt  DateTime           @default(now())
+
+  item InventoryItem @relation(fields: [itemId], references: [id])
+
+  @@unique([itemId, labId, lotNumber])
+  @@index([orgId, itemId, status])
+}
+
+/// Append-only stock ledger. qty > 0 adds stock, < 0 removes it. `shortfall` = quantity wanted but not available (lotId null row).
+model StockMovement {
+  id        String       @id @default(cuid())
+  orgId     String
+  labId     String
+  itemId    String
+  lotId     String?
+  type      MovementType
+  qty       Decimal      @db.Decimal(14, 3)
+  unitCost  Decimal?     @db.Decimal(14, 4)
+  refType   String?
+  refId     String?
+  shortfall Decimal      @default(0) @db.Decimal(14, 3)
+  memo      String?
+  createdBy String
+  createdAt DateTime     @default(now())
+
+  @@index([orgId, itemId, createdAt])
+  @@index([refType, refId])
+}
+
+/// Reagent-to-test consumption: running one order item of `testId` consumes qtyPerTest (+ wastage) of the item, first-expiry-first-out.
+model ConsumptionRule {
+  id             String  @id @default(cuid())
+  orgId          String
+  testId         String
+  itemId         String
+  qtyPerTest     Decimal @db.Decimal(14, 4)
+  wastagePercent Decimal @default(0) @db.Decimal(5, 2)
+  active         Boolean @default(true)
+
+  item InventoryItem @relation(fields: [itemId], references: [id])
+
+  @@unique([testId, itemId])
+  @@index([orgId, testId])
+}
+
+model PurchaseOrder {
+  id         String    @id @default(cuid())
+  orgId      String
+  labId      String
+  number     String
+  supplierId String
+  status     PoStatus  @default(DRAFT)
+  expectedAt DateTime?
+  notes      String?
+  total      Decimal   @default(0) @db.Decimal(14, 2)
+  createdBy  String
+  sentAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  supplier Supplier            @relation(fields: [supplierId], references: [id])
+  lines    PurchaseOrderLine[]
+
+  @@unique([orgId, number])
+  @@index([orgId, status])
+}
+
+model PurchaseOrderLine {
+  id          String  @id @default(cuid())
+  orgId       String
+  poId        String
+  itemId      String
+  qtyOrdered  Decimal @db.Decimal(14, 3)
+  unitCost    Decimal @db.Decimal(14, 4)
+  qtyReceived Decimal @default(0) @db.Decimal(14, 3)
+
+  po   PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  item InventoryItem @relation(fields: [itemId], references: [id])
+}
+
+model GoodsReceipt {
+  id         String   @id @default(cuid())
+  orgId      String
+  labId      String
+  number     String
+  poId       String?
+  supplierId String
+  invoiceRef String?
+  note       String?
+  receivedBy String
+  receivedAt DateTime @default(now())
+
+  lines GoodsReceiptLine[]
+
+  @@unique([orgId, number])
+}
+
+model GoodsReceiptLine {
+  id         String    @id @default(cuid())
+  orgId      String
+  receiptId  String
+  itemId     String
+  lotId      String
+  lotNumber  String
+  expiryDate DateTime? @db.Date
+  qty        Decimal   @db.Decimal(14, 3)
+  unitCost   Decimal   @db.Decimal(14, 4)
+
+  receipt GoodsReceipt @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+}
+
+model StockCount {
+  id          String           @id @default(cuid())
+  orgId       String
+  labId       String
+  number      String
+  status      StockCountStatus @default(OPEN)
+  note        String?
+  createdBy   String
+  createdAt   DateTime         @default(now())
+  completedAt DateTime?
+  completedBy String?
+
+  lines StockCountLine[]
+
+  @@unique([orgId, number])
+}
+
+model StockCountLine {
+  id         String   @id @default(cuid())
+  orgId      String
+  countId    String
+  itemId     String
+  lotId      String
+  systemQty  Decimal  @db.Decimal(14, 3)
+  countedQty Decimal? @db.Decimal(14, 3)
+  variance   Decimal? @db.Decimal(14, 3)
+
+  count StockCount @relation(fields: [countId], references: [id], onDelete: Cascade)
+
+  @@unique([countId, lotId])
+}
