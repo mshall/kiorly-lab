@@ -4,7 +4,6 @@
     "/api/v1/health/live": {
       "get": {
         "operationId": "HealthController_live",
-        "summary": "Liveness probe",
         "parameters": [],
         "responses": {
           "200": {
@@ -24,6 +23,7 @@
             }
           }
         },
+        "summary": "Liveness probe",
         "tags": [
           "health"
         ]
@@ -32,13 +32,13 @@
     "/api/v1/health/ready": {
       "get": {
         "operationId": "HealthController_ready",
-        "summary": "Readiness probe (database connectivity)",
         "parameters": [],
         "responses": {
           "200": {
             "description": ""
           }
         },
+        "summary": "Readiness probe (database connectivity)",
         "tags": [
           "health"
         ]
@@ -188,13 +188,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "admin"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "admin"
         ]
       }
     },
@@ -207,13 +207,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "admin"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "admin"
         ]
       }
     },
@@ -226,13 +226,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "admin"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "admin"
         ]
       },
       "post": {
@@ -297,13 +297,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "admin"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "admin"
         ]
       }
     },
@@ -316,13 +316,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "admin"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "admin"
         ]
       }
     },
@@ -391,13 +391,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "admin"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "admin"
         ]
       }
     },
@@ -410,13 +410,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "admin"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "admin"
         ]
       }
     },
@@ -429,13 +429,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "admin"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "admin"
         ]
       },
       "post": {
@@ -478,13 +478,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "admin"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "admin"
         ]
       }
     },
@@ -556,13 +556,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "admin"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "admin"
         ]
       }
     },
@@ -659,13 +659,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "admin"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "admin"
         ]
       }
     },
@@ -678,13 +678,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "admin"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "admin"
         ]
       },
       "put": {
@@ -786,13 +786,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "admin"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "admin"
         ]
       }
     },
@@ -805,13 +805,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "admin"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "admin"
         ]
       }
     },
@@ -824,13 +824,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "admin"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "admin"
         ]
       }
     },
@@ -843,13 +843,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "admin"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "admin"
         ]
       },
       "post": {
@@ -889,13 +889,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "admin"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "admin"
         ]
       }
     },
@@ -917,13 +917,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "catalogue"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "catalogue"
         ]
       }
     },
@@ -969,13 +969,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "catalogue"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "catalogue"
         ]
       }
     },
@@ -988,13 +988,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "catalogue"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "catalogue"
         ]
       }
     },
@@ -1035,13 +1035,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "catalogue"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "catalogue"
         ]
       }
     },
@@ -1054,13 +1054,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "catalogue"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "catalogue"
         ]
       },
       "post": {
@@ -1147,13 +1147,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "catalogue"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "catalogue"
         ]
       }
     },
@@ -1252,33 +1252,33 @@
             "description": ""
           }
         },
-        "tags": [
-          "catalogue"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "catalogue"
         ]
       }
     },
     "/api/v1/catalogue/tests": {
       "get": {
         "operationId": "CatalogueController_tests",
-        "summary": "KLORD01 test catalogue",
         "parameters": [],
         "responses": {
           "200": {
             "description": ""
           }
         },
-        "tags": [
-          "catalogue"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "summary": "KLORD01 test catalogue",
+        "tags": [
+          "catalogue"
         ]
       },
       "post": {
@@ -1375,13 +1375,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "catalogue"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "catalogue"
         ]
       }
     },
@@ -1403,13 +1403,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "catalogue"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "catalogue"
         ]
       },
       "put": {
@@ -1507,13 +1507,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "catalogue"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "catalogue"
         ]
       }
     },
@@ -1535,13 +1535,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "catalogue"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "catalogue"
         ]
       }
     },
@@ -1554,13 +1554,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "catalogue"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "catalogue"
         ]
       },
       "post": {
@@ -1613,13 +1613,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "catalogue"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "catalogue"
         ]
       }
     },
@@ -1641,13 +1641,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "catalogue"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "catalogue"
         ]
       },
       "post": {
@@ -1742,13 +1742,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "catalogue"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "catalogue"
         ]
       }
     },
@@ -1761,13 +1761,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "orders"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "orders"
         ]
       },
       "post": {
@@ -1874,13 +1874,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "orders"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "orders"
         ]
       }
     },
@@ -1902,13 +1902,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "orders"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "orders"
         ]
       },
       "put": {
@@ -2068,38 +2068,37 @@
             "description": ""
           }
         },
-        "tags": [
-          "registry"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "registry"
         ]
       }
     },
     "/api/v1/orders": {
       "get": {
         "operationId": "OrdersController_list",
-        "summary": "Orders worklist",
         "parameters": [],
         "responses": {
           "200": {
             "description": ""
           }
         },
-        "tags": [
-          "orders"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "summary": "Orders worklist",
+        "tags": [
+          "orders"
         ]
       },
       "post": {
         "operationId": "OrdersController_create",
-        "summary": "KLORD02 create an order (walk-in / referring doctor; home collection needs lab.home_collection)",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -2345,13 +2344,14 @@
             "description": ""
           }
         },
-        "tags": [
-          "orders"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "summary": "KLORD02 create an order (walk-in / referring doctor; home collection needs lab.home_collection)",
+        "tags": [
+          "orders"
         ]
       }
     },
@@ -2373,13 +2373,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "orders"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "orders"
         ]
       },
       "put": {
@@ -2484,13 +2484,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "reception"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "reception"
         ]
       }
     },
@@ -2536,13 +2536,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "orders"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "orders"
         ]
       }
     },
@@ -2595,13 +2595,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "orders"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "orders"
         ]
       }
     },
@@ -2641,13 +2641,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "orders"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "orders"
         ]
       }
     },
@@ -2660,13 +2660,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "orders"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "orders"
         ]
       }
     },
@@ -2679,13 +2679,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "orders"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "orders"
         ]
       }
     },
@@ -2698,13 +2698,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "orders"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "orders"
         ]
       }
     },
@@ -2757,13 +2757,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "orders"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "orders"
         ]
       }
     },
@@ -2810,13 +2810,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "orders"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "orders"
         ]
       }
     },
@@ -2875,13 +2875,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "orders"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "orders"
         ]
       }
     },
@@ -2943,13 +2943,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "orders"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "orders"
         ]
       }
     },
@@ -2993,13 +2993,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "orders"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "orders"
         ]
       }
     },
@@ -3050,13 +3050,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "orders"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "orders"
         ]
       }
     },
@@ -3122,13 +3122,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "orders"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "orders"
         ]
       }
     },
@@ -3141,13 +3141,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "specimens"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "specimens"
         ]
       }
     },
@@ -3181,13 +3181,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "specimens"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "specimens"
         ]
       }
     },
@@ -3209,13 +3209,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "specimens"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "specimens"
         ]
       }
     },
@@ -3237,13 +3237,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "specimens"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "specimens"
         ]
       }
     },
@@ -3265,13 +3265,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "specimens"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "specimens"
         ]
       }
     },
@@ -3293,13 +3293,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "specimens"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "specimens"
         ]
       }
     },
@@ -3321,13 +3321,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "specimens"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "specimens"
         ]
       }
     },
@@ -3366,13 +3366,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "specimens"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "specimens"
         ]
       }
     },
@@ -3424,13 +3424,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "specimens"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "specimens"
         ]
       }
     },
@@ -3482,13 +3482,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "specimens"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "specimens"
         ]
       }
     },
@@ -3540,13 +3540,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "specimens"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "specimens"
         ]
       }
     },
@@ -3598,13 +3598,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "specimens"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "specimens"
         ]
       }
     },
@@ -3656,13 +3656,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "specimens"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "specimens"
         ]
       }
     },
@@ -3714,13 +3714,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "specimens"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "specimens"
         ]
       }
     },
@@ -3769,13 +3769,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "specimens"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "specimens"
         ]
       }
     },
@@ -3834,20 +3834,19 @@
             "description": ""
           }
         },
-        "tags": [
-          "specimens"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "specimens"
         ]
       }
     },
     "/api/v1/home-collections/{id}/safety/answer": {
       "post": {
         "operationId": "FieldSafetyController_answer",
-        "summary": "\"I'm OK\" - answers the safety prompt (timer re-arms)",
         "parameters": [
           {
             "name": "id",
@@ -3863,20 +3862,20 @@
             "description": ""
           }
         },
-        "tags": [
-          "field-safety"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "summary": "\"I'm OK\" - answers the safety prompt (timer re-arms)",
+        "tags": [
+          "field-safety"
         ]
       }
     },
     "/api/v1/home-collections/{id}/sos": {
       "post": {
         "operationId": "FieldSafetyController_sos",
-        "summary": "One-tap SOS: live location to the safety contact; response carries 123 / 122",
         "parameters": [
           {
             "name": "id",
@@ -3920,20 +3919,20 @@
             "description": ""
           }
         },
-        "tags": [
-          "field-safety"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "summary": "One-tap SOS: live location to the safety contact; response carries 123 / 122",
+        "tags": [
+          "field-safety"
         ]
       }
     },
     "/api/v1/home-collections/{id}/leave-unsafe": {
       "post": {
         "operationId": "FieldSafetyController_leave",
-        "summary": "Leave visit - unsafe (never a no-show, BR61)",
         "parameters": [
           {
             "name": "id",
@@ -3998,33 +3997,34 @@
             "description": ""
           }
         },
-        "tags": [
-          "field-safety"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "summary": "Leave visit - unsafe (never a no-show, BR61)",
+        "tags": [
+          "field-safety"
         ]
       }
     },
     "/api/v1/home-collections/safety/alerts": {
       "get": {
         "operationId": "FieldSafetyController_alerts",
-        "summary": "Safety alerts raised for this organisation (delivery outcome, SLA)",
         "parameters": [],
         "responses": {
           "200": {
             "description": ""
           }
         },
-        "tags": [
-          "field-safety"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "summary": "Safety alerts raised for this organisation (delivery outcome, SLA)",
+        "tags": [
+          "field-safety"
         ]
       }
     },
@@ -4037,13 +4037,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "analysis-qc"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "analysis-qc"
         ]
       },
       "post": {
@@ -4102,13 +4102,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "analysis-qc"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "analysis-qc"
         ]
       }
     },
@@ -4150,13 +4150,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "analysis-qc"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "analysis-qc"
         ]
       }
     },
@@ -4178,13 +4178,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "analysis-qc"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "analysis-qc"
         ]
       }
     },
@@ -4206,13 +4206,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "analysis-qc"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "analysis-qc"
         ]
       },
       "post": {
@@ -4269,13 +4269,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "analysis-qc"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "analysis-qc"
         ]
       }
     },
@@ -4316,13 +4316,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "analysis-qc"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "analysis-qc"
         ]
       },
       "get": {
@@ -4333,13 +4333,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "analysis-qc"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "analysis-qc"
         ]
       }
     },
@@ -4352,13 +4352,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "analysis-qc"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "analysis-qc"
         ]
       }
     },
@@ -4380,13 +4380,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "analysis-qc"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "analysis-qc"
         ]
       }
     },
@@ -4434,13 +4434,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "analysis-qc"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "analysis-qc"
         ]
       }
     },
@@ -4453,13 +4453,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "analysis-qc"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "analysis-qc"
         ]
       }
     },
@@ -4518,13 +4518,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "analysis-qc"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "analysis-qc"
         ]
       }
     },
@@ -4573,13 +4573,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "analysis-qc"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "analysis-qc"
         ]
       }
     },
@@ -4601,13 +4601,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "analysis-qc"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "analysis-qc"
         ]
       }
     },
@@ -4629,13 +4629,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "analysis-qc"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "analysis-qc"
         ]
       }
     },
@@ -4657,13 +4657,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "analysis-qc"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "analysis-qc"
         ]
       }
     },
@@ -4685,13 +4685,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "analysis-qc"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "analysis-qc"
         ]
       }
     },
@@ -4747,13 +4747,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "analysis-qc"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "analysis-qc"
         ]
       }
     },
@@ -4796,13 +4796,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "analysis-qc"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "analysis-qc"
         ]
       }
     },
@@ -4845,13 +4845,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "analysis-qc"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "analysis-qc"
         ]
       }
     },
@@ -4873,13 +4873,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "analysis-qc"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "analysis-qc"
         ]
       }
     },
@@ -4901,13 +4901,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "analysis-qc"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "analysis-qc"
         ]
       }
     },
@@ -4958,13 +4958,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "analysis-qc"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "analysis-qc"
         ]
       }
     },
@@ -4977,13 +4977,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "analysis-qc"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "analysis-qc"
         ]
       }
     },
@@ -5052,13 +5052,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "analysis-qc"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "analysis-qc"
         ]
       }
     },
@@ -5080,13 +5080,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "critical"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "critical"
         ]
       }
     },
@@ -5126,13 +5126,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "critical"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "critical"
         ]
       }
     },
@@ -5145,13 +5145,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "critical"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "critical"
         ]
       }
     },
@@ -5207,13 +5207,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "critical"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "critical"
         ]
       }
     },
@@ -5226,13 +5226,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "inventory"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "inventory"
         ]
       }
     },
@@ -5245,13 +5245,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "inventory"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "inventory"
         ]
       }
     },
@@ -5264,13 +5264,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "inventory"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "inventory"
         ]
       },
       "post": {
@@ -5330,13 +5330,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "inventory"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "inventory"
         ]
       }
     },
@@ -5407,13 +5407,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "inventory"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "inventory"
         ]
       }
     },
@@ -5488,13 +5488,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "inventory"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "inventory"
         ]
       }
     },
@@ -5575,13 +5575,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "inventory"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "inventory"
         ]
       }
     },
@@ -5611,13 +5611,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "inventory"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "inventory"
         ]
       }
     },
@@ -5663,13 +5663,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "inventory"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "inventory"
         ]
       }
     },
@@ -5712,13 +5712,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "inventory"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "inventory"
         ]
       }
     },
@@ -5748,13 +5748,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "inventory"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "inventory"
         ]
       }
     },
@@ -5767,13 +5767,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "inventory"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "inventory"
         ]
       }
     },
@@ -5795,13 +5795,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "inventory"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "inventory"
         ]
       }
     },
@@ -5866,13 +5866,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "inventory"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "inventory"
         ]
       }
     },
@@ -5885,13 +5885,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "inventory"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "inventory"
         ]
       }
     },
@@ -5913,13 +5913,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "inventory"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "inventory"
         ]
       }
     },
@@ -5932,13 +5932,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "inventory"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "inventory"
         ]
       },
       "post": {
@@ -6007,13 +6007,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "inventory"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "inventory"
         ]
       }
     },
@@ -6035,13 +6035,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "inventory"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "inventory"
         ]
       }
     },
@@ -6063,13 +6063,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "inventory"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "inventory"
         ]
       }
     },
@@ -6091,13 +6091,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "inventory"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "inventory"
         ]
       }
     },
@@ -6110,13 +6110,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "inventory"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "inventory"
         ]
       },
       "post": {
@@ -6201,13 +6201,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "inventory"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "inventory"
         ]
       }
     },
@@ -6220,13 +6220,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "inventory"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "inventory"
         ]
       },
       "post": {
@@ -6258,13 +6258,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "inventory"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "inventory"
         ]
       }
     },
@@ -6286,13 +6286,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "inventory"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "inventory"
         ]
       }
     },
@@ -6353,13 +6353,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "inventory"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "inventory"
         ]
       }
     },
@@ -6381,20 +6381,19 @@
             "description": ""
           }
         },
-        "tags": [
-          "inventory"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "inventory"
         ]
       }
     },
     "/api/v1/analyzers/ingest": {
       "post": {
         "operationId": "AnalyzersController_post",
-        "summary": "Post an ASTM E1394 / HL7 v2 message from an instrument bridge",
         "parameters": [
           {
             "name": "x-instrument-key",
@@ -6443,6 +6442,7 @@
             "description": ""
           }
         },
+        "summary": "Post an ASTM E1394 / HL7 v2 message from an instrument bridge",
         "tags": [
           "analyzers"
         ]
@@ -6451,7 +6451,6 @@
     "/api/v1/analyzers/simulate": {
       "post": {
         "operationId": "AnalyzersController_simulate",
-        "summary": "Simulated analyzer (ANALYZER_MODE=mock): runs a specimen or a QC level through the bridge",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -6507,13 +6506,14 @@
             "description": ""
           }
         },
-        "tags": [
-          "analyzers"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "summary": "Simulated analyzer (ANALYZER_MODE=mock): runs a specimen or a QC level through the bridge",
+        "tags": [
+          "analyzers"
         ]
       }
     },
@@ -6535,13 +6535,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "analyzers"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "analyzers"
         ]
       }
     },
@@ -6554,13 +6554,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "release"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "release"
         ]
       },
       "post": {
@@ -6650,13 +6650,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "release"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "release"
         ]
       }
     },
@@ -6754,13 +6754,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "release"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "release"
         ]
       },
       "delete": {
@@ -6780,13 +6780,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "release"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "release"
         ]
       }
     },
@@ -6808,13 +6808,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "release"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "release"
         ]
       }
     },
@@ -6857,13 +6857,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "release"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "release"
         ]
       },
       "get": {
@@ -6883,13 +6883,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "release"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "release"
         ]
       }
     },
@@ -6911,13 +6911,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "release"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "release"
         ]
       }
     },
@@ -6977,13 +6977,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "release"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "release"
         ]
       }
     },
@@ -7005,13 +7005,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "release"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "release"
         ]
       }
     },
@@ -7033,13 +7033,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "release"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "release"
         ]
       }
     },
@@ -7075,13 +7075,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "release"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "release"
         ]
       }
     },
@@ -7103,13 +7103,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "release"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "release"
         ]
       }
     },
@@ -7131,13 +7131,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "release"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "release"
         ]
       },
       "post": {
@@ -7157,13 +7157,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "release"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "release"
         ]
       }
     },
@@ -7217,13 +7217,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "release"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "release"
         ]
       }
     },
@@ -7245,13 +7245,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "release"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "release"
         ]
       }
     },
@@ -7385,13 +7385,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "business"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "business"
         ]
       },
       "post": {
@@ -7426,13 +7426,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "business"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "business"
         ]
       }
     },
@@ -7454,13 +7454,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "business"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "business"
         ]
       }
     },
@@ -7509,13 +7509,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "business"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "business"
         ]
       }
     },
@@ -7528,13 +7528,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "business"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "business"
         ]
       },
       "post": {
@@ -7624,13 +7624,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "business"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "business"
         ]
       }
     },
@@ -7731,13 +7731,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "business"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "business"
         ]
       }
     },
@@ -7750,13 +7750,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "business"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "business"
         ]
       }
     },
@@ -7778,13 +7778,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "business"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "business"
         ]
       }
     },
@@ -7833,13 +7833,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "business"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "business"
         ]
       }
     },
@@ -7883,13 +7883,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "business"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "business"
         ]
       }
     },
@@ -7964,13 +7964,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "business"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "business"
         ]
       }
     },
@@ -8014,13 +8014,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "business"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "business"
         ]
       }
     },
@@ -8033,13 +8033,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "business"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "business"
         ]
       }
     },
@@ -8061,13 +8061,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "business"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "business"
         ]
       }
     },
@@ -8080,13 +8080,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "business"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "business"
         ]
       }
     },
@@ -8099,13 +8099,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "business"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "business"
         ]
       },
       "post": {
@@ -8185,13 +8185,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "business"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "business"
         ]
       }
     },
@@ -8235,13 +8235,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "business"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "business"
         ]
       }
     },
@@ -8263,13 +8263,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "business"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "business"
         ]
       }
     },
@@ -8282,13 +8282,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "business"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "business"
         ]
       }
     },
@@ -8301,13 +8301,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "business"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "business"
         ]
       },
       "post": {
@@ -8351,13 +8351,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "business"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "business"
         ]
       }
     },
@@ -8370,13 +8370,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "business"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "business"
         ]
       }
     },
@@ -8389,13 +8389,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "business"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "business"
         ]
       }
     },
@@ -8408,13 +8408,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "business"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "business"
         ]
       }
     },
@@ -8427,13 +8427,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "business"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "business"
         ]
       }
     },
@@ -8481,13 +8481,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "business"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "business"
         ]
       }
     },
@@ -8500,13 +8500,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "business"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "business"
         ]
       }
     },
@@ -8528,13 +8528,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "business"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "business"
         ]
       }
     },
@@ -8556,13 +8556,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "business"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "business"
         ]
       }
     },
@@ -8584,13 +8584,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "business"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "business"
         ]
       }
     },
@@ -8603,13 +8603,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "registry"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "registry"
         ]
       }
     },
@@ -8622,13 +8622,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "registry"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "registry"
         ]
       }
     },
@@ -8650,13 +8650,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "registry"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "registry"
         ]
       }
     },
@@ -8678,13 +8678,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "registry"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "registry"
         ]
       }
     },
@@ -8714,13 +8714,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "registry"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "registry"
         ]
       }
     },
@@ -8750,13 +8750,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "registry"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "registry"
         ]
       }
     },
@@ -8799,13 +8799,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "registry"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "registry"
         ]
       }
     },
@@ -8827,13 +8827,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "registry"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "registry"
         ]
       },
       "post": {
@@ -8895,13 +8895,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "registry"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "registry"
         ]
       }
     },
@@ -8914,13 +8914,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "registry"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "registry"
         ]
       },
       "post": {
@@ -9037,13 +9037,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "registry"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "registry"
         ]
       }
     },
@@ -9056,13 +9056,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "registry"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "registry"
         ]
       }
     },
@@ -9084,13 +9084,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "registry"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "registry"
         ]
       },
       "put": {
@@ -9213,13 +9213,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "registry"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "registry"
         ]
       }
     },
@@ -9241,13 +9241,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "registry"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "registry"
         ]
       }
     },
@@ -9297,13 +9297,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "registry"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "registry"
         ]
       }
     },
@@ -9353,13 +9353,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "registry"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "registry"
         ]
       }
     },
@@ -9409,13 +9409,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "registry"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "registry"
         ]
       }
     },
@@ -9471,13 +9471,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "registry"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "registry"
         ]
       }
     },
@@ -9499,13 +9499,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "registry"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "registry"
         ]
       },
       "delete": {
@@ -9525,13 +9525,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "registry"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "registry"
         ]
       }
     },
@@ -9607,13 +9607,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "reception"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "reception"
         ]
       }
     },
@@ -9626,13 +9626,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "reception"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "reception"
         ]
       }
     },
@@ -9645,13 +9645,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "reception"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "reception"
         ]
       },
       "post": {
@@ -9724,13 +9724,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "reception"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "reception"
         ]
       }
     },
@@ -9752,13 +9752,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "reception"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "reception"
         ]
       }
     },
@@ -9780,13 +9780,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "reception"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "reception"
         ]
       }
     },
@@ -9830,13 +9830,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "reception"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "reception"
         ]
       }
     },
@@ -9898,13 +9898,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "reception"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "reception"
         ]
       }
     },
@@ -9926,13 +9926,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "reception"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "reception"
         ]
       }
     },
@@ -9954,13 +9954,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "reception"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "reception"
         ]
       },
       "post": {
@@ -10003,13 +10003,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "reception"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "reception"
         ]
       }
     },
@@ -10047,13 +10047,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "reception"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "reception"
         ]
       }
     },
@@ -10075,13 +10075,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "reception"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "reception"
         ]
       }
     },
@@ -10103,13 +10103,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "reception"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "reception"
         ]
       }
     },
@@ -10131,13 +10131,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "reception"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "reception"
         ]
       }
     },
@@ -10159,13 +10159,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "reception"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "reception"
         ]
       }
     },
@@ -10187,13 +10187,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "reception"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "reception"
         ]
       }
     },
@@ -10215,13 +10215,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "reception"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "reception"
         ]
       }
     },
@@ -10268,13 +10268,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "reception"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "reception"
         ]
       }
     },
@@ -10312,13 +10312,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "reception"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "reception"
         ]
       }
     },
@@ -10331,13 +10331,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "preanalytics"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "preanalytics"
         ]
       },
       "post": {
@@ -10399,13 +10399,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "preanalytics"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "preanalytics"
         ]
       }
     },
@@ -10427,13 +10427,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "preanalytics"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "preanalytics"
         ]
       }
     },
@@ -10446,13 +10446,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "preanalytics"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "preanalytics"
         ]
       }
     },
@@ -10501,13 +10501,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "preanalytics"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "preanalytics"
         ]
       }
     },
@@ -10529,13 +10529,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "preanalytics"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "preanalytics"
         ]
       }
     },
@@ -10548,13 +10548,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "preanalytics"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "preanalytics"
         ]
       },
       "put": {
@@ -10593,13 +10593,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "preanalytics"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "preanalytics"
         ]
       }
     },
@@ -10621,13 +10621,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "preanalytics"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "preanalytics"
         ]
       }
     },
@@ -10668,13 +10668,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "preanalytics"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "preanalytics"
         ]
       }
     },
@@ -10696,13 +10696,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "preanalytics"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "preanalytics"
         ]
       }
     },
@@ -10724,13 +10724,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "preanalytics"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "preanalytics"
         ]
       }
     },
@@ -10752,13 +10752,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "preanalytics"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "preanalytics"
         ]
       }
     },
@@ -10771,13 +10771,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "preanalytics"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "preanalytics"
         ]
       },
       "post": {
@@ -10818,13 +10818,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "preanalytics"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "preanalytics"
         ]
       }
     },
@@ -10837,13 +10837,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "preanalytics"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "preanalytics"
         ]
       },
       "post": {
@@ -10915,13 +10915,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "preanalytics"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "preanalytics"
         ]
       }
     },
@@ -10943,13 +10943,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "preanalytics"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "preanalytics"
         ]
       }
     },
@@ -10996,13 +10996,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "preanalytics"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "preanalytics"
         ]
       }
     },
@@ -11062,13 +11062,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "preanalytics"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "preanalytics"
         ]
       }
     },
@@ -11121,13 +11121,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "preanalytics"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "preanalytics"
         ]
       }
     },
@@ -11149,13 +11149,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "preanalytics"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "preanalytics"
         ]
       }
     },
@@ -11191,13 +11191,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "microbiology"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "microbiology"
         ]
       },
       "post": {
@@ -11247,13 +11247,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "microbiology"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "microbiology"
         ]
       }
     },
@@ -11266,13 +11266,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "microbiology"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "microbiology"
         ]
       },
       "post": {
@@ -11316,13 +11316,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "microbiology"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "microbiology"
         ]
       }
     },
@@ -11335,13 +11335,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "microbiology"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "microbiology"
         ]
       },
       "post": {
@@ -11389,13 +11389,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "microbiology"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "microbiology"
         ]
       }
     },
@@ -11408,13 +11408,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "microbiology"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "microbiology"
         ]
       }
     },
@@ -11427,13 +11427,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "microbiology"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "microbiology"
         ]
       },
       "post": {
@@ -11480,13 +11480,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "microbiology"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "microbiology"
         ]
       }
     },
@@ -11508,13 +11508,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "microbiology"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "microbiology"
         ]
       },
       "put": {
@@ -11578,13 +11578,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "microbiology"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "microbiology"
         ]
       }
     },
@@ -11634,13 +11634,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "microbiology"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "microbiology"
         ]
       }
     },
@@ -11670,13 +11670,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "microbiology"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "microbiology"
         ]
       }
     },
@@ -11771,13 +11771,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "microbiology"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "microbiology"
         ]
       }
     },
@@ -11823,13 +11823,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "microbiology"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "microbiology"
         ]
       }
     },
@@ -11842,13 +11842,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "histopathology"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "histopathology"
         ]
       },
       "post": {
@@ -11887,13 +11887,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "histopathology"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "histopathology"
         ]
       }
     },
@@ -11915,13 +11915,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "histopathology"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "histopathology"
         ]
       },
       "put": {
@@ -12000,13 +12000,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "histopathology"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "histopathology"
         ]
       }
     },
@@ -12028,13 +12028,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "histopathology"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "histopathology"
         ]
       }
     },
@@ -12076,13 +12076,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "histopathology"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "histopathology"
         ]
       }
     },
@@ -12126,13 +12126,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "histopathology"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "histopathology"
         ]
       }
     },
@@ -12145,13 +12145,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "quality"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "quality"
         ]
       }
     },
@@ -12164,13 +12164,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "quality"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "quality"
         ]
       }
     },
@@ -12223,13 +12223,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "quality"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "quality"
         ]
       }
     },
@@ -12242,13 +12242,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "quality"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "quality"
         ]
       }
     },
@@ -12261,13 +12261,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "quality"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "quality"
         ]
       },
       "post": {
@@ -12333,13 +12333,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "quality"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "quality"
         ]
       }
     },
@@ -12352,13 +12352,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "quality"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "quality"
         ]
       },
       "post": {
@@ -12427,13 +12427,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "quality"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "quality"
         ]
       }
     },
@@ -12446,13 +12446,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "quality"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "quality"
         ]
       },
       "post": {
@@ -12498,13 +12498,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "quality"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "quality"
         ]
       }
     },
@@ -12526,13 +12526,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "quality"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "quality"
         ]
       },
       "post": {
@@ -12590,13 +12590,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "quality"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "quality"
         ]
       }
     },
@@ -12609,13 +12609,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "quality"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "quality"
         ]
       },
       "post": {
@@ -12695,13 +12695,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "quality"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "quality"
         ]
       }
     },
@@ -12723,13 +12723,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "quality"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "quality"
         ]
       }
     },
@@ -12785,13 +12785,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "quality"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "quality"
         ]
       }
     },
@@ -12848,13 +12848,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "quality"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "quality"
         ]
       }
     },
@@ -12867,13 +12867,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "quality"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "quality"
         ]
       }
     },
@@ -12895,13 +12895,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "quality"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "quality"
         ]
       }
     },
@@ -12945,13 +12945,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "quality"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "quality"
         ]
       }
     },
@@ -12964,13 +12964,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "quality"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "quality"
         ]
       },
       "post": {
@@ -13029,13 +13029,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "quality"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "quality"
         ]
       }
     },
@@ -13048,13 +13048,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "quality"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "quality"
         ]
       }
     },
@@ -13076,13 +13076,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "quality"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "quality"
         ]
       }
     },
@@ -13131,13 +13131,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "quality"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "quality"
         ]
       }
     },
@@ -13189,13 +13189,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "quality"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "quality"
         ]
       }
     },
@@ -13225,13 +13225,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "quality"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "quality"
         ]
       }
     },
@@ -13261,13 +13261,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "quality"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "quality"
         ]
       }
     },
@@ -13316,13 +13316,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "quality"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "quality"
         ]
       }
     },
@@ -13352,13 +13352,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "quality"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "quality"
         ]
       }
     },
@@ -13371,13 +13371,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "analytics"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "analytics"
         ]
       }
     },
@@ -13399,13 +13399,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "analytics"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "analytics"
         ]
       }
     },
@@ -13427,13 +13427,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "analytics"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "analytics"
         ]
       }
     },
@@ -13455,13 +13455,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "analytics"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "analytics"
         ]
       }
     },
@@ -13483,13 +13483,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "mobile"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "mobile"
         ]
       }
     },
@@ -13529,13 +13529,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "mobile"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "mobile"
         ]
       }
     },
@@ -13548,13 +13548,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "mobile"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "mobile"
         ]
       }
     },
@@ -13612,13 +13612,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "mobile"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "mobile"
         ]
       },
       "get": {
@@ -13629,13 +13629,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "mobile"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "mobile"
         ]
       }
     },
@@ -13657,13 +13657,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "mobile"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "mobile"
         ]
       }
     },
@@ -13715,13 +13715,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "mobile"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "mobile"
         ]
       }
     },
@@ -13734,13 +13734,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "mobile"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "mobile"
         ]
       }
     },
@@ -13753,13 +13753,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "mobile"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "mobile"
         ]
       }
     },
@@ -13781,13 +13781,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "mobile"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "mobile"
         ]
       }
     },
@@ -13800,13 +13800,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "mobile"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "mobile"
         ]
       }
     },
@@ -13819,13 +13819,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "mobile"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "mobile"
         ]
       }
     },
@@ -13838,13 +13838,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "mobile"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "mobile"
         ]
       }
     },
@@ -13866,13 +13866,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "mobile"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "mobile"
         ]
       }
     },
@@ -13894,13 +13894,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "mobile"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "mobile"
         ]
       }
     },
@@ -13913,13 +13913,13 @@
             "description": ""
           }
         },
-        "tags": [
-          "mobile"
-        ],
         "security": [
           {
             "bearer": []
           }
+        ],
+        "tags": [
+          "mobile"
         ]
       }
     },
@@ -13991,13 +13991,13 @@
     "/api/v1/integration/v1/orders": {
       "post": {
         "operationId": "IntegrationController_create",
-        "summary": "HMAC: create (idempotent on sourceRef) a lab order from Kiorex or Kiorly Clinic",
         "parameters": [],
         "responses": {
           "200": {
             "description": ""
           }
         },
+        "summary": "HMAC: create (idempotent on sourceRef) a lab order from Kiorex or Kiorly Clinic",
         "tags": [
           "integration"
         ]

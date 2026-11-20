@@ -33,7 +33,7 @@ export async function bootApp(): Promise<TestApp> {
   process.env.SWAGGER_ENABLED = "false";
   process.env.STORAGE_DIR = "./.data/test-storage";
   const mod = await Test.createTestingModule({ imports: [AppModule] }).compile();
-  const app = mod.createNestApplication();
+  const app = mod.createNestApplication({ rawBody: true });
   configureApp(app);
   await app.listen(0, "127.0.0.1");
   return {

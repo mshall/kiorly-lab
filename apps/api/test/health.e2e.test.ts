@@ -15,7 +15,7 @@ describe("health e2e", () => {
     loadEnv();
     process.env.SWAGGER_ENABLED = "false";
     const mod = await Test.createTestingModule({ imports: [AppModule] }).compile();
-    app = mod.createNestApplication();
+    app = mod.createNestApplication({ rawBody: true });
     configureApp(app);
     await app.listen(0, "127.0.0.1");
     base = await app.getUrl();

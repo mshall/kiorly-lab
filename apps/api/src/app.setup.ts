@@ -6,8 +6,8 @@ import { PrismaExceptionFilter } from "./common/prisma-exception.filter";
 /** Shared by main.ts and e2e tests so they boot identically. */
 export function configureApp(app: INestApplication): void {
   app.setGlobalPrefix("api/v1");
-  // keep the raw body for HMAC verification (Kiorex/Clinic requests, flag.changed webhook)
-  (app as NestExpressApplication).useBodyParser("json", { limit: "5mb", verify: (req: { rawBody?: Buffer }, _res: unknown, buf: Buffer) => { req.rawBody = buf; } });
+  // `req.rawBody` (HMAC verification: Kiorex/Clinic requests, flag.changed webhook) is filled by Nest because the app is created with `{ rawBody: true }`.
+  (app as NestExpressApplication).useBodyParser("json", { limit: "5mb" });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
   app.useGlobalFilters(new PrismaExceptionFilter());
   if (process.env.SWAGGER_ENABLED !== "false") {

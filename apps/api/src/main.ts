@@ -6,7 +6,7 @@ import { loadEnv } from "./config/env";
 
 async function bootstrap() {
   loadEnv();
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   // Kiorly Work (Expo web, dev) and the lab web app; native apps do not use CORS. Override with CORS_ORIGINS in other environments.
   app.enableCors({ origin: (process.env.CORS_ORIGINS ?? "http://localhost:5191,http://127.0.0.1:5191,http://localhost:8082,http://127.0.0.1:8082").split(","), credentials: false });
   configureApp(app);
