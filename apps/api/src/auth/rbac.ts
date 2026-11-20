@@ -14,6 +14,11 @@ export const PERMISSIONS = [
   "billing.read", "billing.invoice", "billing.payment", "billing.cashclose", "billing.pricing",
   "dashboard.read", "exports.run",
   "staff.manage", "settings.manage", "audit.read",
+  // standalone-LIS additions (registry, reception, pre-analytics, analytics, quality, inventory, finance, analytics)
+  "patients.merge", "referrers.read", "referrers.write", "orders.edit", "queue.manage", "appointments.manage",
+  "storage.manage", "manifests.manage", "results.rerun", "micro.enter", "histo.report",
+  "quality.read", "quality.log", "quality.manage", "documents.approve",
+  "inventory.read", "inventory.manage", "finance.commissions", "expenses.manage", "analytics.read", "reports.deliver", "templates.manage",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -25,19 +30,36 @@ export const ROLE_PERMISSIONS: Record<StaffRole, readonly Permission[]> = {
   LAB_DIRECTOR: all,
   AUTHORIZED_SIGNATORY: [
     ...clinicalRead, "results.medical_validate", "results.correct", "reports.sign", "reports.release", "critical.ack", "qc.clear_block", "audit.read",
+    "histo.report", "micro.enter", "quality.read", "documents.approve", "analytics.read", "referrers.read", "reports.deliver", "results.rerun",
   ],
   TECHNOLOGIST: [
     ...clinicalRead, "specimens.label", "specimens.receive", "specimens.process", "specimens.reject", "results.enter", "results.second_entry",
     "results.tech_validate", "results.correct", "qc.run", "instruments.manage", "analyzers.ingest", "critical.ack",
+    "results.rerun", "micro.enter", "quality.read", "quality.log", "inventory.read", "storage.manage", "manifests.manage",
   ],
   PHLEBOTOMIST: ["orders.read", "patients.read", "catalogue.read", "specimens.read", "specimens.label", "specimens.collect", "collection.perform"],
   RECEPTION: [
     "catalogue.read", "patients.read", "patients.write", "orders.read", "orders.create", "orders.cancel", "collection.manage", "specimens.read",
     "specimens.label", "specimens.collect", "reports.read", "reports.release", "billing.read", "billing.invoice", "billing.payment", "billing.cashclose", "dashboard.read",
+    "referrers.read", "orders.edit", "queue.manage", "appointments.manage", "reports.deliver",
   ],
   BRANCH_MANAGER: [
     ...clinicalRead, "orders.create", "orders.cancel", "collection.manage", "billing.read", "billing.invoice", "billing.payment", "billing.cashclose",
     "billing.pricing", "exports.run", "staff.manage", "audit.read", "catalogue.write", "instruments.manage",
+    "patients.write", "patients.merge", "referrers.read", "referrers.write", "orders.edit", "queue.manage", "appointments.manage", "storage.manage", "manifests.manage",
+    "quality.read", "quality.log", "inventory.read", "inventory.manage", "finance.commissions", "expenses.manage", "analytics.read", "reports.deliver", "templates.manage",
+  ],
+  /** Shift/bench supervisor: runs the floor, approves quality records, merges duplicates; cannot sign reports or touch finance. */
+  SUPERVISOR: [
+    ...clinicalRead, "patients.write", "patients.merge", "orders.create", "orders.cancel", "orders.edit", "collection.manage", "queue.manage", "appointments.manage",
+    "specimens.label", "specimens.collect", "specimens.receive", "specimens.process", "specimens.reject", "storage.manage", "manifests.manage",
+    "results.enter", "results.second_entry", "results.tech_validate", "results.correct", "results.rerun", "micro.enter", "qc.run", "qc.clear_block", "instruments.manage", "analyzers.ingest",
+    "critical.ack", "critical.configure", "quality.read", "quality.log", "quality.manage", "inventory.read", "inventory.manage", "referrers.read", "analytics.read", "audit.read", "exports.run", "reports.deliver",
+  ],
+  /** Finance officer: billing, receivables, commissions, expenses, analytics; no clinical entry. */
+  FINANCE: [
+    "catalogue.read", "patients.read", "orders.read", "reports.read", "dashboard.read", "billing.read", "billing.invoice", "billing.payment", "billing.cashclose", "billing.pricing",
+    "referrers.read", "referrers.write", "finance.commissions", "expenses.manage", "exports.run", "analytics.read", "inventory.read",
   ],
 };
 

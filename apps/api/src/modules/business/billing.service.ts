@@ -11,6 +11,7 @@ import { KERNEL_LEDGER, KERNEL_PRICE_BOOK, type LedgerPort, type PriceBookPort }
 import { OutboxService } from "../../outbox/outbox.service";
 import { PrismaService } from "../../prisma/prisma.service";
 import { CatalogueService } from "../catalogue/catalogue.service";
+import { ReferrersService } from "../registry/referrers.service";
 
 @Injectable()
 export class BillingService {
@@ -23,6 +24,7 @@ export class BillingService {
     @Inject(OutboxService) private readonly outbox: OutboxService,
     @Inject(CatalogueService) private readonly catalogue: CatalogueService,
     @Inject(IdempotencyService) private readonly idem: IdempotencyService,
+    @Inject(ReferrersService) private readonly referrers: ReferrersService,
   ) {}
 
   // ----------------------------------------------------------- price lists
@@ -89,6 +91,7 @@ export class BillingService {
       await this.ledger.post({ orgId: u.orgId, refType: "Invoice", refId: inv.id, debit: "RECEIVABLES", credit: "REVENUE", amount: subtotal, currency: tenant.currency, memo: number }, tx);
       if (vatTotal > 0) await this.ledger.post({ orgId: u.orgId, refType: "Invoice", refId: inv.id, debit: "RECEIVABLES", credit: "VAT_PAYABLE", amount: vatTotal, currency: tenant.currency, memo: `${number} VAT line` }, tx);
       await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "invoice.issue", entityType: "Invoice", entityId: inv.id, meta: { total } }, tx);
+      await this.referrers.accrueForInvoice(tx, { id: inv.id, orgId: u.orgId, orderId, subtotal, number }, order.referrerId, u.staffId);
       if (order.source === "KIOREX_BOOKING") {
         await this.outbox.enqueue({ orgId: u.orgId, type: "LabInvoiceIssued", aggregateType: "Invoice", aggregateId: inv.id, data: { invoiceId: inv.id, orderId, sourceRef: order.sourceRef, currency: tenant.currency, total }, eventId: `evt_labinv_${inv.id}` }, tx);
       }
@@ -120,6 +123,7 @@ export class BillingService {
       if (inv.status === "VOID") return this.getInvoiceIn(tx, u.orgId, id);
       if (D(inv.paidTotal) > 0) throw new ConflictException({ code: "INVOICE_HAS_PAYMENTS", message: "refund payments before voiding" });
       await tx.invoice.update({ where: { id }, data: { status: "VOID" } });
+      await this.referrers.reverseForInvoice(tx, { id, orgId: u.orgId }, u.staffId);
       await this.ledger.post({ orgId: u.orgId, refType: "InvoiceVoid", refId: id, debit: "REVENUE", credit: "RECEIVABLES", amount: D(inv.subtotal), currency: inv.currency, memo: `void ${inv.number}` }, tx);
       if (D(inv.vatTotal) > 0) await this.ledger.post({ orgId: u.orgId, refType: "InvoiceVoid", refId: id, debit: "VAT_PAYABLE", credit: "RECEIVABLES", amount: D(inv.vatTotal), currency: inv.currency, memo: `void ${inv.number} VAT line` }, tx);
       await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "invoice.void", entityType: "Invoice", entityId: id, meta: { reasonProvided: reason.length > 0 } }, tx);

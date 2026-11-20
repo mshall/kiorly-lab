@@ -9,10 +9,12 @@ import { HomeCollectionService } from "./home-collection.service";
 import { OrdersService } from "./orders.service";
 import { PatientsService } from "./patients.service";
 
-const Channels = z.array(z.enum(["PRINTED", "PATIENT_LINK_OTP", "KIORLY_CLINIC_IMPORT", "KIORLY_NURSE_IMPORT", "KIOREX_VAULT"]));
+const Channels = z.array(z.enum(["PRINTED", "PATIENT_LINK_OTP", "KIORLY_CLINIC_IMPORT", "KIORLY_NURSE_IMPORT", "KIOREX_VAULT", "REFERRER_PORTAL"]));
 const PatientBody = z.object({
   fullName: z.string().min(2).max(160), dateOfBirth: z.string().optional(), sex: z.enum(["M", "F", "OTHER", "UNKNOWN"]).optional(), phone: z.string().min(6).max(24).optional(),
   nationalId: z.string().min(5).max(32).optional(), externalId: z.string().optional(), preferredLocale: z.enum(["ar", "en"]).optional(),
+  email: z.string().email().optional(), address: z.string().max(300).optional(), city: z.string().max(80).optional(), nationality: z.string().max(60).optional(),
+  bloodGroup: z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]).optional(), notes: z.string().max(1000).optional(), conditions: z.array(z.string().max(40)).max(10).optional(),
 }).strict();
 const HomeBody = z.object({ slotId: z.string().optional(), address: z.string().min(5), districtId: z.string().min(2).max(80).optional(), contactPhone: z.string().optional(), geo: z.object({ lat: z.number(), lng: z.number() }).optional() }).strict();
 const Geo = z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180), districtId: z.string().optional() }).strict();
@@ -21,7 +23,7 @@ const Arrive = z.object({ geostamp: Geo }).strict();
 export const OrderBody = z.object({
   labId: z.string().optional(), patientId: z.string().optional(), patient: PatientBody.optional(),
   testCodes: z.array(z.string()).optional(), packageCodes: z.array(z.string()).optional(),
-  source: z.enum(["WALK_IN", "REFERRING_DOCTOR"]).optional(), referringDoctorName: z.string().optional(), referringDoctorRef: z.string().optional(), referringDoctorPhone: z.string().optional(),
+  source: z.enum(["WALK_IN", "REFERRING_DOCTOR"]).optional(), referringDoctorName: z.string().optional(), referringDoctorRef: z.string().optional(), referringDoctorPhone: z.string().optional(), referrerId: z.string().optional(),
   priority: z.enum(["ROUTINE", "URGENT", "STAT"]).optional(), collectionType: z.enum(["IN_LAB", "HOME"]).optional(), b2bAccountId: z.string().optional(),
   identifiersChecked: z.array(z.string()).optional(), consentChannels: Channels.optional(), homeCollection: HomeBody.optional(), accession: z.enum(["AUTO", "DEFER"]).optional(),
 }).strict();

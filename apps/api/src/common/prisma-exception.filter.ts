@@ -12,6 +12,7 @@ export class PrismaExceptionFilter implements ExceptionFilter {
     if (/append-only|immutable|cannot be released|check_violation|result_release_requires|report_version_signed|critical_alert_deadline/i.test(msg)) {
       return res.status(HttpStatus.CONFLICT).json({ statusCode: 409, code: "SAFETY_INVARIANT", message: msg.split("\n").pop()?.slice(0, 300) });
     }
+    if (process.env.NODE_ENV !== "production") console.error("[prisma]", e.code ?? e.name, msg.split("\n").slice(-3).join(" ").slice(0, 400));
     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ statusCode: 500, code: "INTERNAL_ERROR" });
   }
 }

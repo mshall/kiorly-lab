@@ -21,6 +21,7 @@ import { CatalogueModule } from "./modules/catalogue/catalogue.module";
 import { CriticalModule } from "./modules/critical/critical.module";
 import { FieldSafetyModule } from "./modules/field-safety/field-safety.module";
 import { OrdersModule } from "./modules/orders/orders.module";
+import { RegistryModule } from "./modules/registry/registry.module";
 import { ReleaseModule } from "./modules/release/release.module";
 import { SpecimensModule } from "./modules/specimens/specimens.module";
 import { OutboxModule } from "./outbox/outbox.module";
@@ -29,7 +30,7 @@ import { PrismaModule } from "./prisma/prisma.module";
 @Module({
   imports: [
     PrismaModule, AuthModule, AuditModule, OutboxModule, AdaptersModule, KernelModule, CoreModule, FeatureFlagsModule, HealthModule,
-    AdminModule, CatalogueModule, OrdersModule, SpecimensModule, AnalysisQcModule, AnalyzersModule, CriticalModule, FieldSafetyModule, ReleaseModule, BusinessModule, IntegrationModule,
+    AdminModule, CatalogueModule, OrdersModule, SpecimensModule, AnalysisQcModule, AnalyzersModule, CriticalModule, FieldSafetyModule, ReleaseModule, BusinessModule, RegistryModule, IntegrationModule,
   ],
   providers: [
     // order matters: authenticate first, then flag, then plan entitlement

@@ -45,6 +45,10 @@ enum StaffRole {
   PHLEBOTOMIST
   RECEPTION
   BRANCH_MANAGER
+  /// Shift/bench supervisor (standalone LIS).
+  SUPERVISOR
+  /// Finance officer (standalone LIS).
+  FINANCE
 }
 
 enum Sex {
@@ -191,6 +195,8 @@ enum ReleaseChannel {
   /// KLCRIT02: Kiorly Nurse import (for nurse-ordered samples).
   KIORLY_NURSE_IMPORT
   KIOREX_VAULT
+  /// Standalone: the referring doctor's portal (needs patient consent like every channel).
+  REFERRER_PORTAL
 }
 
 enum CriticalAlertStatus {
@@ -499,11 +505,29 @@ model PatientRef {
   nationalIdLast4 String?
   preferredLocale String    @default("ar")
   createdAt       DateTime  @default(now())
+  /// Standalone patient registry (no Kiorly Clinic needed): lab medical record number, contact + clinical context.
+  mrn             String?
+  email           String?
+  address         String?
+  city            String?
+  nationality     String?
+  bloodGroup      String?
+  notes           String?
+  /// Reference-interval conditions, e.g. PREGNANT_T1, POSTMENOPAUSAL, NEONATE.
+  conditions      String[]  @default([])
+  active          Boolean   @default(true)
+  /// Duplicate merge: the surviving record (this row stays for audit, hidden from search).
+  mergedIntoId    String?
+  mergedAt        DateTime?
+  updatedAt       DateTime  @default(now()) @updatedAt
 
-  orders LabOrder[]
+  orders   LabOrder[]
+  consents PatientConsent[]
 
+  @@unique([orgId, mrn])
   @@index([orgId, phone])
   @@index([orgId, externalId])
+  @@index([orgId, nationalIdHash])
 }
 
 model LabOrder {
@@ -530,6 +554,8 @@ model LabOrder {
   b2bAccountId         String?
   /// Ordering clinician contact for critical alerts (KLCRIT01); phone only, never clinical data.
   referringDoctorPhone String?
+  /// Directory entry of the referring doctor/clinic (commission, delivery preferences).
+  referrerId           String?
   createdBy            String
   createdAt            DateTime         @default(now())
 
@@ -541,6 +567,7 @@ model LabOrder {
   reports         ReportVersion[]
   invoices        Invoice[]
   b2bAccount      B2bAccount?      @relation(fields: [b2bAccountId], references: [id])
+  referrer        Referrer?        @relation(fields: [referrerId], references: [id])
 
   @@unique([orgId, orderNumber])
   @@unique([orgId, source, sourceRef])
@@ -1262,4 +1289,103 @@ model IntegrationClient {
   webhookSecretEnc String?
 
   @@index([orgId])
+}
+
+// ============================================================ registry (M1) ====
+
+enum ReferrerKind {
+  DOCTOR
+  CLINIC
+  HOSPITAL
+  CORPORATE
+}
+
+enum CommissionType {
+  NONE
+  PERCENT
+  FIXED
+}
+
+enum ConsentKind {
+  RESULT_SHARING
+  DATA_PROCESSING
+  MARKETING
+  RESEARCH
+}
+
+enum ReferrerAccount {
+  /// What the lab owes the referrer (commission accrued - paid out).
+  COMMISSION
+  /// What the referrer owes the lab (credit sales - payments).
+  CREDIT
+}
+
+/// Consent history (append-only): the latest row per kind is the current state.
+model PatientConsent {
+  id         String      @id @default(cuid())
+  orgId      String
+  patientId  String
+  kind       ConsentKind
+  granted    Boolean
+  /// Wording version shown to the patient (wording itself is NEEDS_HUMAN NH-LB-007).
+  version    String      @default("v0")
+  channel    String      @default("DESK")
+  capturedBy String
+  note       String?
+  capturedAt DateTime    @default(now())
+
+  patient PatientRef @relation(fields: [patientId], references: [id])
+
+  @@index([orgId, patientId, kind, capturedAt])
+}
+
+/// Referring doctors / clinics directory with delivery preferences and commission / credit accounts.
+model Referrer {
+  id               String                @id @default(cuid())
+  orgId            String
+  kind             ReferrerKind          @default(DOCTOR)
+  name             String
+  specialty        String?
+  phone            String?
+  email            String?
+  address          String?
+  licenceNo        String?
+  /// Delivery preferences: which channels get the released report automatically (needs patient consent per order).
+  deliveryChannels NotificationChannel[] @default([])
+  deliverOnRelease Boolean               @default(false)
+  preferredLocale  String                @default("ar")
+  commissionType   CommissionType        @default(NONE)
+  commissionValue  Decimal               @default(0) @db.Decimal(14, 2)
+  creditLimit      Decimal?              @db.Decimal(14, 2)
+  paymentTermsDays Int                   @default(30)
+  /// sha256 of the doctor-portal token (the token is shown once at creation).
+  portalTokenHash  String?               @unique
+  active           Boolean               @default(true)
+  createdAt        DateTime              @default(now())
+
+  orders LabOrder[]
+  ledger ReferrerLedgerEntry[]
+
+  @@index([orgId, name])
+}
+
+/// Append-only commission / credit ledger. amount > 0 increases the balance, < 0 decreases it.
+model ReferrerLedgerEntry {
+  id         String          @id @default(cuid())
+  orgId      String
+  referrerId String
+  account    ReferrerAccount
+  /// COMMISSION_ACCRUED | COMMISSION_PAYOUT | CREDIT_CHARGE | CREDIT_PAYMENT | ADJUSTMENT
+  type       String
+  amount     Decimal         @db.Decimal(14, 2)
+  orderId    String?
+  invoiceId  String?
+  memo       String?
+  createdBy  String
+  createdAt  DateTime        @default(now())
+
+  referrer Referrer @relation(fields: [referrerId], references: [id])
+
+  @@unique([referrerId, type, invoiceId])
+  @@index([orgId, referrerId, createdAt])
 }

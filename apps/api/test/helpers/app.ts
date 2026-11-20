@@ -84,7 +84,7 @@ export interface Lab {
   materials: Record<string, { l1: string; l2: string }>;
 }
 
-export const ALL_ROLES: StaffRole[] = ["OWNER", "LAB_DIRECTOR", "AUTHORIZED_SIGNATORY", "TECHNOLOGIST", "PHLEBOTOMIST", "RECEPTION", "BRANCH_MANAGER"];
+export const ALL_ROLES: StaffRole[] = ["OWNER", "LAB_DIRECTOR", "AUTHORIZED_SIGNATORY", "TECHNOLOGIST", "PHLEBOTOMIST", "RECEPTION", "BRANCH_MANAGER", "SUPERVISOR", "FINANCE"];
 
 /** Creates an isolated tenant (PRO edition by default) with one lab, one staff member per role, the synthetic starter catalogue, QC materials and three instruments. */
 export async function makeLab(t: TestApp, opts: { edition?: "LITE" | "PRO" | "CHAIN"; vat?: number; market?: string } = {}): Promise<Lab> {
@@ -177,3 +177,18 @@ export async function enterAndTechValidate(t: TestApp, lab: Lab, orderId: string
 }
 
 export const NORMAL = { HB: 13.5, WBC: 7, PLT: 250, GLU: 85, CREA: 0.9, K: 4.2, NA: 140, ALT: 25, AST: 25, TSH: 2 };
+
+const qcDone = new WeakSet<Lab>();
+/** Whole happy path for an order: process specimens, QC pass, enter + validate results, medical validate, sign, release. Returns ids. */
+export async function releaseOrder(t: TestApp, lab: Lab, f: OrderFixture, opts: { values?: Record<string, number>; channels?: string[] } = {}) {
+  await toProcessing(t, lab, f);
+  if (!qcDone.has(lab)) { await qcPass(t, lab, lab.instruments.bench, Object.keys(NORMAL)); qcDone.add(lab); }
+  await enterAndTechValidate(t, lab, f.orderId, { ...NORMAL, ...(opts.values ?? {}) });
+  const mv = await call(t, "POST", `/orders/${f.orderId}/medical-validate`, { token: lab.tokens.AUTHORIZED_SIGNATORY });
+  if (mv.status !== 201) throw new Error(`medical validate failed: ${JSON.stringify(mv.body)}`);
+  const signed = await call(t, "POST", `/orders/${f.orderId}/reports`, { token: lab.tokens.AUTHORIZED_SIGNATORY });
+  if (signed.status !== 201) throw new Error(`sign failed: ${JSON.stringify(signed.body)}`);
+  const rel = await call(t, "POST", `/reports/${signed.body.id}/release`, { token: lab.tokens.RECEPTION, body: { channels: opts.channels ?? ["PATIENT_LINK_OTP"] } });
+  if (rel.status !== 201) throw new Error(`release failed: ${JSON.stringify(rel.body)}`);
+  return { reportId: signed.body.id as string, secureLink: rel.body.secureLink as string };
+}

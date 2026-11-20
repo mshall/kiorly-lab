@@ -16,10 +16,12 @@ import { qcBlockers } from "../analysis-qc/qc-gate";
 import { renderReportPdf, type ReportModel } from "./report-pdf";
 
 /** Contract enum (kiorex-contracts LabResultReleased.channels) for each internal release channel. */
-export const CONTRACT_CHANNEL: Record<ReleaseChannel, "PATIENT_LINK" | "KIOREX_VAULT" | "KIORLY_CLINIC" | "PRINTED"> = {
+export const CONTRACT_CHANNEL: Record<ReleaseChannel, "PATIENT_LINK" | "KIOREX_VAULT" | "KIORLY_CLINIC" | "PRINTED" | null> = {
   PRINTED: "PRINTED", PATIENT_LINK_OTP: "PATIENT_LINK", KIORLY_CLINIC_IMPORT: "KIORLY_CLINIC",
   /** Kiorly Nurse is an edition of Kiorly Clinic (ADR-031): the contract channel stays KIORLY_CLINIC. */
   KIORLY_NURSE_IMPORT: "KIORLY_CLINIC", KIOREX_VAULT: "KIOREX_VAULT",
+  /** Local-only channel (doctor portal): not part of the Kiorex contract, never in the outbox event. */
+  REFERRER_PORTAL: null,
 };
 
 const sha256 = (b: string | Buffer) => createHash("sha256").update(b).digest("hex");
@@ -152,11 +154,11 @@ export class ReportsService {
         if (existing) continue;
         recs.push(await tx.releaseRecord.create({ data: { orgId: u.orgId, reportVersionId: rv.id, channel: ch, consentRef: `order:${rv.orderId}:${rv.order.consentCapturedAt?.toISOString() ?? "n/a"}`, secureLinkId: link.id, releasedBy: u.staffId } }));
       }
-      const allChannels = (await tx.releaseRecord.findMany({ where: { reportVersionId: rv.id } })).map((r) => CONTRACT_CHANNEL[r.channel]);
+      const allChannels = (await tx.releaseRecord.findMany({ where: { reportVersionId: rv.id } })).map((r) => CONTRACT_CHANNEL[r.channel]).filter((c): c is NonNullable<typeof c> => c !== null);
       await this.orderStatus.refreshOrder(tx, rv.orderId);
 
       // 3) outbox (contract-validated, no raw values) — same transaction
-      await this.outbox.enqueue(
+      if (allChannels.length) await this.outbox.enqueue(
         {
           orgId: u.orgId, type: "LabResultReleased", aggregateType: "LabReport", aggregateId: rv.id,
           data: { reportId: rv.id, orderId: rv.orderId, labId: rv.order.labId, patientRef: rv.order.patient.externalId ?? rv.order.patient.id, reportVersion: rv.version, signedAt: rv.signedAt.toISOString(), secureLink, channels: [...new Set(allChannels)] },

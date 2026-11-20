@@ -5,7 +5,7 @@ import type { AuthUser } from "../../auth/auth.types";
 import { ZBody, z } from "../../common/zod";
 import { ReportsService } from "./reports.service";
 
-const Release = z.object({ channels: z.array(z.enum(["PRINTED", "PATIENT_LINK_OTP", "KIORLY_CLINIC_IMPORT", "KIORLY_NURSE_IMPORT", "KIOREX_VAULT"])).min(1) }).strict();
+const Release = z.object({ channels: z.array(z.enum(["PRINTED", "PATIENT_LINK_OTP", "KIORLY_CLINIC_IMPORT", "KIORLY_NURSE_IMPORT", "KIOREX_VAULT", "REFERRER_PORTAL"])).min(1) }).strict();
 const Verify = z.object({ otp: z.string().regex(/^\d{6}$/) }).strict();
 
 /** Release & reports. SAFETY PATH (ADR-025): nothing here is flag-gated. */

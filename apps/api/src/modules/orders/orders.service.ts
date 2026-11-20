@@ -57,6 +57,7 @@ export interface CreateOrderInput {
   referringDoctorName?: string;
   referringDoctorRef?: string;
   referringDoctorPhone?: string;
+  referrerId?: string;
   priority?: "ROUTINE" | "URGENT" | "STAT";
   collectionType?: "IN_LAB" | "HOME";
   b2bAccountId?: string;
@@ -191,12 +192,14 @@ export class OrdersService {
     // a nurse-collected sample is shared under the patient's consent token: results go back to the nurse by default (KLCRIT02)
     if (source === "KIORLY_NURSE") consent = [...new Set<ReleaseChannel>([...consent, "KIORLY_NURSE_IMPORT"])];
 
+    const referrer = input.referrerId ? await tx.referrer.findFirst({ where: { id: input.referrerId, orgId, active: true } }) : null;
+    if (input.referrerId && !referrer) throw new NotFoundException({ code: "REFERRER_NOT_FOUND" });
     const orderNumber = `ORD-${new Date().getUTCFullYear()}-${pad(await nextSequence(tx, orgId, `ord:${new Date().getUTCFullYear()}`), 6)}`;
     const order = await tx.labOrder.create({
       data: {
         orgId, labId, patientId: patient.id, source, sourceRef: input.sourceRef, status: "AWAITING_COLLECTION", orderNumber,
         identityVerified, identifiersChecked: identityVerified ? [...new Set(checked)] : [],
-        referringDoctorName: input.referringDoctorName, referringDoctorRef: input.referringDoctorRef, referringDoctorPhone: input.referringDoctorPhone,
+        referringDoctorName: referrer?.name ?? input.referringDoctorName, referringDoctorRef: input.referringDoctorRef, referringDoctorPhone: referrer?.phone ?? input.referringDoctorPhone, referrerId: referrer?.id,
         consentShareChannels: consent, consentCapturedAt: consent.length ? new Date() : null,
         priority: input.priority ?? "ROUTINE", collectionType: source === "KIORLY_NURSE" ? "NURSE_VISIT" : (input.collectionType ?? "IN_LAB"), b2bAccountId: input.b2bAccountId, createdBy: actor.staffId,
         items: { create: items.map((i) => ({ testId: i.test.id, price: i.price, packageCode: i.packageCode })) },

@@ -10,4 +10,5 @@ export const BOUNDED_CONTEXTS = [
   { dir: "analyzers", name: "AnalyzersModule", prefix: "KLQC01", title: "Analyzer bridge (ASTM E1394 / HL7 v2) and simulator", safetyPath: false },
   { dir: "admin", name: "AdminModule", prefix: "LB-F07", title: "Auth session, onboarding, staff/RBAC, settings", safetyPath: false },
   { dir: "business", name: "BusinessModule", prefix: "KLBIZ", title: "Business: price lists, invoices, TAT", safetyPath: false },
+  { dir: "registry", name: "RegistryModule", prefix: "KLPAT", title: "Standalone patient registry, referrers directory, commission/credit accounts, doctor portal", safetyPath: false },
 ] as const;
