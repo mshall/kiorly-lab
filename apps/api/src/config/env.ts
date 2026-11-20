@@ -13,7 +13,7 @@ export function loadEnv(): void {
   if (process.env.NODE_ENV === "test" && !process.env.CI) {
     process.env.DATABASE_URL = process.env.TEST_DATABASE_URL ?? LOCAL_TEST_DB;
   }
-  config({ path: resolve(__dirname, "../../.env") });
+  config({ path: resolve(__dirname, "../../.env"), quiet: true });
   process.env.DATABASE_URL ??= LOCAL_DB;
   process.env.PORT ??= "3200";
 }
