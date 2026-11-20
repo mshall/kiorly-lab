@@ -53,7 +53,7 @@ export class SpecimensService {
     for (const [k, group] of groups) {
       const [specimenType, container] = k.split("|");
       const accession = opts.accessionNumber ?? (await this.nextAccession(db, order.orgId, order.labId));
-      const sp = await this.insertSpecimen(db, { orgId: order.orgId, labId: order.labId, orderId: order.id, accessionNumber: accession, barcode: accession, specimenType, container: container || null });
+      const sp = await this.insertSpecimen(db, { orgId: order.orgId, labId: order.labId, orderId: order.id, accessionNumber: accession, barcode: accession, specimenType, container: container || null, volumeMl: group.reduce((m, g) => Math.max(m, g.test.volumeMl == null ? 0 : Number(g.test.volumeMl)), 0) || undefined });
       await db.orderItem.updateMany({ where: { id: { in: group.map((g) => g.id) } }, data: { specimenId: sp.id } });
       out.push(sp);
     }
@@ -159,7 +159,7 @@ export class SpecimensService {
     const fasting = s.order.items.some((i) => i.specimenId === s.id && i.test.fastingRequired);
     const qrPayload = `KLB|${s.accessionNumber}|${s.barcode}|${s.order.orderNumber ?? ""}`.slice(0, 100);
     return {
-      fasting, priority: s.order.priority, qrPayload, qrSvg: qrSvg(qrPayload),
+      fasting, priority: s.order.priority, volumeMl: s.volumeMl == null ? null : Number(s.volumeMl), qrPayload, qrSvg: qrSvg(qrPayload),
       specimenId: s.id, accessionNumber: s.accessionNumber, barcode: s.barcode, symbology: "CODE128", specimenType: s.specimenType, container: s.container,
       patientName: s.order.patient.fullName, dateOfBirth: s.order.patient.dateOfBirth, orderNumber: s.order.orderNumber, tests,
       svg: code128bSvg(s.barcode),
@@ -213,6 +213,7 @@ export class SpecimensService {
       if (action === "process") {
         await tx.orderItem.updateMany({ where: { specimenId: id, status: "PENDING" }, data: { status: "IN_PROGRESS" } });
       }
+      if (action === "collect") await tx.recollectionRequest.updateMany({ where: { newSpecimenId: id, status: { in: ["REQUESTED", "NOTIFIED"] } }, data: { status: "COLLECTED", resolvedAt: new Date() } });
       await this.orderStatus.refreshOrder(tx, sp.orderId);
       return tx.specimen.findUniqueOrThrow({ where: { id } });
     });
@@ -233,26 +234,35 @@ export class SpecimensService {
 
   // ---------------------------------------------------------- aliquots
   /** KLSPC02: aliquots link to the parent; each gets its own barcode `<parent>-A<n>` and an ALIQUOTED custody event on the parent. */
-  async aliquot(u: AuthUser, parentId: string, count: number) {
+  async aliquot(u: AuthUser, parentId: string, count: number, volumeMl?: number) {
     if (!Number.isInteger(count) || count < 1 || count > 20) throw new BadRequestException({ code: "ALIQUOT_COUNT_INVALID" });
     return this.prisma.$transaction(async (tx) => {
       const parent = await tx.specimen.findFirst({ where: { id: parentId, orgId: u.orgId } });
       if (!parent) throw new NotFoundException({ code: "SPECIMEN_NOT_FOUND" });
       if (!["RECEIVED", "PROCESSING", "STORED"].includes(parent.status)) throw new ConflictException({ code: "ILLEGAL_SPECIMEN_TRANSITION", from: parent.status, action: "aliquot" });
       const existing = await tx.specimen.count({ where: { parentSpecimenId: parentId } });
+      // splitting by volume: the parent's remaining volume is drawn down and cannot go negative
+      if (volumeMl != null) {
+        if (!(volumeMl > 0)) throw new BadRequestException({ code: "ALIQUOT_VOLUME_INVALID" });
+        if (parent.volumeMl != null) {
+          const left = Number(parent.volumeMl) - volumeMl * count;
+          if (left < -1e-9) throw new UnprocessableEntityException({ code: "INSUFFICIENT_VOLUME", available: Number(parent.volumeMl), requested: Math.round(volumeMl * count * 100) / 100 });
+          await tx.specimen.update({ where: { id: parentId }, data: { volumeMl: Math.max(0, Math.round(left * 100) / 100) } });
+        }
+      }
       const made: Specimen[] = [];
       for (let i = 1; i <= count; i++) {
         const code = `${parent.accessionNumber}-A${existing + i}`;
         made.push(
           await this.insertSpecimen(tx, {
             orgId: u.orgId, labId: parent.labId, orderId: parent.orderId, accessionNumber: code, barcode: code, specimenType: parent.specimenType,
-            container: parent.container, parentSpecimenId: parentId, status: "RECEIVED",
+            container: parent.container, parentSpecimenId: parentId, status: "RECEIVED", ...(volumeMl != null ? { volumeMl } : {}),
           }),
         );
         await this.custody.append(tx, { orgId: u.orgId, specimenId: made[made.length - 1].id, type: "RECEIVED", actorId: u.staffId, note: `aliquot of ${parent.accessionNumber}` });
       }
       await this.custody.append(tx, { orgId: u.orgId, specimenId: parentId, type: "ALIQUOTED", actorId: u.staffId, note: `${count} aliquot(s)` });
-      await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "specimen.aliquot", entityType: "Specimen", entityId: parentId, meta: { count } }, tx);
+      await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "specimen.aliquot", entityType: "Specimen", entityId: parentId, meta: { count, volumeMl: volumeMl ?? null } }, tx);
       return made;
     });
   }
@@ -272,6 +282,8 @@ export class SpecimensService {
         orgId: u.orgId, labId: sp.labId, orderId: sp.orderId, accessionNumber: accession, barcode: accession, specimenType: sp.specimenType, container: sp.container, recollectOfId: sp.id,
       });
       await tx.orderItem.updateMany({ where: { specimenId: sp.id }, data: { specimenId: recollect.id, status: "PENDING" } });
+      const contactNow = sp.order.patient.phone ?? sp.order.patient.externalId;
+      await tx.recollectionRequest.create({ data: { orgId: u.orgId, orderId: sp.orderId, rejectedSpecimenId: sp.id, newSpecimenId: recollect.id, reason, note, status: contactNow ? "NOTIFIED" : "REQUESTED", notifiedAt: contactNow ? new Date() : null, requestedBy: u.staffId } });
       if (sp.order.homeCollection && sp.order.homeCollection.status === "COLLECTED") {
         await tx.homeCollection.update({ where: { id: sp.order.homeCollection.id }, data: { status: "REQUESTED", confirmedAt: null } });
       }

@@ -6,8 +6,8 @@ import { ZBody, z } from "../../common/zod";
 import { SpecimensService } from "./specimens.service";
 
 const Transit = z.object({ scannedBarcode: z.string().optional(), temperatureC: z.number().min(-90).max(60).optional(), location: z.string().max(120).optional(), note: z.string().max(500).optional() }).strict();
-const Reject = z.object({ reason: z.enum(["HAEMOLYSED", "INSUFFICIENT_VOLUME", "MISLABELLED", "WRONG_CONTAINER", "CLOTTED", "OTHER"]), note: z.string().max(500).optional() }).strict();
-const Aliquot = z.object({ count: z.number().int().min(1).max(20) }).strict();
+const Reject = z.object({ reason: z.enum(["HAEMOLYSED", "INSUFFICIENT_VOLUME", "MISLABELLED", "WRONG_CONTAINER", "CLOTTED", "OTHER", "LIPAEMIC", "LEAKED", "UNLABELLED", "TEMPERATURE_EXCURSION", "STABILITY_EXCEEDED"]), note: z.string().max(500).optional() }).strict();
+const Aliquot = z.object({ count: z.number().int().min(1).max(20), volumeMl: z.number().positive().max(100).optional() }).strict();
 const Scan = z.object({ barcode: z.string().min(1) }).strict();
 const Accession = z.object({ accessionNumber: z.string().optional() }).strict();
 
@@ -34,6 +34,6 @@ export class SpecimensController {
   @Post("specimens/:id/process") @Perm("specimens.process") @ZBody(Transit) process(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof Transit>) { return this.svc.transition(u, id, "process", b); }
   @Post("specimens/:id/store") @Perm("specimens.process") @ZBody(Transit) store(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof Transit>) { return this.svc.transition(u, id, "store", b); }
   @Post("specimens/:id/dispose") @Perm("specimens.process") @ZBody(Transit) dispose(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof Transit>) { return this.svc.transition(u, id, "dispose", b); }
-  @Post("specimens/:id/aliquots") @Perm("specimens.process") @ZBody(Aliquot) aliquot(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof Aliquot>) { return this.svc.aliquot(u, id, b.count); }
+  @Post("specimens/:id/aliquots") @Perm("specimens.process") @ZBody(Aliquot) aliquot(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof Aliquot>) { return this.svc.aliquot(u, id, b.count, b.volumeMl); }
   @Post("specimens/:id/reject") @Perm("specimens.reject") @ZBody(Reject) reject(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof Reject>) { return this.svc.reject(u, id, b.reason, b.note); }
 }

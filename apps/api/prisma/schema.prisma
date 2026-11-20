@@ -139,6 +139,11 @@ enum RejectionReason {
   WRONG_CONTAINER
   CLOTTED
   OTHER
+  LIPAEMIC
+  LEAKED
+  UNLABELLED
+  TEMPERATURE_EXCURSION
+  STABILITY_EXCEEDED
 }
 
 enum InstrumentKind {
@@ -715,6 +720,10 @@ model Specimen {
   collectedByRef   String?
   labelsPrinted    Int              @default(0)
   createdAt        DateTime         @default(now())
+  /// Volume on hand (mL); aliquoting/splitting draws it down.
+  volumeMl         Decimal?         @db.Decimal(8, 2)
+  /// Retention window of a stored sample (RetentionRule, default 7 days); disposal list = STORED past this date.
+  retentionUntil   DateTime?
 
   lab      Lab            @relation(fields: [labId], references: [id])
   order    LabOrder       @relation(fields: [orderId], references: [id])
@@ -1485,4 +1494,176 @@ model OrderRevision {
 
   @@unique([orderId, revision])
   @@index([orgId, orderId])
+}
+
+// ====================================================== pre-analytics (M3) ====
+
+enum StorageKind {
+  FRIDGE
+  FREEZER_MINUS20
+  FREEZER_MINUS80
+  ROOM_TEMP
+  RACK
+}
+
+enum RecollectionStatus {
+  REQUESTED
+  NOTIFIED
+  COLLECTED
+  CANCELLED
+}
+
+enum ManifestKind {
+  INTER_BRANCH
+  SEND_OUT
+}
+
+enum ManifestStatus {
+  DRAFT
+  DISPATCHED
+  IN_TRANSIT
+  DELIVERED
+  RECEIVED
+  CANCELLED
+}
+
+/// Freezer / fridge / rack with a rows x cols grid of slots (A1..).
+model StorageUnit {
+  id        String      @id @default(cuid())
+  orgId     String
+  labId     String
+  name      String
+  kind      StorageKind @default(FRIDGE)
+  rows      Int         @default(8)
+  cols      Int         @default(12)
+  tempMinC  Decimal?    @db.Decimal(5, 1)
+  tempMaxC  Decimal?    @db.Decimal(5, 1)
+  active    Boolean     @default(true)
+  createdAt DateTime    @default(now())
+
+  assignments StorageAssignment[]
+
+  @@unique([labId, name])
+  @@index([orgId])
+}
+
+/// Where a specimen lives. A partial unique index (unitId, slot) WHERE releasedAt IS NULL forbids two specimens in one slot.
+model StorageAssignment {
+  id         String    @id @default(cuid())
+  orgId      String
+  specimenId String
+  unitId     String
+  slot       String
+  assignedBy String
+  assignedAt DateTime  @default(now())
+  releasedAt DateTime?
+  releasedBy String?
+
+  unit StorageUnit @relation(fields: [unitId], references: [id])
+
+  @@index([specimenId])
+  @@index([orgId, unitId, releasedAt])
+}
+
+model RetentionRule {
+  id            String @id @default(cuid())
+  orgId         String
+  specimenType  String
+  retentionDays Int
+
+  @@unique([orgId, specimenType])
+}
+
+/// Rejection -> recollection workflow (one per rejected specimen).
+model RecollectionRequest {
+  id                 String             @id @default(cuid())
+  orgId              String
+  orderId            String
+  rejectedSpecimenId String             @unique
+  newSpecimenId      String?
+  reason             RejectionReason
+  note               String?
+  status             RecollectionStatus @default(REQUESTED)
+  requestedBy        String
+  notifiedAt         DateTime?
+  resolvedAt         DateTime?
+  createdAt          DateTime           @default(now())
+
+  @@index([orgId, status])
+}
+
+model Courier {
+  id      String  @id @default(cuid())
+  orgId   String
+  name    String
+  phone   String?
+  company String?
+  active  Boolean @default(true)
+
+  @@unique([orgId, name])
+}
+
+/// Transport of specimens between branches or to a referral (send-out) lab, with courier tracking.
+model TransportManifest {
+  id              String         @id @default(cuid())
+  orgId           String
+  number          String
+  kind            ManifestKind
+  status          ManifestStatus @default(DRAFT)
+  fromLabId       String
+  toLabId         String?
+  /// Referral lab / hospital name for SEND_OUT.
+  destinationName String?
+  courierId       String?
+  courierName     String?
+  courierPhone    String?
+  /// Opaque public tracking reference (no PHI): /public/track/:ref.
+  trackingRef     String         @unique
+  temperatureC    Decimal?       @db.Decimal(5, 1)
+  note            String?
+  dispatchedAt    DateTime?
+  deliveredAt     DateTime?
+  receivedAt      DateTime?
+  receivedBy      String?
+  createdBy       String
+  createdAt       DateTime       @default(now())
+
+  items  ManifestItem[]
+  events CourierEvent[]
+
+  @@unique([orgId, number])
+  @@index([orgId, status])
+}
+
+model ManifestItem {
+  id         String    @id @default(cuid())
+  orgId      String
+  manifestId String
+  specimenId String
+  /// PACKED | RECEIVED | MISSING
+  status     String    @default("PACKED")
+  receivedAt DateTime?
+  note       String?
+
+  manifest TransportManifest @relation(fields: [manifestId], references: [id], onDelete: Cascade)
+
+  @@unique([manifestId, specimenId])
+  @@index([orgId, specimenId])
+}
+
+model CourierEvent {
+  id           String   @id @default(cuid())
+  orgId        String
+  manifestId   String
+  /// PICKED_UP | IN_TRANSIT | DELAYED | DELIVERED | NOTE
+  status       String
+  location     String?
+  note         String?
+  temperatureC Decimal? @db.Decimal(5, 1)
+  by           String
+  at           DateTime @default(now())
+
+  manifest TransportManifest @relation(fields: [manifestId], references: [id], onDelete: Cascade)
+
+  @@index([manifestId, at])
 }
