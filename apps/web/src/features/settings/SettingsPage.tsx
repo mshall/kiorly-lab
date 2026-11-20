@@ -8,8 +8,9 @@ import { Check } from "lucide-react";
 import { Badge, Button, Card, CardTitle, Empty, Field, Input, Select, Table, Tabs, Td, useToast } from "@/components/ui";
 import { Surface } from "@/brand/ui-kit";
 import { ErrorNote, PageHeader } from "@/components/common";
+import { AuditViewer, ImportTab, TemplatesTab } from "./SettingsExtras";
 
-const ROLES = ["OWNER", "LAB_DIRECTOR", "AUTHORIZED_SIGNATORY", "TECHNOLOGIST", "PHLEBOTOMIST", "RECEPTION", "BRANCH_MANAGER"];
+const ROLES = ["OWNER", "LAB_DIRECTOR", "AUTHORIZED_SIGNATORY", "TECHNOLOGIST", "SUPERVISOR", "PHLEBOTOMIST", "RECEPTION", "FINANCE", "BRANCH_MANAGER"];
 
 /** HVBK01: the districts a lab collects in (comma separated); saved through PUT /labs/:id/coverage. */
 function CoverageEditor({ lab, onSaved }: { lab: any; onSaved: () => void }) {
@@ -41,7 +42,6 @@ export function SettingsPage() {
   const settings = useQuery({ queryKey: ["settings"], queryFn: () => api<any>("/settings"), enabled: tab === "general" });
   const clients = useQuery({ queryKey: ["clients"], queryFn: () => api<any[]>("/integration-clients"), enabled: tab === "integrations" && can("settings.manage") });
   const inbox = useQuery({ queryKey: ["inbox"], queryFn: () => api<any[]>("/dev/inbox?limit=50"), enabled: tab === "integrations" && can("settings.manage") });
-  const audit = useQuery({ queryKey: ["audit"], queryFn: () => api<any[]>("/audit-logs?limit=100"), enabled: tab === "audit" && can("audit.read") });
   const [g, setG] = useState<any>(null);
   const refresh = () => void qc.invalidateQueries();
   const addStaff = useMutation({ mutationFn: () => api("/staff", { body: { ...s, signatoryLicenceNo: s.signatoryLicenceNo || undefined } }), onSuccess: () => { setS({ ...s, email: "", displayName: "", signatoryLicenceNo: "" }); refresh(); toast(t("common.saved")); } });
@@ -55,6 +55,8 @@ export function SettingsPage() {
     ...(can("staff.manage") ? [{ id: "staff", label: t("set.staff") }, { id: "rbac", label: t("set.rbac") }] : []),
     { id: "labs", label: t("set.labs") },
     ...(can("settings.manage") ? [{ id: "general", label: t("set.general") }, { id: "integrations", label: t("set.integrations") }] : []),
+    ...(can("reports.read") ? [{ id: "templates", label: t("set.templates") }] : []),
+    ...(can("catalogue.write") ? [{ id: "import", label: t("set.import") }] : []),
     ...(can("audit.read") ? [{ id: "audit", label: t("set.audit") }] : []),
   ];
   return (
@@ -118,6 +120,12 @@ export function SettingsPage() {
         <Card className="grid gap-3 sm:grid-cols-2">
           <Field label={t("common.name")}><Input value={form.name} onChange={(e) => setG({ ...form, name: e.target.value })} /></Field>
           <Field label={t("set.vat")} hint={t("set.vatHint")}><Input type="number" step="0.01" value={form.vatRatePercent} onChange={(e) => setG({ ...form, vatRatePercent: Number(e.target.value) })} /></Field>
+          <Field label={t("set.defaultLocale")}><Select value={form.defaultLocale ?? "ar"} onChange={(e) => setG({ ...form, defaultLocale: e.target.value })}><option value="ar">العربية</option><option value="en">English</option></Select></Field>
+          <div className="sm:col-span-2 rounded-lg border border-border bg-muted/40 p-3" data-testid="integration-mode">
+            <p className="mb-1 text-sm font-semibold">{t("set.mode")}</p>
+            <div className="flex flex-wrap gap-4">{["STANDALONE", "INTEGRATED"].map((m) => <label key={m} className="flex items-center gap-2 text-sm"><input type="radio" name="mode" checked={form.integrationMode === m} onChange={() => setG({ ...form, integrationMode: m })} />{t(`set.modes.${m}`)}</label>)}</div>
+            <p className="mt-1 text-xs text-muted-foreground">{t(`set.modeNote.${form.integrationMode ?? "INTEGRATED"}`)}</p>
+          </div>
           <Field label={t("set.qcHours")} hint={t("set.qcHoursHint")}><Input type="number" value={form.qcValidityHours} onChange={(e) => setG({ ...form, qcValidityHours: Number(e.target.value) })} /></Field>
           <div className="sm:col-span-2 rounded-md border border-border p-3" data-testid="safety-settings">
             <p className="mb-2 text-sm font-semibold">{t("set.safety")}</p>
@@ -133,6 +141,8 @@ export function SettingsPage() {
           <p className="sm:col-span-2 text-xs text-muted-foreground">{t("set.noTaxNote")}</p>
         </Card>
       ) : null}
+      {tab === "templates" ? <TemplatesTab /> : null}
+      {tab === "import" ? <ImportTab /> : null}
       {tab === "integrations" ? (
         <div className="space-y-4">
           <Card>
@@ -154,9 +164,7 @@ export function SettingsPage() {
           </Card>
         </div>
       ) : null}
-      {tab === "audit" ? (
-        audit.data?.length ? <Table head={[t("common.date"), t("set.action"), t("set.entity"), t("set.actor")]}>{audit.data.map((a) => <tr key={a.id}><Td className="text-xs">{dt(a.at, i18n.language)}</Td><Td className="font-mono text-xs">{a.action}</Td><Td className="text-xs">{a.entityType} {a.entityId.slice(0, 8)}</Td><Td className="font-mono text-xs">{a.actorId?.slice(0, 10) ?? "system"}</Td></tr>)}</Table> : <Empty>{t("common.none")}</Empty>
-      ) : null}
+      {tab === "audit" && can("audit.read") ? <AuditViewer /> : null}
     </>
   );
 }

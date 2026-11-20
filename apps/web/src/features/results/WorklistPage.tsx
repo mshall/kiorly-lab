@@ -2,7 +2,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { CheckCheck, Play } from "lucide-react";
+import { CheckCheck, Play, RefreshCw } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Badge, Button, Input, Select, useToast } from "@/components/ui";
@@ -21,6 +21,7 @@ const stateOf = (r: any): CellState => {
 
 function ResultRow({ item, analyte, result, instrumentId, canEnter, canSecond, canTech }: { item: any; analyte: any; result: any; instrumentId: string; canEnter: boolean; canSecond: boolean; canTech: boolean }) {
   const { t, i18n } = useTranslation();
+  const { can } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
   const [v, setV] = useState("");
@@ -29,10 +30,14 @@ function ResultRow({ item, analyte, result, instrumentId, canEnter, canSecond, c
   /** Keyboard-first entry: after a value is saved, focus moves to the next empty value field. */
   const focusNext = (idx: number) => requestAnimationFrame(() => requestAnimationFrame(() => (document.querySelectorAll<HTMLInputElement>("input[data-entry]")[idx])?.focus()));
   const entryIndex = (el: Element | null) => (el ? Array.from(document.querySelectorAll("input[data-entry]")).indexOf(el) : -1);
-  const enter = useMutation({ mutationFn: () => api("/results", { body: { orderItemId: item.id, analyteId: analyte.id, instrumentId, value: Number(v) } }), onSuccess: async () => { const i = entryIndex(document.activeElement); setV(""); await refresh(); if (i >= 0) focusNext(i); } });
-  const second = useMutation({ mutationFn: () => api(`/results/${result.id}/second-entry`, { body: { value: Number(v2) } }), onSuccess: async () => { const i = entryIndex(document.activeElement); setV2(""); await refresh(); toast(t("work.confirmed")); if (i >= 0) focusNext(i); } });
+  const textual = analyte.valueType && analyte.valueType !== "NUMERIC";
+  const [dil, setDil] = useState("");
+  const [rr, setRr] = useState<{ reason: string; factor: string } | null>(null);
+  const enter = useMutation({ mutationFn: () => api("/results", { body: { orderItemId: item.id, analyteId: analyte.id, instrumentId, ...(textual ? { valueText: v } : { value: Number(v), ...(dil ? { dilutionFactor: Number(dil) } : {}) }) } }), onSuccess: async () => { const i = entryIndex(document.activeElement); setV(""); await refresh(); if (i >= 0) focusNext(i); } });
+  const second = useMutation({ mutationFn: () => api(`/results/${result.id}/second-entry`, { body: textual ? { valueText: v2 } : { value: Number(v2) } }), onSuccess: async () => { const i = entryIndex(document.activeElement); setV2(""); await refresh(); toast(t("work.confirmed")); if (i >= 0) focusNext(i); } });
   const tech = useMutation({ mutationFn: () => api(`/results/${result.id}/tech-validate`, { body: {} }), onSuccess: refresh });
-  const err = enter.error ?? second.error ?? tech.error;
+  const rerun = useMutation({ mutationFn: () => api(`/results/${result.id}/rerun`, { body: { reason: rr!.reason, ...(rr!.factor ? { dilutionFactor: Number(rr!.factor) } : {}) } }), onSuccess: () => { setRr(null); void refresh(); toast(t("work.rerunRequested")); } });
+  const err = enter.error ?? second.error ?? tech.error ?? rerun.error;
   const st = stateOf(result);
   const submit = (fn: () => void) => (e: FormEvent) => { e.preventDefault(); fn(); };
   const crit = !!result?.flag?.startsWith("CRITICAL");
@@ -46,7 +51,10 @@ function ResultRow({ item, analyte, result, instrumentId, canEnter, canSecond, c
         {!result ? (
           canEnter ? (
             <form className="flex max-w-xs gap-2" onSubmit={submit(() => v && instrumentId && enter.mutate())}>
-              <Input data-entry="1" type="number" step="any" inputMode="decimal" value={v} onChange={(e) => setV(e.target.value)} aria-label={`${analyte.code} ${t("work.value")}`} placeholder={t("work.value")} disabled={!instrumentId} className="tabular-nums" />
+              {analyte.calculated ? <span className="self-center text-xs text-muted-foreground">{t("work.calculated")}</span> : analyte.valueType === "CHOICE" || analyte.valueType === "SEMI_QUANT" ? (
+                <Select data-entry="1" value={v} onChange={(e) => setV(e.target.value)} aria-label={`${analyte.code} ${t("work.value")}`} disabled={!instrumentId}><option value="">{t("work.value")}</option>{(analyte.allowedValues ?? []).map((x: string) => <option key={x}>{x}</option>)}</Select>
+              ) : analyte.valueType === "TEXT" ? <Input data-entry="1" value={v} onChange={(e) => setV(e.target.value)} aria-label={`${analyte.code} ${t("work.value")}`} placeholder={t("work.value")} disabled={!instrumentId} dir="auto" />
+              : <><Input data-entry="1" type="number" step="any" inputMode="decimal" value={v} onChange={(e) => setV(e.target.value)} aria-label={`${analyte.code} ${t("work.value")}`} placeholder={t("work.value")} disabled={!instrumentId} className="tabular-nums" /><Input type="number" step="any" min="1" value={dil} onChange={(e) => setDil(e.target.value)} aria-label={t("work.dilution")} placeholder={t("work.dilution")} title={t("work.dilutionHint")} className="w-20 tabular-nums" /></>}
               <Button type="submit" size="sm" className="h-10 shrink-0" disabled={!v || !instrumentId || enter.isPending}>{t("work.enter")}</Button>
             </form>
           ) : <span className="text-xs text-muted-foreground">-</span>
@@ -63,12 +71,15 @@ function ResultRow({ item, analyte, result, instrumentId, canEnter, canSecond, c
       <div className="flex flex-wrap items-center gap-2 md:justify-end">
         {st === "second" && canSecond ? (
           <form className="flex gap-2" onSubmit={submit(() => v2 && second.mutate())}>
-            <Input data-entry="1" type="number" step="any" value={v2} onChange={(e) => setV2(e.target.value)} placeholder={t("work.rekey")} aria-label={t("work.rekey")} className="w-32 tabular-nums" />
+            {textual ? <Input data-entry="1" value={v2} onChange={(e) => setV2(e.target.value)} placeholder={t("work.rekey")} aria-label={t("work.rekey")} className="w-32" dir="auto" /> : <Input data-entry="1" type="number" step="any" value={v2} onChange={(e) => setV2(e.target.value)} placeholder={t("work.rekey")} aria-label={t("work.rekey")} className="w-32 tabular-nums" />}
             <Button type="submit" size="sm" variant="secondary" className="h-10" disabled={!v2 || second.isPending}>{t("work.confirm")}</Button>
           </form>
         ) : null}
         {st === "validate" && canTech ? <Button size="sm" variant="outline" disabled={tech.isPending} onClick={() => tech.mutate()}><CheckCheck aria-hidden className="size-4" />{t("work.techValidate")}</Button> : null}
         {st === "review" ? <Link className="text-xs font-medium text-primary underline" to="/validation">{t("work.deltaReview")}</Link> : null}
+        {result && result.status !== "RELEASED" && result.source !== "CALCULATED" && can("results.rerun") ? (rr ? (
+          <span className="flex flex-wrap items-center gap-2"><Input className="h-8 w-40 text-xs" value={rr.reason} onChange={(e) => setRr({ ...rr, reason: e.target.value })} placeholder={t("work.rerunReason")} aria-label={t("work.rerunReason")} /><Input type="number" min="1" step="any" className="h-8 w-20 text-xs" value={rr.factor} onChange={(e) => setRr({ ...rr, factor: e.target.value })} placeholder={t("work.dilution")} aria-label={t("work.dilution")} /><Button size="sm" variant="outline" disabled={rr.reason.length < 3 || rerun.isPending} onClick={() => rerun.mutate()}>{t("work.rerun")}</Button></span>
+        ) : <Button size="sm" variant="ghost" onClick={() => setRr({ reason: "", factor: "" })}><RefreshCw aria-hidden className="size-3.5" />{t("work.rerun")}</Button>) : null}
       </div>
       {err ? <div className="md:col-span-3"><ErrorNote error={err} /></div> : null}
     </li>
@@ -87,7 +98,10 @@ export function WorklistPage() {
   const [search, setSearch] = useState("");
   const [picked, setPicked] = useState<string[]>([]);
   const instruments = useQuery({ queryKey: ["instruments"], queryFn: () => api<any[]>("/instruments") });
-  const wl = useQuery({ queryKey: ["worklist"], queryFn: () => api<any[]>("/worklist"), refetchInterval: 20_000 });
+  const [section, setSection] = useState("");
+  const [prio, setPrio] = useState("");
+  const [onlyInst, setOnlyInst] = useState(false);
+  const wl = useQuery({ queryKey: ["worklist", section, prio, onlyInst ? instrumentId : ""], queryFn: () => api<any[]>(`/worklist?${[section && `section=${section}`, prio && `priority=${prio}`, onlyInst && (instrumentId || "") && `instrumentId=${instrumentId}`].filter(Boolean).join("&")}`), refetchInterval: 20_000 });
   const inst = instruments.data?.filter((i) => i.active) ?? [];
   const chosen = instrumentId || inst[0]?.id || "";
   const cur = inst.find((i) => i.id === chosen);
@@ -131,6 +145,9 @@ export function WorklistPage() {
           <div className="min-w-[14rem]"><label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="inst">{t("work.instrument")}</label><Select id="inst" value={chosen} onChange={(e) => setInstrumentId(e.target.value)}>{inst.map((i) => <option key={i.id} value={i.id}>{i.name}{i.protocol ? ` (${i.protocol})` : ""}</option>)}</Select></div>
           {analyzersOn && cur?.protocol ? <div><label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="mode">{t("work.simMode")}</label><Select id="mode" value={mode} onChange={(e) => setMode(e.target.value)}>{["normal", "abnormal", "critical"].map((m) => <option key={m} value={m}>{t(`work.modes.${m}`)}</option>)}</Select></div> : null}
           {!analyzersOn ? <Badge tone="warn" className="mb-2">{t("work.manualOnly")}</Badge> : null}
+          <div><label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="sec">{t("work.section")}</label><Select id="sec" value={section} onChange={(e) => setSection(e.target.value)}><option value="">{t("common.all")}</option>{["HEMATOLOGY", "CHEMISTRY", "IMMUNOLOGY", "SEROLOGY", "COAGULATION", "URINALYSIS", "MICROBIOLOGY", "GENERAL"].map((x) => <option key={x} value={x}>{t(`work.sections.${x}`)}</option>)}</Select></div>
+          <div><label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="prio">{t("orders.priority")}</label><Select id="prio" value={prio} onChange={(e) => setPrio(e.target.value)}><option value="">{t("common.all")}</option>{["STAT", "URGENT", "ROUTINE"].map((x) => <option key={x} value={x}>{t(`ux.priority.${x}`, { defaultValue: x })}</option>)}</Select></div>
+          <label className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"><input type="checkbox" checked={onlyInst} onChange={(e) => setOnlyInst(e.target.checked)} />{t("work.onlyInstrument")}</label>
           <SearchBox value={search} onChange={setSearch} placeholder={t("ux.worklist.search")} className="ms-auto" />
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/70 pt-3">

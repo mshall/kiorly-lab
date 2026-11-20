@@ -4,7 +4,7 @@ import { api, getToken, setToken } from "@/lib/api";
 
 export interface Me {
   user: { id: string; displayName: string; role: string; signatory: boolean };
-  tenant: { id: string; name: string; edition: string; marketCode: string; currency: string; vatRatePercent: number };
+  tenant: { id: string; name: string; edition: string; marketCode: string; currency: string; vatRatePercent: number; integrationMode?: "STANDALONE" | "INTEGRATED"; defaultLocale?: string };
   labs: { id: string; name: string; code: string }[];
   permissions: string[];
   flags: Record<string, { enabled: boolean; scope?: string }>;

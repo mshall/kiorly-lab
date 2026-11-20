@@ -6,13 +6,14 @@ import { api, download } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { dOnly, dt, money, num } from "@/lib/format";
 import { Check, Eye, FileText, Home } from "lucide-react";
-import { Badge, Button, Card, CardTitle, Modal, Table, Td, useToast } from "@/components/ui";
+import { Badge, Button, Card, CardTitle, Input, Modal, Table, Td, useToast } from "@/components/ui";
 import { Meta, PdfPreview, PriorityChip } from "@/components/kit";
 import { Skeleton, StatusChip, Surface, kcn } from "@/brand/ui-kit";
 import { ErrorNote, PageHeader, ResultValue, StatusBadge } from "@/components/common";
 import { SpecimenPanel } from "@/features/specimens/SpecimenPanel";
+import { OrderExtras } from "@/components/OrderExtras";
 
-const CHANNELS = ["PRINTED", "PATIENT_LINK_OTP", "KIORLY_CLINIC_IMPORT", "KIOREX_VAULT"];
+const CHANNELS = ["PRINTED", "PATIENT_LINK_OTP", "KIORLY_CLINIC_IMPORT", "KIOREX_VAULT", "REFERRER_PORTAL"];
 
 export function OrderDetailPage() {
   const { id = "" } = useParams();
@@ -34,7 +35,11 @@ export function OrderDetailPage() {
   const run = <T,>(fn: () => Promise<T>, msg?: string) => ({ mutationFn: fn, onSuccess: () => { refresh(); if (msg) toast(msg); } });
   const verify = useMutation(run(() => api(`/orders/${id}/verify-identity`, { body: { identifiersChecked: ids } }), t("orders.idVerified")));
   const saveConsent = useMutation(run(() => api(`/orders/${id}/consent`, { method: "PUT", body: { channels: consent ?? o.data.consentShareChannels } }), t("common.saved")));
-  const cancel = useMutation(run(() => api(`/orders/${id}/cancel`, { body: {} })));
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [deliver, setDeliver] = useState<any>(null);
+  const cancel = useMutation({ mutationFn: () => api(`/orders/${id}/cancel`, { body: { reason: cancelReason } }), onSuccess: () => { setCancelOpen(false); refresh(); } });
+  const doDeliver = useMutation({ mutationFn: () => api<any[]>(`/reports/${deliver.id}/deliver`, { body: { recipient: deliver.recipient, channels: deliver.channels } }), onSuccess: (r) => { setDeliver(null); refresh(); toast(t("oe.delivered", { ok: r.filter((x) => x.status === "SENT").length, n: r.length })); } });
   const medical = useMutation(run(() => api(`/orders/${id}/medical-validate`, { body: {} }), t("order.medicalDone")));
   const sign = useMutation(run(() => api(`/orders/${id}/reports`, { body: {} }), t("order.signed")));
   const release = useMutation({ mutationFn: () => api(`/reports/${rel.id}/release`, { body: { channels } }), onSuccess: () => { setRel(null); refresh(); toast(t("order.released")); } });
@@ -60,7 +65,7 @@ export function OrderDetailPage() {
   return (
     <>
       <PageHeader title={`${d.orderNumber}`} sub={`${d.patient.fullName} · ${t(`orders.sources.${d.source}`)}`}
-        actions={<><PriorityChip priority={d.priority} /><StatusBadge value={d.status} />{can("orders.cancel") && !["CANCELLED", "RELEASED"].includes(d.status) ? <Button variant="outline" size="sm" onClick={() => cancel.mutate()}>{t("order.cancel")}</Button> : null}</>} />
+        actions={<><PriorityChip priority={d.priority} /><StatusBadge value={d.status} />{can("orders.cancel") && !["CANCELLED", "RELEASED"].includes(d.status) ? <Button variant="outline" size="sm" onClick={() => setCancelOpen(true)}>{t("order.cancel")}</Button> : null}</>} />
       <ErrorNote error={cancel.error ?? medical.error ?? sign.error ?? invoice.error ?? verify.error} />
       {!cancelled ? (
         <ol aria-label={t("ux.order.progress")} className="mb-5 flex items-start">
@@ -124,6 +129,7 @@ export function OrderDetailPage() {
                         <Button size="sm" variant="outline" onClick={() => setPdf({ ...r, filename: `${d.orderNumber}-v${r.version}.pdf` })}><Eye aria-hidden className="size-4" />{t("ux.preview.open")}</Button>
                         <Button size="sm" variant="outline" onClick={() => void download(`/reports/${r.id}/pdf`, `${d.orderNumber}-v${r.version}.pdf`)}>PDF</Button>
                         {can("reports.release") && r.version === reports.data[0].version ? <Button size="sm" onClick={() => { setRel(r); setChannels([]); }}>{t("order.release")}</Button> : null}
+                        {can("reports.deliver") && r.releases.length && r.version === reports.data[0].version ? <Button size="sm" variant="outline" onClick={() => setDeliver({ id: r.id, recipient: "PATIENT", channels: ["WHATSAPP"] })}>{t("oe.deliver")}</Button> : null}
                       </div>
                     </li>
                   ))}
@@ -187,6 +193,7 @@ export function OrderDetailPage() {
               </div>
             ) : null}
           </Card>
+          <OrderExtras order={d} results={results.data ?? []} />
           {can("billing.invoice") ? (
             <Card>
               <CardTitle>{t("order.billing")}</CardTitle>
@@ -208,6 +215,15 @@ export function OrderDetailPage() {
         <p className="mb-3 text-sm text-muted-foreground">{t("order.releaseNote")}</p>
         <div className="space-y-2">{CHANNELS.map((c) => { const ok = d.consentShareChannels.includes(c); return <label key={c} className={`flex items-center gap-2 text-sm ${ok ? "" : "opacity-40"}`}><input type="checkbox" disabled={!ok} checked={channels.includes(c)} onChange={() => toggle(channels, setChannels, c)} />{t(`channel.${c}`)}{!ok ? <Badge tone="warn">{t("order.noConsent")}</Badge> : null}</label>; })}</div>
         <div className="mt-4 space-y-2"><ErrorNote error={release.error} /><Button disabled={!channels.length || release.isPending} onClick={() => release.mutate()}>{t("order.release")}</Button></div>
+      </Modal>
+      <Modal open={cancelOpen} onClose={() => setCancelOpen(false)} title={t("order.cancel")}>
+        <div className="space-y-3"><p className="text-sm text-muted-foreground">{t("oe.cancelNote")}</p><Input value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} placeholder={t("oe.reason")} aria-label={t("oe.reason")} autoFocus /><ErrorNote error={cancel.error} /><Button variant="outline" disabled={cancelReason.trim().length < 3 || cancel.isPending} onClick={() => cancel.mutate()}>{t("order.cancel")}</Button></div>
+      </Modal>
+      <Modal open={Boolean(deliver)} onClose={() => setDeliver(null)} title={t("oe.deliver")}>
+        {deliver ? <div className="space-y-3"><p className="text-sm text-muted-foreground">{t("oe.deliverNote")}</p>
+          <div className="flex gap-4">{["PATIENT", "REFERRER"].map((r) => <label key={r} className="flex items-center gap-2 text-sm"><input type="radio" name="rcp" checked={deliver.recipient === r} onChange={() => setDeliver({ ...deliver, recipient: r })} />{t(`oe.recipients.${r}`)}</label>)}</div>
+          <div className="flex gap-4">{["EMAIL", "WHATSAPP", "SMS"].map((c) => <label key={c} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={deliver.channels.includes(c)} onChange={() => setDeliver({ ...deliver, channels: deliver.channels.includes(c) ? deliver.channels.filter((x: string) => x !== c) : [...deliver.channels, c] })} />{t(`ref.chan.${c}`)}</label>)}</div>
+          <ErrorNote error={doDeliver.error} /><Button disabled={!deliver.channels.length || doDeliver.isPending} onClick={() => doDeliver.mutate()}>{t("oe.send")}</Button></div> : null}
       </Modal>
     </>
   );

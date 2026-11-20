@@ -1,28 +1,47 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Activity, AlertTriangle, BarChart3, BookOpen, ClipboardList, CreditCard, FileCheck2, FlaskConical, LayoutDashboard, LogOut, Menu, Microscope, ScanBarcode, Settings, ShieldCheck, Smartphone } from "lucide-react";
+import { Activity, AlertTriangle, BadgeCheck, BarChart3, BookOpen, BriefcaseMedical, Bug, ClipboardList, CreditCard, FileCheck2, FlaskConical, LayoutDashboard, LineChart, LogOut, Menu, Microscope, Package, ScanBarcode, Settings, ShieldCheck, Smartphone, Snowflake, Ticket, Users, Wallet } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { setLang, type Lang } from "@/lib/i18n";
+import { applyTenantDefault, setLang, type Lang } from "@/lib/i18n";
 import { cn } from "@/lib/cn";
 import { Badge, Button } from "@/components/ui";
 import { KiorlyBrand, ThemeToggle } from "@/brand/ui-kit";
 
-const NAV = [
-  { to: "/", key: "dashboard", icon: LayoutDashboard, perm: "dashboard.read", end: true },
-  { to: "/orders", key: "orders", icon: ClipboardList, perm: "orders.read" },
-  { to: "/accessioning", key: "accessioning", icon: ScanBarcode, perm: "specimens.read" },
-  { to: "/worklist", key: "worklist", icon: FlaskConical, perm: "results.read" },
-  { to: "/validation", key: "validation", icon: ShieldCheck, perm: "results.read" },
-  { to: "/qc", key: "qc", icon: Activity, perm: "qc.read" },
-  { to: "/release", key: "release", icon: FileCheck2, perm: "reports.read" },
-  { to: "/critical", key: "critical", icon: AlertTriangle, perm: "critical.read" },
-  { to: "/billing", key: "billing", icon: CreditCard, perm: "billing.read" },
-  { to: "/reports", key: "reports", icon: BarChart3, perm: "dashboard.read" },
-  { to: "/catalogue", key: "catalogue", icon: BookOpen, perm: "catalogue.read" },
-  { to: "/settings", key: "settings", icon: Settings, perm: "staff.manage" },
+const NAV_GROUPS = [
+  { key: "front", items: [
+    { to: "/", key: "dashboard", icon: LayoutDashboard, perm: "dashboard.read", end: true },
+    { to: "/reception", key: "reception", icon: Ticket, perm: "orders.read" },
+    { to: "/orders", key: "orders", icon: ClipboardList, perm: "orders.read" },
+    { to: "/patients", key: "patients", icon: Users, perm: "patients.read" },
+    { to: "/referrers", key: "referrers", icon: BriefcaseMedical, perm: "referrers.read" },
+  ] },
+  { key: "lab", items: [
+    { to: "/accessioning", key: "accessioning", icon: ScanBarcode, perm: "specimens.read" },
+    { to: "/storage", key: "storage", icon: Snowflake, perm: "specimens.read" },
+    { to: "/worklist", key: "worklist", icon: FlaskConical, perm: "results.read" },
+    { to: "/microbiology", key: "microbiology", icon: Bug, perm: "results.read" },
+    { to: "/validation", key: "validation", icon: ShieldCheck, perm: "results.read" },
+    { to: "/release", key: "release", icon: FileCheck2, perm: "reports.read" },
+    { to: "/critical", key: "critical", icon: AlertTriangle, perm: "critical.read" },
+  ] },
+  { key: "quality", items: [
+    { to: "/qc", key: "qc", icon: Activity, perm: "qc.read" },
+    { to: "/quality", key: "quality", icon: BadgeCheck, perm: "quality.read" },
+    { to: "/inventory", key: "inventory", icon: Package, perm: "inventory.read" },
+  ] },
+  { key: "business", items: [
+    { to: "/billing", key: "billing", icon: CreditCard, perm: "billing.read" },
+    { to: "/finance", key: "finance", icon: Wallet, perm: "billing.read" },
+    { to: "/analytics", key: "analytics", icon: LineChart, perm: "analytics.read" },
+    { to: "/reports", key: "reports", icon: BarChart3, perm: "dashboard.read" },
+  ] },
+  { key: "admin", items: [
+    { to: "/catalogue", key: "catalogue", icon: BookOpen, perm: "catalogue.read" },
+    { to: "/settings", key: "settings", icon: Settings, perm: "staff.manage" },
+  ] },
 ] as const;
 
 export function AppShell() {
@@ -31,9 +50,9 @@ export function AppShell() {
   const [open, setOpen] = useState(false);
   const nav = useNavigate();
   const next: Lang = i18n.language === "ar" ? "en" : "ar";
+  useEffect(() => { applyTenantDefault(me?.tenant.defaultLocale); }, [me?.tenant.defaultLocale]);
   const alerts = useQuery({ queryKey: ["critical-count"], queryFn: () => api<any[]>("/critical-alerts"), enabled: can("critical.read"), refetchInterval: 30_000 });
   const openAlerts = alerts.data?.length ?? 0;
-  const items = NAV.filter((n) => can(n.perm));
   return (
     <div className="flex min-h-screen">
       <aside className={cn("fixed inset-y-0 start-0 z-40 w-64 shrink-0 border-e border-border bg-card p-4 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto transition-transform lg:translate-x-0", open ? "translate-x-0" : "max-lg:-translate-x-full max-lg:rtl:translate-x-full")}>
@@ -42,14 +61,23 @@ export function AppShell() {
           <div className="mt-2 text-sm font-semibold leading-tight">{t("app.product")}</div>
           <div className="truncate text-xs text-muted-foreground">{me?.tenant.name}</div>
         </div>
-        <nav className="space-y-1" aria-label="main">
-          {items.map((n) => (
-            <NavLink key={n.to} to={n.to} end={"end" in n} onClick={() => setOpen(false)} className={({ isActive }) => cn("relative flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150", isActive ? "bg-accent font-semibold text-accent-foreground before:absolute before:inset-y-2 before:start-0 before:w-[3px] before:rounded-full before:bg-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground")}>
-              <n.icon className="h-4 w-4" />
-              <span className="flex-1">{t(`nav.${n.key}`)}</span>
-              {n.key === "critical" && openAlerts > 0 ? <Badge tone="crit">{openAlerts}</Badge> : null}
-            </NavLink>
-          ))}
+        <nav className="space-y-4" aria-label="main">
+          {NAV_GROUPS.map((g) => {
+            const items = g.items.filter((n) => can(n.perm));
+            if (!items.length) return null;
+            return (
+              <div key={g.key} role="group" aria-label={t(`nav.groups.${g.key}`)} className="space-y-1">
+                <div className="px-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/80 rtl:normal-case rtl:tracking-normal">{t(`nav.groups.${g.key}`)}</div>
+                {items.map((n) => (
+                  <NavLink key={n.to} to={n.to} end={"end" in n} onClick={() => setOpen(false)} className={({ isActive }) => cn("relative flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150", isActive ? "bg-accent font-semibold text-accent-foreground before:absolute before:inset-y-2 before:start-0 before:w-[3px] before:rounded-full before:bg-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground")}>
+                    <n.icon className="h-4 w-4" />
+                    <span className="flex-1">{t(`nav.${n.key}`)}</span>
+                    {n.key === "critical" && openAlerts > 0 ? <Badge tone="crit">{openAlerts}</Badge> : null}
+                  </NavLink>
+                ))}
+              </div>
+            );
+          })}
           {can("collection.perform") ? (
             <NavLink to="/phleb" className="flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><Smartphone className="h-4 w-4" />{t("nav.phleb")}</NavLink>
           ) : null}
@@ -62,6 +90,7 @@ export function AppShell() {
           <Button variant="ghost" size="icon" className="lg:hidden" aria-label="menu" onClick={() => setOpen(true)}><Menu className="h-5 w-5" /></Button>
           <div className="flex-1" />
           {!flagOn("lab.module") ? <Badge tone="warn">{t("shell.moduleOff")}</Badge> : null}
+          <Badge tone={me?.tenant.integrationMode === "STANDALONE" ? "muted" : "info"} title={t("set.mode")}>{me?.tenant.integrationMode === "STANDALONE" ? t("shell.standalone") : t("shell.integrated")}</Badge>
           <Badge tone="info"><Microscope className="me-1 h-3 w-3" />{me?.tenant.edition}</Badge>
           <ThemeToggle labels={{ theme: t("theme.label"), light: t("theme.light"), dark: t("theme.dark"), system: t("theme.system") }} />
           <Button variant="outline" size="sm" className="h-10 shrink-0" onClick={() => setLang(next)}>{t("app.lang")}</Button>

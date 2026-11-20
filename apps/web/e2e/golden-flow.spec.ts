@@ -10,7 +10,7 @@ async function post(r: APIRequestContext, path: string, token: string | null, da
 }
 const as = async (page: Page, token: string) => {
   await page.goto("/login");
-  await page.evaluate((t) => localStorage.setItem("kiorly.lab.token", t), token);
+  await page.evaluate((t) => { localStorage.setItem("kiorly.lab.token", t); localStorage.setItem("kiorly.lang", "en"); }, token);
 };
 
 test("golden flow: order -> collect -> QC -> results (dual control) -> validation -> signed report -> release -> patient OTP link", async ({ page, request }) => {

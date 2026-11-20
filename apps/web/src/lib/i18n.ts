@@ -11,14 +11,26 @@ export function applyDirection(lang: Lang): void {
   document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
 }
 
-function initialLang(): Lang {
+export function savedLang(): Lang | null {
   try {
     const saved = localStorage.getItem(KEY);
     if (saved === "ar" || saved === "en") return saved;
   } catch {
     /* storage unavailable */
   }
-  return navigator.language?.toLowerCase().startsWith("ar") ? "ar" : "en";
+  return null;
+}
+
+/** Arabic (RTL) is the default; a user's own choice wins, then the lab's default language (applied after login). */
+function initialLang(): Lang {
+  return savedLang() ?? "ar";
+}
+
+/** Applies the lab's default language when the user has not chosen one (not persisted, so the lab setting stays authoritative). */
+export function applyTenantDefault(lang: string | undefined): void {
+  if (savedLang() || (lang !== "ar" && lang !== "en") || i18n.language === lang) return;
+  void i18n.changeLanguage(lang);
+  applyDirection(lang);
 }
 
 export function setLang(lang: Lang): void {

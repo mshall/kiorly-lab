@@ -1,21 +1,27 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { today } from "@/lib/format";
-import { Badge, Button, Card, CardTitle, Field, Input, Select, Spinner } from "@/components/ui";
+import { Badge, Button, Card, CardTitle, Field, Input, Select, Spinner, Textarea } from "@/components/ui";
 import { ErrorNote, PageHeader } from "@/components/common";
 
-const CHANNELS = ["PRINTED", "PATIENT_LINK_OTP", "KIORLY_CLINIC_IMPORT", "KIOREX_VAULT"];
+const CHANNELS = ["PRINTED", "PATIENT_LINK_OTP", "KIORLY_CLINIC_IMPORT", "KIOREX_VAULT", "REFERRER_PORTAL"];
 const IDS = ["dateOfBirth", "phone", "nationalId"];
 
 /** KLORD02/03 walk-in & referring-doctor order: two identifiers, consent per channel, tests/packages, optional home collection. */
 export function NewOrderPage() {
-  const { t } = useTranslation();
-  const { flagOn, me } = useAuth();
+  const { t, i18n } = useTranslation();
+  const { flagOn, me, can } = useAuth();
   const nav = useNavigate();
+  const [sp] = useSearchParams();
+  const [referrerId, setReferrerId] = useState("");
+  const [clinical, setClinical] = useState("");
+  const [icdCodes, setIcdCodes] = useState<string[]>([]);
+  const [icdQ, setIcdQ] = useState("");
+  const [fasting, setFasting] = useState(false);
   const [p, setP] = useState({ fullName: "", dateOfBirth: "", sex: "UNKNOWN", phone: "", nationalId: "" });
   const [existing, setExisting] = useState<any>(null);
   const [search, setSearch] = useState("");
@@ -32,6 +38,10 @@ export function NewOrderPage() {
   const [slotId, setSlotId] = useState("");
   const [address, setAddress] = useState("");
   const catalogue = useQuery({ queryKey: ["tests"], queryFn: () => api<any[]>("/catalogue/tests") });
+  const referrers = useQuery({ queryKey: ["referrers-pick"], queryFn: () => api<any[]>("/referrers?active=true"), enabled: can("referrers.read") });
+  const icd = useQuery({ queryKey: ["icd", icdQ], queryFn: () => api<any[]>(`/icd/search?q=${encodeURIComponent(icdQ)}`), enabled: icdQ.length >= 1 });
+  const preset = useQuery({ queryKey: ["patient", sp.get("patientId")], queryFn: () => api<any>(`/patients/${sp.get("patientId")}`), enabled: Boolean(sp.get("patientId")) && !existing });
+  useEffect(() => { if (preset.data && !existing) setExisting(preset.data); }, [preset.data, existing]);
   const packages = useQuery({ queryKey: ["packages"], queryFn: () => api<any[]>("/catalogue/packages") });
   const found = useQuery({ queryKey: ["patient-search", search], queryFn: () => api<any[]>(`/patients?search=${encodeURIComponent(search)}&limit=5`), enabled: search.length >= 3 });
   const homeOk = flagOn("lab.home_collection") && (me?.capabilities.includes("home_collection") ?? false);
@@ -46,12 +56,14 @@ export function NewOrderPage() {
           ...(existing ? { patientId: existing.id } : { patient: { fullName: p.fullName, ...(p.dateOfBirth ? { dateOfBirth: p.dateOfBirth } : {}), sex: p.sex, ...(p.phone ? { phone: p.phone } : {}), ...(p.nationalId ? { nationalId: p.nationalId } : {}) } }),
           testCodes: tests, packageCodes: pkgs, source, priority, consentChannels: consent,
           ...(checked.length >= 2 ? { identifiersChecked: checked } : {}),
-          ...(source === "REFERRING_DOCTOR" || doc.name ? { referringDoctorName: doc.name || undefined, referringDoctorRef: doc.ref || undefined, referringDoctorPhone: doc.phone || undefined } : {}),
+          ...(referrerId ? { referrerId } : {}), ...(clinical ? { clinicalInfo: clinical } : {}), ...(icdCodes.length ? { icdCodes } : {}), ...(needsFasting ? { fastingConfirmed: fasting } : {}),
+          ...(!referrerId && (source === "REFERRING_DOCTOR" || doc.name) ? { referringDoctorName: doc.name || undefined, referringDoctorRef: doc.ref || undefined, referringDoctorPhone: doc.phone || undefined } : {}),
           ...(home ? { collectionType: "HOME", homeCollection: { slotId, address } } : {}),
         },
       }),
     onSuccess: (o) => nav(`/orders/${o.id}`),
   });
+  const needsFasting = (catalogue.data ?? []).some((x) => tests.includes(x.code) && x.fastingRequired);
   if (catalogue.isLoading) return <Spinner />;
   const list = (catalogue.data ?? []).filter((x) => !filter || `${x.code} ${x.nameEn} ${x.nameAr ?? ""}`.toLowerCase().includes(filter.toLowerCase()));
   const ready = (existing || p.fullName.length >= 2) && (tests.length > 0 || pkgs.length > 0) && (!home || (slotId && address.length >= 5));
@@ -100,6 +112,19 @@ export function NewOrderPage() {
             <p className="mb-1 text-xs font-medium text-muted-foreground">{t("orders.consent")}</p>
             <div className="flex flex-wrap gap-3">{CHANNELS.map((c) => <label key={c} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={consent.includes(c)} onChange={() => toggle(consent, setConsent, c)} />{t(`channel.${c}`)}</label>)}</div>
             <p className="mt-1 text-xs text-muted-foreground">{t("orders.consentNote")}</p>
+          </div>
+        </Card>
+        <Card className="space-y-3 lg:col-span-2">
+          <CardTitle>{t("oe.clinical")}</CardTitle>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {can("referrers.read") ? <Field label={t("ref.referrer")} hint={t("oe.referrerHint")}><Select value={referrerId} onChange={(e) => { setReferrerId(e.target.value); if (e.target.value) setSource("REFERRING_DOCTOR"); }}><option value="">-</option>{(referrers.data ?? []).map((r) => <option key={r.id} value={r.id}>{r.name}{r.specialty ? ` · ${r.specialty}` : ""}</option>)}</Select></Field> : null}
+            {needsFasting ? <label className="flex items-center gap-2 self-end text-sm"><input type="checkbox" checked={fasting} onChange={(e) => setFasting(e.target.checked)} />{t("oe.fastingConfirm")}</label> : null}
+            <Field label={t("oe.clinical")} className="sm:col-span-2"><Textarea rows={2} value={clinical} onChange={(e) => setClinical(e.target.value)} dir="auto" /></Field>
+            <Field label={t("oe.icd")} hint={t("oe.icdHint")} className="sm:col-span-2">
+              <div className="space-y-2"><Input value={icdQ} onChange={(e) => setIcdQ(e.target.value)} placeholder="E11 / thyroid / سكر" />
+                <div className="flex flex-wrap gap-1">{(icd.data ?? []).map((h) => <button key={h.code} type="button" className="rounded-full border border-border px-2.5 py-1 text-xs hover:bg-accent" onClick={() => { setIcdCodes([...new Set([...icdCodes, h.code])]); const add = h.suggest.filter((c: string) => (catalogue.data ?? []).some((x) => x.code === c) && !tests.includes(c)); if (add.length) setTests([...tests, ...add]); }}>{h.code} · {i18n.language === "ar" ? h.ar : h.en}</button>)}</div>
+                <div className="flex flex-wrap gap-1">{icdCodes.map((c) => <Badge key={c} tone="info">{c}<button type="button" aria-label={t("common.remove")} className="ms-1" onClick={() => setIcdCodes(icdCodes.filter((x) => x !== c))}>×</button></Badge>)}</div></div>
+            </Field>
           </div>
         </Card>
         <Card className="space-y-3">
