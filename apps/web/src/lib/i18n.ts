@@ -9,6 +9,7 @@ const KEY = "kiorly.lang";
 export function applyDirection(lang: Lang): void {
   document.documentElement.lang = lang;
   document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
+  document.title = i18n.t("app.docTitle", { lng: lang }); // «كيورلي لاب من كيوريكس» in Arabic
 }
 
 export function savedLang(): Lang | null {

@@ -35,7 +35,7 @@ export function LoginPage() {
       <aside className="relative hidden overflow-hidden p-12 text-white lg:flex lg:flex-col lg:justify-between" style={{ background: "linear-gradient(145deg,#3730A3 0%,#2B2680 55%,#0A4F7A 100%)" }}>
         <div aria-hidden className="pointer-events-none absolute -end-24 -top-24 size-96 rounded-full bg-white/5" />
         <div aria-hidden className="pointer-events-none absolute -bottom-32 -start-20 size-[28rem] rounded-full bg-white/5" />
-        <div className="relative w-fit"><KiorexLogo variant="lockup" product="lab" tone="inverse" height={48} /></div>
+        <div className="relative w-fit"><KiorexLogo variant="lockup" product="lab" lang={i18n.language} tone="inverse" height={48} /></div>
         <div className="relative max-w-md space-y-6">
           <h2 className="text-balance text-3xl font-semibold leading-tight">{t("ux.login.headline")}</h2>
           <ul className="space-y-4">
