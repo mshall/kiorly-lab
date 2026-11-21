@@ -107,5 +107,24 @@ Dev HMAC partner clients (DEV ONLY, for the Kiorex / Clinic links): `kl_dev_kior
 * Fixed 21 Nov 2026: all critical alerts used to be ESCALATED by the scheduler, so the "open, not yet escalated" state was missing. `db:seed:demo` now keeps one clearly named alert (`DEMO-OPEN-ALERT-001`) OPEN with a far deadline. Anyone who acknowledges it closes it for good; to re-open it, re-run `db:seed:demo` only while it is still ESCALATED/OPEN (an acknowledged alert is left alone).
 * Seeds back-shift order dates with a session-local trigger bypass (needs a superuser role such as the local `postgres`).
 
+## 8. Provider flows in mock mode, and the Provider go-live checklist
+
+**Try every provider flow (mock, DEV ONLY).** As `owner@demo-lab.test` (settings.manage): `POST /api/v1/dev/providers/demo/run` sends result-ready (WhatsApp + email), a critical-alert SMS and an invoice email to dummy recipients (`+201000000001`, `+201000000002`, `patient.demo@example.test`), delivers each receipt through the signed webhook path, then (on the newest unpaid invoice of the org) runs pay-by-link success -> refund and a failing link. `GET /api/v1/dev/providers/messages` is the view of everything "sent" (rendered EN/AR body, status SENT -> DELIVERED); `POST /api/v1/dev/providers/simulate/webhook {"kind":"payment","type":"payment.failed","providerRef":"mocklink_..."}` replays any single callback. All of it is 404 in production. Manual path: invoice a released order -> `POST /invoices/:id/pay-link {"sendVia":{"channel":"SMS"}}` -> simulate `payment.succeeded` -> `POST /pay-links/:id/refund`. Recipients ending `-fail` are rejected by the mock (failure path). Details: [Docs/PROVIDERS.md](Docs/PROVIDERS.md).
+
+### Provider go-live checklist (no code change: env/secrets only; staging first)
+
+Add these to the secrets manager / task definition of the Lab API. Nothing else is needed per kind; the app refuses to start if a real MODE is missing something (it names the variable).
+
+| Kind | Set `*_MODE=real` and | Secrets / values to add | Provider-side to-do |
+|---|---|---|---|
+| SMS | `SMS_MODE=real` | `SMS_API_URL`, `SMS_API_KEY`, `SMS_WEBHOOK_SECRET`, `SMS_SENDER_ID` | Register the sender id; point delivery receipts at `https://<lab-api>/api/v1/webhooks/providers/sms` |
+| Email | `EMAIL_MODE=real` | `EMAIL_API_URL`, `EMAIL_API_KEY`, `EMAIL_WEBHOOK_SECRET`, `EMAIL_FROM` | Verify the sending domain (SPF/DKIM); webhook `.../webhooks/providers/email` |
+| WhatsApp | `WHATSAPP_MODE=real` | `WHATSAPP_API_URL`, `WHATSAPP_API_KEY`, `WHATSAPP_WEBHOOK_SECRET`, `WHATSAPP_SENDER_ID` | Meta-approved EN + AR templates named exactly like the template ids (`TODO_NEEDS_HUMAN_*`, NH-LB-018); webhook `.../webhooks/providers/whatsapp` |
+| Payment | `PAYMENT_MODE=real` | `PAYMENT_API_URL`, `PAYMENT_API_KEY`, `PAYMENT_WEBHOOK_SECRET` | Merchant account; webhook `.../webhooks/providers/payment`; reconcile `PayLink` vs settlement report |
+| Push (Kiorly Work) | `PUSH_MODE=real` | `PUSH_API_URL` (Expo: `https://exp.host/--/api/v2/push/send`), optional `PUSH_API_KEY` | Expo project / credentials in the mobile build |
+| Storage | `STORAGE_MODE=real` | `STORAGE_API_URL`, `STORAGE_API_KEY` | Private bucket behind an S3-compatible gateway, retention + KMS |
+
+Then: (1) if the vendor's payload or signature differs from the generic shape, edit only `src/providers/mapping/<kind>.mapping.ts`; (2) call `GET /api/v1/dev/providers/status` (non-production) to confirm each kind shows `real` with the credentials set (booleans); (3) send one real message to your own phone and one 1.00 EGP pay link, check `NotificationAttempt` goes SENT -> DELIVERED and the `PayLink` goes PAID; (4) set `PROVIDER_DEV_TOOLS=false` (it is already off when `NODE_ENV=production`). Run `prisma migrate deploy` first (migration `20261122090000_provider_go_live`: `PayLink`, `ProviderWebhookEvent`, `NotificationPurpose.BILLING`).
+
 ---
 Verified: 2026-11-21 (seed scripts run twice, `kiorly_lab` database via SELECT, web dev port start-up check on 5193).

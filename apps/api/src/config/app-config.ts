@@ -1,3 +1,4 @@
+import { providerMode } from "../providers/provider-env";
 /** Central, lazily-read configuration. Every third-party provider has MODE=mock|real (default mock). */
 export type Mode = "mock" | "real";
 const mode = (v: string | undefined): Mode => (v === "real" ? "real" : "mock");
@@ -15,9 +16,10 @@ export const appConfig = {
   labTimezone: () => process.env.LAB_TIMEZONE?.trim() || "Africa/Cairo",
   publicBaseUrl: () => (process.env.PUBLIC_BASE_URL ?? "http://localhost:5191").replace(/\/+$/, ""),
   storageDir: () => process.env.STORAGE_DIR ?? "./.data/storage",
-  messagingMode: () => mode(process.env.MESSAGING_MODE),
-  pspMode: () => mode(process.env.PSP_MODE),
-  storageMode: () => mode(process.env.STORAGE_MODE),
+  /** Legacy aggregate: "real" when ANY of SMS/EMAIL/WHATSAPP is real (per-channel switches: SMS_MODE, EMAIL_MODE, WHATSAPP_MODE). */
+  messagingMode: (): Mode => (["SMS", "EMAIL", "WHATSAPP"] as const).some((k) => providerMode(k) === "real") ? "real" : "mock",
+  pspMode: (): Mode => providerMode("PAYMENT"),
+  storageMode: (): Mode => providerMode("STORAGE"),
   analyzerMode: () => mode(process.env.ANALYZER_MODE),
   kiorexMode: () => mode(process.env.KIOREX_MODE),
   kiorexWebhookUrl: () => process.env.KIOREX_WEBHOOK_URL ?? "http://localhost:4000/api/v1/webhooks/lab",

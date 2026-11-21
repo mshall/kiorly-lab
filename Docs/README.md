@@ -5,6 +5,7 @@ Governing doc: KX-07. Status: **MVP built with mock providers**; discovery, coun
 | Doc | Purpose |
 |---|---|
 | [lab-cursor-build-sequence.md](./lab-cursor-build-sequence.md) | 45 ordered steps derived from every PRD requirement ID + progress tracker (tracker ticked as built) |
+| [PROVIDERS.md](./PROVIDERS.md) | Provider ports, env contract, webhooks, dev-only simulator (SMS / email / WhatsApp / PSP / push / storage) |
 | [NEEDS_HUMAN.md](./NEEDS_HUMAN.md) | Discovery interviews, regulatory/legal items, pricing, templates, hardware, decisions, defaults shipped, **Provider go-live** |
 | [API.md](./API.md) / [openapi.json](./openapi.json) | Auth, errors, idempotency, outbox events, module map; generated OpenAPI |
 | [FIELD_VISIT.md](./FIELD_VISIT.md) | KLORD04: home collection on `@kiorly/field-visit` (vendored tarball), coverage, buffers, address privacy, phlebotomist safety protocol (never switchable) |

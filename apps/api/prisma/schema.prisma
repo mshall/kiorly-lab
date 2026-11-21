@@ -250,6 +250,8 @@ enum NotificationPurpose {
   SLA_ALERT
   /// HVSAF (phlebotomist safety): ids only, no PHI.
   SAFETY_ALERT
+  /// Invoice email, payment link and payment receipt (no clinical content).
+  BILLING
 }
 
 enum SafetyAlertKind {
@@ -2647,4 +2649,54 @@ model MobileAlertAck {
   ackedAt  DateTime @default(now())
 
   @@unique([orgId, alertKey])
+}
+
+enum PayLinkStatus {
+  PENDING
+  PAID
+  FAILED
+  EXPIRED
+  REFUND_PENDING
+  REFUNDED
+}
+
+/// Pay-by-link for an invoice (PAYMENT_MODE=mock|real). Status is driven by the signed PSP webhook; the paid link books a Payment (+ ledger) once.
+model PayLink {
+  id             String        @id @default(cuid())
+  orgId          String
+  invoiceId      String
+  amount         Decimal       @db.Decimal(14, 2)
+  currency       String        @default("EGP")
+  status         PayLinkStatus @default(PENDING)
+  /// Provider-side id of the link / charge (webhook correlation).
+  providerRef    String?
+  payUrl         String?
+  idempotencyKey String
+  /// Payment row booked when the link was paid.
+  paymentId      String?
+  failureReason  String?
+  refundedAmount Decimal       @default(0) @db.Decimal(14, 2)
+  /// Provider refund id while a refund is in flight.
+  refundRef      String?
+  refundAmount   Decimal?      @db.Decimal(14, 2)
+  expiresAt      DateTime?
+  createdBy      String
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([orgId, idempotencyKey])
+  @@index([providerRef])
+  @@index([refundRef])
+  @@index([orgId, invoiceId])
+}
+
+/// Webhook dedupe: a replayed provider event (same kind + event id) is a no-op.
+model ProviderWebhookEvent {
+  id         String   @id @default(cuid())
+  kind       String
+  eventId    String
+  type       String
+  receivedAt DateTime @default(now())
+
+  @@unique([kind, eventId])
 }

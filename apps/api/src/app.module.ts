@@ -18,6 +18,7 @@ import { AnalysisQcModule } from "./modules/analysis-qc/analysis-qc.module";
 import { AnalyticsModule } from "./modules/analytics/analytics.module";
 import { AnalyzersModule } from "./modules/analyzers/analyzers.module";
 import { BusinessModule } from "./modules/business/business.module";
+import { ProvidersModule } from "./providers/providers.module";
 import { CatalogueModule } from "./modules/catalogue/catalogue.module";
 import { CriticalModule } from "./modules/critical/critical.module";
 import { FieldSafetyModule } from "./modules/field-safety/field-safety.module";
@@ -40,7 +41,7 @@ import { PrismaModule } from "./prisma/prisma.module";
 @Module({
   imports: [
     PrismaModule, AuthModule, AuditModule, OutboxModule, AdaptersModule, KernelModule, CoreModule, FeatureFlagsModule, HealthModule,
-    AdminModule, CatalogueModule, OrdersModule, SpecimensModule, AnalysisQcModule, AnalyzersModule, CriticalModule, FieldSafetyModule, ReleaseModule, BusinessModule, RegistryModule, ReceptionModule, PreanalyticsModule, MicrobiologyModule, HistopathologyModule, QualityModule, InventoryModule, AnalyticsModule, MobileAlertsModule, MobileModule, IntegrationModule,
+    AdminModule, CatalogueModule, OrdersModule, SpecimensModule, AnalysisQcModule, AnalyzersModule, CriticalModule, FieldSafetyModule, ReleaseModule, BusinessModule, ProvidersModule, RegistryModule, ReceptionModule, PreanalyticsModule, MicrobiologyModule, HistopathologyModule, QualityModule, InventoryModule, AnalyticsModule, MobileAlertsModule, MobileModule, IntegrationModule,
   ],
   providers: [
     // order matters: authenticate first, then flag, then plan entitlement

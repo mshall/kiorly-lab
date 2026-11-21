@@ -53,8 +53,10 @@ export class CriticalService implements OnModuleInit, OnModuleDestroy {
   /** Alert the ordering clinician (when reachable) and the lab director(s). TODO_NEEDS_HUMAN templates (NH-LB-018); no values in params. */
   private async notify(db: Db, orgId: string, alertId: string, order: Pick<LabOrder, "id" | "orderNumber" | "referringDoctorPhone" | "referringDoctorRef">, purpose: "CRITICAL_ALERT" | "CRITICAL_ESCALATION", level: number) {
     const params = { orderNumber: order.orderNumber ?? order.id, alertId, level };
-    const recipients: { ref: string; channel: "WHATSAPP" | "PUSH" | "VOICE" }[] = [];
+    const recipients: { ref: string; channel: "WHATSAPP" | "SMS" | "PUSH" | "VOICE" }[] = [];
     if (purpose === "CRITICAL_ALERT" && (order.referringDoctorPhone || order.referringDoctorRef)) recipients.push({ ref: (order.referringDoctorPhone ?? order.referringDoctorRef)!, channel: "WHATSAPP" });
+    // SMS as the safety net for an unanswered WhatsApp: the same non-clinical template (order number only, never a result value)
+    if (purpose === "CRITICAL_ALERT" && order.referringDoctorPhone) recipients.push({ ref: order.referringDoctorPhone, channel: "SMS" });
     const roles = level >= 2 ? ["OWNER"] : ["LAB_DIRECTOR"];
     const staff = await db.staffUser.findMany({ where: { orgId, role: { in: roles as never }, active: true } });
     for (const s of staff) recipients.push({ ref: s.id, channel: "PUSH" });

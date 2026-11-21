@@ -6,6 +6,7 @@ import type { AuthUser } from "../../auth/auth.types";
 import { ZBody, z } from "../../common/zod";
 import { RequiresFlag } from "../../feature-flags/requires-flag.guard";
 import { BillingService } from "./billing.service";
+import { PayLinksService } from "./paylinks.service";
 import { EXPORT_KINDS, ExportsService, type ExportKind } from "./exports.service";
 import { InsightsService } from "./insights.service";
 import { FinanceService } from "./finance.service";
@@ -22,6 +23,8 @@ const Account = z.object({
 }).strict();
 const AccountPatch = Account.partial().extend({ active: z.boolean().optional() }).strict();
 const InvoiceBody = z.object({ discountPercent: num.min(0).max(100).optional(), discountAmount: num.nonnegative().optional(), reason: z.string().max(200).optional() }).strict();
+const PayLinkBody = z.object({ amount: num.positive().optional(), expiresInHours: z.number().int().min(1).max(24 * 30).optional(), sendVia: z.object({ channel: z.enum(["SMS", "EMAIL", "WHATSAPP"]), to: z.string().min(3).max(120).optional() }).strict().optional() }).strict();
+const SendDocBody = z.object({ kind: z.enum(["INVOICE", "RECEIPT"]), channel: z.enum(["SMS", "EMAIL", "WHATSAPP"]).default("EMAIL"), to: z.string().min(3).max(120).optional() }).strict();
 const RefundBody = z.object({ amount: num.positive().optional(), reason: z.string().max(200).optional() }).strict();
 const ExpenseBody = z.object({ labId: z.string().optional(), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), category: z.enum(["RENT", "SALARIES", "UTILITIES", "REAGENTS", "CONSUMABLES", "EQUIPMENT", "MAINTENANCE", "TRANSPORT", "MARKETING", "PROFESSIONAL_FEES", "OTHER"]), amount: num.positive(), vendor: z.string().max(120).optional(), paidVia: z.enum(["CASH", "BANK", "CARD"]).optional(), fromDrawer: z.boolean().optional(), reference: z.string().max(60).optional(), note: z.string().max(300).optional() }).strict();
 const VoidExpense = z.object({ reason: z.string().min(3).max(200) }).strict();
@@ -39,6 +42,7 @@ export class BusinessController {
     @Inject(InsightsService) private readonly insights: InsightsService,
     @Inject(ExportsService) private readonly exports: ExportsService,
     @Inject(FinanceService) private readonly finance: FinanceService,
+    @Inject(PayLinksService) private readonly payLinks: PayLinksService,
   ) {}
 
   @Get("price-lists") @Perm("billing.read") priceLists(@CurrentUser() u: AuthUser) { return this.billing.listPriceLists(u.orgId); }
@@ -55,6 +59,10 @@ export class BusinessController {
   @Post("invoices/:id/void") @Perm("billing.invoice") @ZBody(Void) voidInvoice(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof Void>) { return this.billing.voidInvoice(u, id, b.reason); }
   @Post("invoices/:id/payments") @Perm("billing.payment") @ZBody(Pay) pay(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof Pay>, @Headers("idempotency-key") key?: string) { return this.billing.pay(u, id, b, key); }
   @Post("payments/:id/refund") @Perm("billing.payment") @ZBody(RefundBody) refund(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof RefundBody>) { return this.billing.refund(u, id, b); }
+  @Post("invoices/:id/pay-link") @Perm("billing.payment") @ZBody(PayLinkBody) payLink(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof PayLinkBody>, @Headers("idempotency-key") key?: string) { return this.payLinks.create(u, id, b, key); }
+  @Get("invoices/:id/pay-links") @Perm("billing.read") payLinksFor(@CurrentUser() u: AuthUser, @Param("id") id: string) { return this.payLinks.list(u.orgId, id); }
+  @Post("pay-links/:id/refund") @Perm("billing.payment") @ZBody(RefundBody) refundPayLink(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof RefundBody>) { return this.payLinks.refund(u, id, b); }
+  @Post("invoices/:id/send") @Perm("billing.invoice") @ZBody(SendDocBody) sendDoc(@CurrentUser() u: AuthUser, @Param("id") id: string, @Body() b: z.infer<typeof SendDocBody>) { return this.payLinks.sendDocument(u, id, b); }
   @Get("refunds") @Perm("billing.read") refunds(@CurrentUser() u: AuthUser, @Query() q: { from?: string; to?: string }) { return this.billing.refunds(u.orgId, q); }
 
   @Get("finance/aging") @Perm("billing.read") aging(@CurrentUser() u: AuthUser, @Query("asOf") asOf?: string) { return this.finance.aging(u, { asOf }); }

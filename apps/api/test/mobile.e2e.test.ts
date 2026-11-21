@@ -311,14 +311,14 @@ describe("Kiorly Work mobile API", () => {
     assert.equal((await call(t, "GET", "/mobile/reagents/low-stock", { token: pro.tokens.PHLEBOTOMIST, headers: APP })).status, 403);
   });
 
-  it("push templates never carry raw values (KLCRIT03) and real mode is refused until go-live", async () => {
+  it("push templates never carry raw values (KLCRIT03) and real mode needs PUSH_API_URL", async () => {
     const { MobilePushService } = await import("../src/adapters/mobile-push.adapter");
     const svc = t.app.get(MobilePushService);
     await assert.rejects(() => svc.send({ orgId: pro.orgId, staffId: pro.staff.OWNER.id, templateId: "TEST", params: { value: 6 } }));
     await assert.rejects(() => svc.send({ orgId: pro.orgId, staffId: pro.staff.OWNER.id, templateId: "NOPE" }));
     process.env.MOBILE_PUSH_MODE = "real";
     try {
-      await assert.rejects(() => svc.send({ orgId: pro.orgId, staffId: pro.staff.OWNER.id, templateId: "TEST" }), /not wired/);
+      await assert.rejects(() => svc.send({ orgId: pro.orgId, staffId: pro.staff.OWNER.id, templateId: "TEST" }), /PUSH_API_URL/);
     } finally {
       delete process.env.MOBILE_PUSH_MODE;
     }

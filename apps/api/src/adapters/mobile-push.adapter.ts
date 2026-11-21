@@ -2,6 +2,9 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 import type { StaffRole } from "../generated/prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import type { Db } from "../common/db";
+import { ProviderError, type FetchLike } from "../providers/http";
+import { providerConfig, providerMode } from "../providers/provider-env";
+import { sendPush } from "../providers/push-provider";
 
 export type MobileKind = "GENERAL" | "SAFETY" | "CLINICAL" | "OPS";
 
@@ -31,16 +34,19 @@ const fill = (s: string, p: Record<string, string | number>) => s.replace(/\{(\w
 const PURPOSE_TEMPLATE: Record<string, string> = { CRITICAL_ALERT: "CRITICAL_ALERT", CRITICAL_ESCALATION: "CRITICAL_ESCALATION", SLA_ALERT: "SLA_ALERT", SAFETY_ALERT: "SAFETY_ALERT" };
 
 /**
- * Kiorly Work push sender. MOBILE_PUSH_MODE=mock (default): stores the message (= the in-app inbox), marks it DELIVERED and, when the
- * recipient has registered devices with a push token, simulates the provider hand-off. real: Expo push is wired in the go-live pass.
+ * Kiorly Work push sender. PUSH_MODE (legacy MOBILE_PUSH_MODE)=mock (default): stores the message (= the in-app inbox), marks it DELIVERED and, when the
+ * recipient has registered devices with a push token, simulates the provider hand-off. real: Expo-compatible push gateway (PUSH_API_URL / PUSH_API_KEY).
  */
 @Injectable()
 export class MobilePushService {
   private readonly log = new Logger(MobilePushService.name);
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
+  /** Test seam for the real push gateway. */
+  static fetchImpl?: FetchLike;
+
   static mode(): "mock" | "real" {
-    return process.env.MOBILE_PUSH_MODE === "real" ? "real" : "mock";
+    return providerMode("PUSH");
   }
 
   async send(input: { orgId: string; staffId: string; templateId: string; params?: Record<string, string | number>; data?: Record<string, unknown> }, db: Db = this.prisma) {
@@ -50,11 +56,22 @@ export class MobilePushService {
     for (const [k, v] of Object.entries(params)) {
       if (FORBIDDEN.test(k) || (typeof v === "string" && /\d+(\.\d+)?\s?(mmol|mg\/dl|g\/dl|x10)/i.test(v))) throw new Error(`mobile push param "${k}" looks like a raw result value`);
     }
-    if (MobilePushService.mode() === "real") throw new Error("MOBILE_PUSH_MODE=real is not wired yet (see Docs/NEEDS_HUMAN.md, Provider go-live)");
+    const real = MobilePushService.mode() === "real";
+    if (real && !providerConfig("PUSH").apiUrl) throw new ProviderError("NOT_CONFIGURED", "PUSH_API_URL is not set (PUSH_MODE=real)");
     const now = new Date();
+    // The in-app inbox row is always written (it is the inbox). Real mode additionally hands the message to the push gateway for registered devices.
     const row = await db.mobilePush.create({
-      data: { orgId: input.orgId, staffId: input.staffId, kind: tpl.kind, templateId: input.templateId, title: fill(tpl.title, params), titleAr: fill(tpl.titleAr, params), body: fill(tpl.body, params), bodyAr: fill(tpl.bodyAr, params), data: (input.data ?? {}) as never, status: "DELIVERED", provider: "mock", deliveredAt: now },
+      data: { orgId: input.orgId, staffId: input.staffId, kind: tpl.kind, templateId: input.templateId, title: fill(tpl.title, params), titleAr: fill(tpl.titleAr, params), body: fill(tpl.body, params), bodyAr: fill(tpl.bodyAr, params), data: (input.data ?? {}) as never, status: real ? "SENT" : "DELIVERED", provider: real ? "push" : "mock", deliveredAt: real ? null : now },
     });
+    if (real) {
+      const tokens = (await db.mobileDevice.findMany({ where: { orgId: input.orgId, staffId: input.staffId, status: "ACTIVE", pushToken: { not: null } }, select: { pushToken: true } })).map((d) => d.pushToken!).filter(Boolean);
+      try {
+        if (tokens.length) await sendPush(tokens.map((to) => ({ to, title: row.title, body: row.body, data: { ...(input.data ?? {}), pushId: row.id } })), process.env, MobilePushService.fetchImpl);
+      } catch (e) {
+        this.log.warn(`push gateway failed (${e instanceof ProviderError ? e.code : "UNEXPECTED"}) for inbox ${row.id}`);
+        await db.mobilePush.update({ where: { id: row.id }, data: { status: "FAILED" } });
+      }
+    }
     return row;
   }
 

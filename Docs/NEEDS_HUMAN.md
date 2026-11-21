@@ -64,9 +64,9 @@ All providers run on **mock adapters** today (`MODE=mock|real`, default `mock`).
 
 | Provider | Switch | What the real pass needs | Related |
 |---|---|---|---|
-| WhatsApp / SMS / email / push / voice | `MESSAGING_MODE=real` | Provider accounts and keys, approved templates (replace `TODO_NEEDS_HUMAN_CRITICAL_ALERT`, `_CRITICAL_ESCALATION`, `_RESULT_READY`, `_REPORT_CORRECTED`, `_REPORT_OTP`, `_COLLECTION_REMINDER`, `_RECOLLECTION_NOTICE`, `_SLA_ALERT`; EN + AR), delivery-receipt webhooks | NH-LB-008/018 |
-| PSP (Paymob / Fawry / InstaPay) | `PSP_MODE=real` | PSP onboarding, hosted card fields (the API only accepts tokens), webhook signing secrets, settlement/reconciliation feed | NH-LB-004 |
-| Object storage (reports, label photos) | `STORAGE_MODE=real` | S3 adapter inside `src/platform/adapters/*` (no `@aws-sdk` elsewhere), KMS key, private bucket, retention policy | NH-LB-021 |
+| WhatsApp / SMS / email / push (voice has no provider yet) | `SMS_MODE` / `EMAIL_MODE` / `WHATSAPP_MODE` / `PUSH_MODE` = `real` (wired: see [PROVIDERS.md](./PROVIDERS.md)) | Provider accounts and keys, approved templates (replace `TODO_NEEDS_HUMAN_CRITICAL_ALERT`, `_CRITICAL_ESCALATION`, `_RESULT_READY`, `_REPORT_CORRECTED`, `_REPORT_OTP`, `_COLLECTION_REMINDER`, `_RECOLLECTION_NOTICE`, `_SLA_ALERT`; EN + AR), delivery-receipt webhooks | NH-LB-008/018 |
+| PSP (Paymob / Fawry / InstaPay) | `PAYMENT_MODE=real` (wired: pay-by-link, refund, webhook; adapt `mapping/payment.mapping.ts`) | PSP onboarding, hosted card fields (the API only accepts tokens), webhook signing secrets, settlement/reconciliation feed | NH-LB-004 |
+| Object storage (reports, label photos) | `STORAGE_MODE=real` + `STORAGE_API_URL/KEY` (HTTP object store, wired) | S3-compatible gateway or presigning proxy, KMS key, private bucket, retention policy | NH-LB-021 |
 | Analyzer bridge | `ANALYZER_MODE=real` | TCP/MLLP (HL7) and ASTM serial/TCP gateway per instrument model, TLS, instrument API keys (`POST /instruments/:id/api-key`), vendor specs and a test instrument | NH-LB-010 |
 | Kiorex outbox + flags | `KIOREX_MODE=real` | `KIOREX_WEBHOOK_URL/SECRET`, product key/secret for the flag snapshot, registry entries for `lab.*` | NH-LB-016 |
 | Identity | `AUTH_MODE=oidc` | Kiorex Account client, audience, JWKS, MFA claim | NH-LB-029 |

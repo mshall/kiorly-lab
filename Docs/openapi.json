@@ -8024,6 +8024,232 @@
         ]
       }
     },
+    "/api/v1/invoices/{id}/pay-link": {
+      "post": {
+        "operationId": "BusinessController_payLink",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "expiresInHours": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 720
+                  },
+                  "sendVia": {
+                    "type": "object",
+                    "properties": {
+                      "channel": {
+                        "type": "string",
+                        "enum": [
+                          "SMS",
+                          "EMAIL",
+                          "WHATSAPP"
+                        ]
+                      },
+                      "to": {
+                        "type": "string",
+                        "minLength": 3,
+                        "maxLength": 120
+                      }
+                    },
+                    "required": [
+                      "channel"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "business"
+        ]
+      }
+    },
+    "/api/v1/invoices/{id}/pay-links": {
+      "get": {
+        "operationId": "BusinessController_payLinksFor",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "business"
+        ]
+      }
+    },
+    "/api/v1/pay-links/{id}/refund": {
+      "post": {
+        "operationId": "BusinessController_refundPayLink",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "reason": {
+                    "type": "string",
+                    "maxLength": 200
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "business"
+        ]
+      }
+    },
+    "/api/v1/invoices/{id}/send": {
+      "post": {
+        "operationId": "BusinessController_sendDoc",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "INVOICE",
+                      "RECEIPT"
+                    ]
+                  },
+                  "channel": {
+                    "default": "EMAIL",
+                    "type": "string",
+                    "enum": [
+                      "SMS",
+                      "EMAIL",
+                      "WHATSAPP"
+                    ]
+                  },
+                  "to": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 120
+                  }
+                },
+                "required": [
+                  "kind",
+                  "channel"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "business"
+        ]
+      }
+    },
     "/api/v1/refunds": {
       "get": {
         "operationId": "BusinessController_refunds",
@@ -9586,6 +9812,132 @@
         },
         "tags": [
           "registry"
+        ]
+      }
+    },
+    "/api/v1/webhooks/providers/{kind}": {
+      "post": {
+        "operationId": "ProviderWebhooksController_receive",
+        "parameters": [
+          {
+            "name": "kind",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-kiorex-signature",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "provider-webhooks"
+        ]
+      }
+    },
+    "/api/v1/dev/providers/status": {
+      "get": {
+        "operationId": "DevProvidersController_status",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "dev-providers"
+        ]
+      }
+    },
+    "/api/v1/dev/providers/messages": {
+      "get": {
+        "operationId": "DevProvidersController_messages",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "dev-providers"
+        ]
+      }
+    },
+    "/api/v1/dev/providers/pay-links": {
+      "get": {
+        "operationId": "DevProvidersController_payLinkList",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "dev-providers"
+        ]
+      }
+    },
+    "/api/v1/dev/providers/simulate/webhook": {
+      "post": {
+        "operationId": "DevProvidersController_simulate",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "dev-providers"
+        ]
+      }
+    },
+    "/api/v1/dev/providers/demo/run": {
+      "post": {
+        "operationId": "DevProvidersController_demo",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "dev-providers"
         ]
       }
     },
@@ -13545,6 +13897,47 @@
         "parameters": [],
         "responses": {
           "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "mobile"
+        ]
+      }
+    },
+    "/api/v1/mobile/upgrade-request": {
+      "post": {
+        "operationId": "MobileController_upgradeRequest",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "featureKey": {
+                    "type": "string",
+                    "maxLength": 80
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
             "description": ""
           }
         },

@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
-import { createHash } from "node:crypto";
-import { appConfig } from "../config/app-config";
+import { ProviderError, type FetchLike } from "../providers/http";
+import { paymentProvider } from "../providers/payment-provider";
+import type { PayLinkRequest, PayLinkResult, RefundRequest, RefundResult } from "../providers/provider-types";
 
 export interface ChargeRequest {
   amount: number;
@@ -8,6 +9,7 @@ export interface ChargeRequest {
   /** Opaque card token from the (mock) hosted fields. Raw card numbers are never accepted. */
   cardToken: string;
   idempotencyKey: string;
+  reference?: string;
 }
 export interface ChargeResult {
   ok: boolean;
@@ -15,13 +17,29 @@ export interface ChargeResult {
   error?: string;
 }
 
-/** PSP port (Paymob/Fawry/InstaPay later). PSP_MODE=mock: deterministic fake — token "tok_decline" declines, everything else succeeds. */
+/**
+ * PSP port. PAYMENT_MODE=mock|real (legacy PSP_MODE is the default). mock = deterministic fake (token "tok_decline" declines, amounts ending .13 decline);
+ * real = generic HTTP PSP driven by PAYMENT_API_URL / PAYMENT_API_KEY (src/providers/mapping/payment.mapping.ts is the only vendor-specific file).
+ * Payment status after a pay-by-link arrives through the signed webhook (POST /webhooks/providers/payment).
+ */
 @Injectable()
 export class PspAdapter {
+  /** Test seam for the real HTTP provider. */
+  static fetchImpl?: FetchLike;
+  private provider() { return paymentProvider(process.env, PspAdapter.fetchImpl); }
+
   async charge(req: ChargeRequest): Promise<ChargeResult> {
     if (/^\d{12,19}$/.test(req.cardToken)) return { ok: false, error: "raw card numbers are not accepted; use a token" };
-    if (appConfig.pspMode() === "real") throw new Error("PSP_MODE=real is not wired yet (Docs/NEEDS_HUMAN.md, Provider go-live)");
-    if (req.cardToken === "tok_decline") return { ok: false, error: "card_declined" };
-    return { ok: true, pspRef: "mockpsp_" + createHash("sha256").update(req.idempotencyKey).digest("hex").slice(0, 16) };
+    try {
+      const r = await this.provider().charge({ amount: req.amount.toFixed(2), currency: req.currency, method: "CARD", reference: req.reference ?? req.idempotencyKey, idempotencyKey: req.idempotencyKey, cardToken: req.cardToken });
+      if (r.status === "CAPTURED") return { ok: true, pspRef: r.providerRef };
+      return { ok: false, error: r.status === "PENDING" ? "payment_pending" : r.declineReason ?? "card_declined" };
+    } catch (e) {
+      if (e instanceof ProviderError) return { ok: false, error: `psp_${e.code.toLowerCase()}` };
+      throw e;
+    }
   }
+
+  createPayLink(r: PayLinkRequest): Promise<PayLinkResult> { return this.provider().createPayLink(r); }
+  refund(r: RefundRequest): Promise<RefundResult> { return this.provider().refund(r); }
 }

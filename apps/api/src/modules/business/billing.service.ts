@@ -258,7 +258,7 @@ export class BillingService {
   }
 
   /** Outstanding per share (patient / payer) from the succeeded payments net of refunds. */
-  private async shares(db: Db, inv: { id: string; total: unknown; payerAmount: unknown }) {
+  async shares(db: Db, inv: { id: string; total: unknown; payerAmount: unknown }) {
     const pays = await db.payment.findMany({ where: { invoiceId: inv.id, status: "SUCCEEDED" } });
     const net = (who: string) => round2(pays.filter((p) => p.payer === who).reduce((a, p) => a + D(p.amount) - D(p.refundedAmount), 0));
     return { patientOutstanding: round2(D(inv.total as never) - D(inv.payerAmount as never) - net("PATIENT")), payerOutstanding: round2(D(inv.payerAmount as never) - net("PAYER")) };
