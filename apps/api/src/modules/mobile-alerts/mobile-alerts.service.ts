@@ -69,7 +69,7 @@ export class MobileAlertsService {
           body: `Order ${label}: ${a.result.analyte.nameEn} is critical ${dir}. Acknowledge and call the clinician.`,
           bodyAr: `الطلب ${label}: ${a.result.analyte.nameAr ?? a.result.analyte.nameEn} حرجة ${dirAr}. أقرّ بالاستلام واتصل بالطبيب.`,
           subject: { type: "ORDER", id: a.orderId ?? a.resultId, label: String(label) }, raisedAt: a.notifiedAt.toISOString(), dueAt: a.ackDeadlineAt.toISOString(),
-          ackedAt: a.acknowledgedAt?.toISOString() ?? null, ackedBy: a.acknowledgedBy, ackedByName: a.acknowledgedBy ? names.get(a.acknowledgedBy) ?? null : null, ackNote: acked ? acks.get(`crit_${a.id}`)?.note ?? null : null, escalationLevel: a.escalationLevel,
+          ackedAt: a.acknowledgedAt?.toISOString() ?? null, ackedBy: a.acknowledgedBy, ackedByName: a.acknowledgedBy ? names.get(a.acknowledgedBy) ?? null : null, ackNote: acked ? a.readBackNote ?? acks.get(`crit_${a.id}`)?.note ?? null : null, escalationLevel: a.escalationLevel,
         });
       }
     }
@@ -133,8 +133,8 @@ export class MobileAlertsService {
       const a = await this.prisma.criticalAlert.findFirst({ where: { id: raw, orgId: u.orgId } });
       if (!a) throw new NotFoundException({ code: "ALERT_NOT_FOUND" });
       if (a.status !== "ACKNOWLEDGED" && a.status !== "CLOSED") {
-        await this.critical.acknowledge(u, raw, note).catch(async (e: { status?: number }) => { if (e?.status !== 409) throw e; });
-        await this.prisma.mobileAlertAck.upsert({ where: { orgId_alertKey: { orgId: u.orgId, alertKey: id } }, create: { orgId: u.orgId, alertKey: id, ackedBy: u.staffId, note: note ?? null }, update: {} });
+        // CriticalAlert.readBackNote is the single source of truth (web and app); a lost race (409) is a no-op replay.
+        await this.critical.acknowledge(u, raw, note).catch((e: { status?: number }) => { if (e?.status !== 409) throw e; });
       }
     } else {
       const exists =

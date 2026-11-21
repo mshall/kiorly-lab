@@ -70,13 +70,16 @@ export class CriticalService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
+  /** Stores the (trimmed, <=500 chars) read-back note on the alert itself. First acknowledger wins; a replay throws 409 and changes nothing. The note is audited as hasNote only and never sent in notifications. */
   async acknowledge(u: AuthUser, id: string, note?: string) {
+    const readBackNote = note?.trim().slice(0, 500) || null;
     return this.prisma.$transaction(async (tx) => {
       const a = await tx.criticalAlert.findFirst({ where: { id, orgId: u.orgId } });
       if (!a) throw new NotFoundException({ code: "ALERT_NOT_FOUND" });
-      if (a.status === "ACKNOWLEDGED" || a.status === "CLOSED") throw new ConflictException({ code: "ALERT_ALREADY_ACKNOWLEDGED" });
-      const out = await tx.criticalAlert.update({ where: { id }, data: { status: "ACKNOWLEDGED", acknowledgedBy: u.staffId, acknowledgedAt: new Date() } });
-      await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "critical.acknowledged", entityType: "CriticalAlert", entityId: id, meta: { late: a.status === "ESCALATED", hasNote: Boolean(note) } }, tx);
+      const won = await tx.criticalAlert.updateMany({ where: { id, orgId: u.orgId, status: { in: ["OPEN", "ESCALATED"] } }, data: { status: "ACKNOWLEDGED", acknowledgedBy: u.staffId, acknowledgedAt: new Date(), readBackNote } });
+      if (won.count === 0) throw new ConflictException({ code: "ALERT_ALREADY_ACKNOWLEDGED" });
+      const out = await tx.criticalAlert.findUniqueOrThrow({ where: { id } });
+      await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "critical.acknowledged", entityType: "CriticalAlert", entityId: id, meta: { late: a.status === "ESCALATED", hasNote: Boolean(readBackNote) } }, tx);
       return out;
     });
   }

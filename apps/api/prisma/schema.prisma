@@ -998,6 +998,8 @@ model CriticalAlert {
   ackDeadlineAt     DateTime
   acknowledgedBy    String?
   acknowledgedAt    DateTime?
+  /// Read-back note captured at acknowledgement (web or app); single source of truth. Free text, may carry clinical detail: never put in notifications.
+  readBackNote      String?
   escalatedToUserId String?
   escalatedAt       DateTime?
   escalationLevel   Int                 @default(0)

@@ -6,7 +6,7 @@ import { ZBody, z } from "../../common/zod";
 import { CatalogueService } from "../catalogue/catalogue.service";
 import { CriticalService } from "./critical.service";
 
-const Ack = z.object({ note: z.string().max(500).optional() }).strict();
+const Ack = z.object({ note: z.string().trim().max(500).optional() }).strict();
 const CriticalBody = z.object({ criticalLow: z.coerce.number().nullable().optional(), criticalHigh: z.coerce.number().nullable().optional(), ackWithinMinutes: z.number().int().min(1).max(1440) }).strict();
 
 /** Safety path (ADR-025): not flag-gated, no switch. */

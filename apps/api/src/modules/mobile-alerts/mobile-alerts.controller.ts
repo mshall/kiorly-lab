@@ -5,7 +5,7 @@ import type { AuthUser } from "../../auth/auth.types";
 import { ZBody, z } from "../../common/zod";
 import { MobileAlertsService } from "./mobile-alerts.service";
 
-const Ack = z.object({ note: z.string().max(500).optional() }).strict();
+const Ack = z.object({ note: z.string().trim().max(500).optional() }).strict();
 
 /** Safety path (ADR-025): not flag-gated, not entitlement-gated (see isMobileExempt). Per-kind RBAC lives in the service. */
 @ApiTags("mobile")
