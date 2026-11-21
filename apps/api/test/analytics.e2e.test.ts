@@ -291,9 +291,20 @@ describe("M4 analytics: value types, calculated tests, reruns/dilution, delta ch
     await dual(cor.body.id, 95);
     await call(t, "POST", `/results/${cor.body.id}/tech-validate`, { token: T().TECHNOLOGIST, body: {} });
     await call(t, "POST", `/orders/${f.orderId}/medical-validate`, { token: T().AUTHORIZED_SIGNATORY });
+    // release queue: an amended order that needs a NEW version is offered for signing (not hidden), and is not "ready to release" yet
+    const q1 = (await call(t, "GET", "/release-queue", { token: T().AUTHORIZED_SIGNATORY })).body;
+    assert.ok(q1.readyToSign.some((o: any) => o.orderId === f.orderId), "amended order needs signing");
+    assert.ok(!q1.readyToRelease.some((o: any) => o.orderId === f.orderId));
     const v2 = await call(t, "POST", `/orders/${f.orderId}/reports`, { token: T().AUTHORIZED_SIGNATORY });
     assert.equal(v2.status, 201, JSON.stringify(v2.body));
     assert.equal(v2.body.version, 2);
+    // signed but not yet released: moves to readyToRelease and leaves readyToSign (a second sign would 409 NO_CHANGES_TO_REPORT)
+    const q2 = (await call(t, "GET", "/release-queue", { token: T().AUTHORIZED_SIGNATORY })).body;
+    assert.ok(!q2.readyToSign.some((o: any) => o.orderId === f.orderId), "signed order must not be offered for signing again");
+    assert.ok(q2.readyToRelease.some((o: any) => o.orderId === f.orderId), "signed order is ready to release");
+    assert.ok(q2.signedNotReleased.some((r: any) => r.reportId === v2.body.id));
+    const again = await call(t, "POST", `/orders/${f.orderId}/reports`, { token: T().AUTHORIZED_SIGNATORY });
+    assert.equal(again.status, 409); assert.equal(again.body.code, "NO_CHANGES_TO_REPORT");
     const am = await call(t, "GET", `/orders/${f.orderId}/amendments`, { token: T().TECHNOLOGIST });
     assert.equal(am.body.versions.length, 2);
     assert.equal(am.body.versions[1].correctionReason !== null, true);

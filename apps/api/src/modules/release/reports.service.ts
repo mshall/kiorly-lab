@@ -74,7 +74,8 @@ export class ReportsService {
     const prev = await this.prisma.reportVersion.findFirst({ where: { orderId, orgId: u.orgId }, orderBy: { version: "desc" } });
     let reason: string | null = null;
     if (prev) {
-      const corrected = await this.prisma.result.findMany({ where: { orgId: u.orgId, orderItem: { orderId }, supersedesResultId: { not: null }, status: "MEDICAL_VALIDATED", releasedAt: null }, select: { correctionReason: true } });
+      // only corrections validated AFTER the current version was signed need a new version (an already-signed, not yet released amendment does not)
+      const corrected = await this.prisma.result.findMany({ where: { orgId: u.orgId, orderItem: { orderId }, supersedesResultId: { not: null }, status: "MEDICAL_VALIDATED", releasedAt: null, medicalValidatedAt: { gt: prev.signedAt } }, select: { correctionReason: true } });
       if (!corrected.length) throw new ConflictException({ code: "NO_CHANGES_TO_REPORT", message: "a new version needs a corrected result" });
       reason = [...new Set(corrected.map((c) => c.correctionReason).filter(Boolean))].join("; ");
     } else if (order.status === "CANCELLED") throw new ConflictException({ code: "ORDER_CANCELLED" });
@@ -208,11 +209,34 @@ export class ReportsService {
     return this.prisma.reportVersion.findMany({ where: { orgId, orderId }, include: { releases: { select: { channel: true, releasedAt: true } } }, orderBy: { version: "desc" } });
   }
 
-  /** Release queue: orders ready for signature, and signed versions not yet released on any channel. */
+  /**
+   * Release queue. `readyToSign`: validated orders that need a (new) report version, i.e. never signed, or signed but carrying a corrected result
+   * not yet covered by a version (an amendment). `readyToRelease`: validated orders whose current version is signed, has no pending amendment and
+   * is not released yet (sign would answer 409 NO_CHANGES_TO_REPORT). `signedNotReleased`: every signed version without a release record.
+   */
   async releaseQueue(orgId: string) {
-    const ready = await this.prisma.labOrder.findMany({ where: { orgId, status: "VALIDATED" }, include: { patient: { select: { fullName: true } } }, orderBy: { createdAt: "asc" }, take: 200 });
+    const validated = await this.prisma.labOrder.findMany({ where: { orgId, status: "VALIDATED" }, include: { patient: { select: { fullName: true } } }, orderBy: { createdAt: "asc" }, take: 200 });
+    const ids = validated.map((o) => o.id);
+    const [versions, corrected] = ids.length
+      ? await Promise.all([
+          this.prisma.reportVersion.findMany({ where: { orgId, orderId: { in: ids } }, select: { orderId: true, signedAt: true } }),
+          this.prisma.result.findMany({ where: { orgId, orderItem: { orderId: { in: ids } }, supersedesResultId: { not: null }, status: "MEDICAL_VALIDATED", releasedAt: null }, select: { medicalValidatedAt: true, orderItem: { select: { orderId: true } } } }),
+        ])
+      : [[], []];
+    const lastSigned = new Map<string, Date>();
+    for (const v of versions) if (!lastSigned.has(v.orderId) || v.signedAt > lastSigned.get(v.orderId)!) lastSigned.set(v.orderId, v.signedAt);
+    const signed = new Set(lastSigned.keys());
+    // an amendment needs a NEW version only when its corrected result was validated after the current version was signed
+    const amended = new Set(corrected.filter((c) => { const at = lastSigned.get(c.orderItem.orderId); return at && c.medicalValidatedAt && c.medicalValidatedAt > at; }).map((c) => c.orderItem.orderId));
+    const row = (o: (typeof validated)[number]) => ({ orderId: o.id, orderNumber: o.orderNumber, patient: o.patient.fullName });
+    const needsSignature = validated.filter((o) => !signed.has(o.id) || amended.has(o.id));
+    const alreadySigned = validated.filter((o) => signed.has(o.id) && !amended.has(o.id));
     const unreleased = await this.prisma.reportVersion.findMany({ where: { orgId, releases: { none: {} } }, include: { order: { select: { orderNumber: true, consentShareChannels: true, patient: { select: { fullName: true } } } } }, orderBy: { createdAt: "asc" }, take: 200 });
-    return { readyToSign: ready.map((o) => ({ orderId: o.id, orderNumber: o.orderNumber, patient: o.patient.fullName })), signedNotReleased: unreleased.map((r) => ({ reportId: r.id, version: r.version, orderId: r.orderId, orderNumber: r.order.orderNumber, patient: r.order.patient.fullName, consent: r.order.consentShareChannels })) };
+    return {
+      readyToSign: needsSignature.map(row),
+      readyToRelease: alreadySigned.map(row),
+      signedNotReleased: unreleased.map((r) => ({ reportId: r.id, version: r.version, orderId: r.orderId, orderNumber: r.order.orderNumber, patient: r.order.patient.fullName, consent: r.order.consentShareChannels })),
+    };
   }
 
   async pdf(orgId: string, reportId: string): Promise<Buffer> {

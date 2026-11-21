@@ -121,7 +121,24 @@ async function main() {
     };
     // outbox events produced by the seed describe demo state Kiorex already holds (or the Kiorex seed relays itself): never push them
     const markSent = () => prisma.$executeRawUnsafe(`UPDATE "OutboxEvent" SET status='SENT', "sentAt"=now() WHERE "orgId"='${org}' AND status<>'SENT' AND "occurredAt" >= now() - interval '30 minutes'`).catch(() => {});
-    if (alreadySeeded) { await nurseOrders(); await markSent(); console.log("Lab demo seed: demo patients already present; nurse-collected orders ensured."); return; }
+    // One critical alert is deliberately left OPEN (not yet escalated) so the "open" state exists beside the escalated ones. The scheduler only escalates
+    // alerts whose ackDeadlineAt has passed, so the deadline is set a year ahead. Clearly named order: referring doctor "DEMO-OPEN-ALERT-001". Idempotent.
+    const ensureOpenCriticalAlert = async () => {
+      const MARK = "DEMO-OPEN-ALERT-001";
+      let order = await prisma.labOrder.findFirst({ where: { orgId: org, referringDoctorName: { contains: MARK } }, select: { id: true } });
+      if (!order) {
+        const o = await mkOrder(11, ["KFT"], { referringDoctorName: `${MARK} (Dr Tamer Shawky, DEMO)` });
+        await advance(o, "processing"); const it = (await orders.get(org, o.id)).items[0];
+        const kA = analytes.find((a) => a.code === "K"); if (!kA) { console.warn("open critical alert: analyte K missing"); return; }
+        await results.enterManual(tech, { orderItemId: it.id, analyteId: kA.id, instrumentId: bench.id, value: 6.9 });
+        order = { id: o.id };
+      }
+      const alert = await prisma.criticalAlert.findFirst({ where: { orgId: org, orderId: order.id }, orderBy: { notifiedAt: "desc" } });
+      if (!alert) { console.warn("open critical alert: no alert was raised for the demo order"); return; }
+      if (alert.status === "OPEN" || alert.status === "ESCALATED") await prisma.criticalAlert.update({ where: { id: alert.id }, data: { status: "OPEN", escalationLevel: 0, escalatedAt: null, escalatedToUserId: null, ackDeadlineAt: new Date(Date.now() + 365 * DAY) } });
+      console.log(`Lab demo seed: open critical alert ${MARK} ensured (order ${order.id}).`);
+    };
+    if (alreadySeeded) { await nurseOrders(); await ensureOpenCriticalAlert(); await markSent(); console.log("Lab demo seed: demo patients already present; nurse-collected orders ensured."); return; }
 
     for (let i = 0; i < 6; i++) await safe("awaiting-collection", async () => { const o = await mkOrder(k++, COMBOS[i % COMBOS.length]); await spread(o, i % 3); });
     for (let i = 0; i < 3; i++) await safe("collected", async () => { const o = await mkOrder(k++, COMBOS[i]); await advance(o, "collected"); await spread(o, 1 + i); });
@@ -154,6 +171,7 @@ async function main() {
       if (st === "REJECTED") await orders.cancel?.(users.RECEPTION, r.id, "Slot unavailable (DEMO)").catch(() => {});
     });
     await nurseOrders();
+    await ensureOpenCriticalAlert();
     // outbox events produced above describe demo state Kiorex already holds: never push them
     await markSent();
     console.log(`Lab demo seed OK — ${JSON.stringify(done)}; orders total ${await prisma.labOrder.count({ where: { orgId: org } })}`);

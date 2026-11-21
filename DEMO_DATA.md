@@ -11,17 +11,17 @@ A full LIS: catalogue (257 test definitions in the DB, panels, calculated analyt
 
 ```bash
 e2e/scripts/up.sh [--build] [--seed]          # workspace root: Lab API :3200 (AUTH_MODE=dev, KIOREX_MODE=real)
-cd kiorly-lab && npm run dev -w web            # web on http://localhost:5191 (proxies /api to :3200)
+cd kiorly-lab && npm run dev -w web            # web on http://localhost:5193 (proxies /api to :3200; port from LAB_WEB_PORT, default 5193)
 cd kiorly-lab/apps/api
 npm run db:seed          # base tenant demo-lab (catalogue, QC history incl. a failing run, 6 sample orders) + LIS dataset
 npm run db:seed:demo     # idempotent (skips if "(DEMO)" patients exist): ~34 more orders, QC history, home-collection stops, Kiorex bookings
 npm run db:seed:lis      # the LIS dataset alone (marker supplier "MedSupply (demo)"; idempotent)
-npm run db:seed:mobile   # Kiorly Work tenants chain-lab and basic-lab + alerts
+npm run db:seed:mobile   # Kiorly Work tenants chain-lab and basic-lab + alerts (idempotent; run by scripts/seed-all.sh right after db:seed:demo)
 ```
 
 * **No reset:** released reports, QC runs and the audit log are append-only (DB triggers). A full wipe means recreating the `kiorly_lab` database, then both seeds. `seed-all.sh --reset` only re-creates what it can.
-* **Port clash:** port **5191** is currently the Kiorly Clinic *main* checkout's **docs** server (main uses web 5190 / docs 5191). If `http://localhost:5191` shows "Kiorly Clinic by Kiorex - Documentation", run the Lab web on another port: `LAB_WEB_PORT=5193 npm run dev -w web` (API origin override `LAB_API_ORIGIN`) and open `http://localhost:5193`.
-* Run the API beside another stack with `PORT=3201`, then `LAB_WEB_PORT=5192 LAB_API_ORIGIN=http://127.0.0.1:3201`.
+* **Ports:** the web dev port is configurable and defaults to **5193** (`LAB_WEB_PORT=<port> npm run dev -w web`; API origin override `LAB_API_ORIGIN`). It used to be 5191, which is the Kiorly Clinic *main* checkout's docs server (its web is on 5190), so Pharmacy and Lab webs now default to 5192 / 5193.
+* Run the API beside another stack with `PORT=3201`, then `LAB_WEB_PORT=5194 LAB_API_ORIGIN=http://127.0.0.1:3201`.
 * The hand-off file `.e2e/demo-handoff.json` written by the Lab demo seed is read by the Kiorex seed (nurse samples); order numbers and ids differ per database.
 
 ## 3. Personas (dev-login screen: organisation slug, then pick the role; API `POST :3200/api/v1/auth/dev-login {"orgSlug","email"}`)
@@ -53,7 +53,7 @@ Dev HMAC partner clients (DEV ONLY, for the Kiorex / Clinic links): `kl_dev_kior
 | Data | Detail | Where to click |
 |---|---|---|
 | Orders (248) | RELEASED 92, AWAITING_COLLECTION 75, CANCELLED 40, IN_LAB 14, AWAITING_VALIDATION 11, COLLECTED 8, VALIDATED 7, PARTIALLY_RESULTED 1. Sources: WALK_IN, KIOREX_BOOKING, KIORLY_NURSE (the base seed plus the demo seed create roughly 40-50; the rest are test leftovers) | Orders (`/orders`), Worklist, Validation, Release |
-| **Critical values** | all ESCALATED (level 2, the ack deadline has passed): haemoglobin x3 (HB 5.9 g/dL), potassium (K 6.8 mmol/L), a **positive blood culture** (S. aureus, MRSA screen) ; chain-lab has an escalated HB; basic-lab one more (shown in the app inbox) | Critical (`/critical`) |
+| **Critical values** | one alert is deliberately **OPEN** (not escalated): potassium K 6.9 mmol/L on the order whose referring doctor is `DEMO-OPEN-ALERT-001 (Dr Tamer Shawky, DEMO)` (its ack deadline is a year out so the scheduler never escalates it; `db:seed:demo` re-creates or re-opens it idempotently). The older demo alerts are ESCALATED (level 2, the ack deadline has passed) or, where a test acknowledged them, ACKNOWLEDGED: haemoglobin x3 (HB 5.9 g/dL), potassium (K 6.8 mmol/L), a **positive blood culture** (S. aureus, MRSA screen) ; chain-lab has an escalated HB; basic-lab one more (shown in the app inbox) | Critical (`/critical`) |
 | **QC** | 1,580 PASS runs on two analyzers (+ a manual bench); **1 FAIL** (TSH, rule `1_3s`, z = 3.6, level DEMO-L1) (QC_FAILURE alert, severity HIGH); a QC block is cleared by a signatory/supervisor (`qc.clear_block`) | QC (`/qc`) |
 | **TAT breaches** | STAT x3 and URGENT x1 turnaround breaches (alerts) | Dashboard, Kiorly Work Lab -> TAT |
 | Nurse samples (KNLAB01) | `demo_lo_nl1` RELEASED (signed, report link in the Kiorex vault), `nl2` AWAITING_VALIDATION (results entered + tech validated), `nl3` COLLECTED / specimen in transit (tube `DEMO-NL3-EDTA`), `nl4` REFUSED at hand-off (no order here); order numbers `ORD-2026-000129..131` in the current DB | Accessioning, Validation, Release |
@@ -73,7 +73,7 @@ Dev HMAC partner clients (DEV ONLY, for the Kiorex / Clinic links): `kl_dev_kior
 
 **L3. Accession, enter, validate, release (tech@ then signatory@).** 1) As Technologist: Accessioning -> receive tube `DEMO-NL3-EDTA`. *Expected:* nurse sample `nl3` becomes received in lab; custody timeline continues the nurse's hand-over. 2) Worklist: enter results for a collected order (a delta check may flag); technically validate. 3) As Signatory: Validation -> `nl2` -> medically validate -> Release. *Expected:* report version created, order RELEASED, report link in the Kiorex vault, the nurse sees the report. 4) Verify the public link `/r/<token>`.
 
-**L4. Critical value (signatory@).** 1) Critical: the escalated HB 5.9 and K 6.8 alerts. 2) Acknowledge one with a note. *Expected:* the alert closes with who and when; reopening shows the audit. 3) The positive blood-culture alert is acknowledged the same way.
+**L4. Critical value (signatory@).** 1) Critical: the OPEN `DEMO-OPEN-ALERT-001` alert (K 6.9) and the escalated HB 5.9 and K 6.8 alerts. 2) Acknowledge one with a note. *Expected:* the alert closes with who and when; reopening shows the audit. 3) The positive blood-culture alert is acknowledged the same way.
 
 **L5. QC failure (tech@ / signatory@).** 1) QC: the TSH run with rule `1_3s` is FAIL and the analyte is blocked. 2) Tech re-runs QC (a passing run) and the signatory clears the block (`qc.clear_block`). *Expected:* the QC failure alert is resolved and the block on TSH is lifted; check Validation for TSH orders before and after.
 
@@ -102,8 +102,10 @@ Dev HMAC partner clients (DEV ONLY, for the Kiorex / Clinic links): `kl_dev_kior
 ## 7. Known limitations and inconsistencies found
 
 * Dev authentication only (no passwords); production uses Passport. Mock providers for messaging, WhatsApp/e-mail delivery, payments.
-* Port 5191 collides with the Clinic main docs server (section 2).
 * The live DB carries e2e leftovers: 248 `demo-lab` orders instead of the roughly 40-50 seeded, 124 home-collection rows, many Kiorex-booking orders. The documented "6 awaiting collection / 3 collected / ..." figures in `Docs/TEST_DATA.md` are therefore lower bounds only.
 * `kx_lb_demo_7` is REJECTED in Kiorex and `CANCELLED` in the lab DB (a lab-side cancellation maps to a Kiorex rejection): consistent, but easy to mistake for a seed bug.
-* All current critical alerts are already **ESCALATED** (the scheduler ran), so the "open, not yet escalated" state is only seen right after a fresh seed.
+* Fixed 21 Nov 2026: all critical alerts used to be ESCALATED by the scheduler, so the "open, not yet escalated" state was missing. `db:seed:demo` now keeps one clearly named alert (`DEMO-OPEN-ALERT-001`) OPEN with a far deadline. Anyone who acknowledges it closes it for good; to re-open it, re-run `db:seed:demo` only while it is still ESCALATED/OPEN (an acknowledged alert is left alone).
 * Seeds back-shift order dates with a session-local trigger bypass (needs a superuser role such as the local `postgres`).
+
+---
+Verified: 2026-11-21 (seed scripts run twice, `kiorly_lab` database via SELECT, web dev port start-up check on 5193).

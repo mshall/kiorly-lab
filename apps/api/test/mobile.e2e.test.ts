@@ -144,6 +144,12 @@ describe("Kiorly Work mobile API", () => {
     F(await call(t, "POST", "/mobile/devices", { token: basic.tokens.TECHNOLOGIST, body: { deviceId: DEV, platform: "android", name: "Pixel" } }));
     F(await call(t, "GET", "/mobile/inbox", { token: basic.tokens.TECHNOLOGIST }));
     F(await call(t, "GET", "/mobile/summary", { token: basic.tokens.TECHNOLOGIST }));
+    // the plan gate beats RBAC: a BASIC user LACKING the permission (reception has no results.read / inventory.read) still gets FEATURE_DISABLED, not FORBIDDEN
+    F(await call(t, "GET", "/mobile/worklist/progress", { token: basic.tokens.RECEPTION }));
+    F(await call(t, "GET", "/mobile/reagents/low-stock", { token: basic.tokens.RECEPTION }));
+    F(await call(t, "GET", "/validation-queue?stage=medical", { token: basic.tokens.RECEPTION, headers: APP }));
+    // ... while on PRO the same permission miss stays FORBIDDEN
+    assert.equal((await call(t, "GET", "/mobile/worklist/progress", { token: pro.tokens.RECEPTION })).body.code, "FORBIDDEN");
     // the web console (no app header) is unaffected
     assert.equal((await call(t, "GET", "/orders", { token: basic.tokens.RECEPTION })).status, 200);
     // exempt on every plan

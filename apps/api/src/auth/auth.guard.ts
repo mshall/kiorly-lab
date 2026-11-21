@@ -6,6 +6,7 @@ import type { AuthedRequest } from "./auth.types";
 import { IS_PUBLIC, PERMS } from "./decorators";
 import { hasPermission, mfaSatisfied, type Permission } from "./rbac";
 import { TokenService } from "./token.service";
+import { isMobilePlanGated } from "../modules/mobile/mobile-gate";
 
 /**
  * Global guard: authenticates (JWT aud/iss), resolves the staff row (tenant + role come from the DB, never from headers),
@@ -43,6 +44,11 @@ export class AuthGuard implements CanActivate {
       signatoryLicenceNo: staff.signatoryLicenceNo,
     };
     const need = this.reflector.getAllAndOverride<Permission[] | undefined>(PERMS, [ctx.getHandler(), ctx.getClass()]);
+    // plan-gated /mobile routes: FEATURE_DISABLED (MobileGuard) must win over FORBIDDEN, so the RBAC check runs there after the entitlement check
+    if (need?.length && isMobilePlanGated(req)) {
+      req.deferredPerms = need;
+      return true;
+    }
     if (need?.length && !need.every((p) => hasPermission(staff.role, p))) throw new ForbiddenException({ code: "FORBIDDEN", required: need });
     return true;
   }

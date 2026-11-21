@@ -18,4 +18,6 @@ export interface AuthedRequest {
   originalUrl: string;
   route?: { path?: string };
   rawBody?: Buffer;
+  /** Set by AuthGuard on plan-gated /mobile routes: the @Perm check is deferred to MobileGuard so FEATURE_DISABLED wins over FORBIDDEN. */
+  deferredPerms?: string[];
 }

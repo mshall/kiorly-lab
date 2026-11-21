@@ -10,13 +10,14 @@ import { InventoryService } from "../inventory/inventory.service";
 import { MOBILE_ENTITLEMENT_KEY, MobileEntitlementService } from "./mobile-entitlement.service";
 import { SCAN_REQUIRED, nextSpecimenStatus, type SpecimenAction } from "../specimens/specimen-state";
 import { MobileAlertsService } from "../mobile-alerts/mobile-alerts.service";
+import { appConfig } from "../../config/app-config";
+import { startOfLocalDay } from "./local-day";
 import { sha256 } from "./mobile.guard";
 import { modulesForRole } from "./mobile-modules";
 import { MobileUpgradeService } from "./mobile-upgrade.service";
 
 const ACTION_PERM: Record<SpecimenAction, Permission> = { collect: "specimens.collect", transport: "specimens.collect", receive: "specimens.receive", process: "specimens.process", store: "specimens.process", dispose: "specimens.process", reject: "specimens.reject", retrieve: "specimens.process" };
 const ACTIONS = Object.keys(ACTION_PERM) as SpecimenAction[];
-const startOfDay = () => new Date(new Date().toISOString().slice(0, 10) + "T00:00:00.000Z");
 
 @Injectable()
 export class MobileService {
@@ -121,7 +122,7 @@ export class MobileService {
     const p = (perm: Permission) => hasPermission(u.role, perm);
     const org = u.orgId, labScope = u.labIds.length ? { labId: { in: u.labIds } } : {};
     const [ordersToday, awaitingCollection, inLab, pendingTech, pendingMedical, openCritical, openQc, tatItems, stock, unread, alerts] = await Promise.all([
-      p("orders.read") ? this.prisma.labOrder.count({ where: { orgId: org, ...labScope, createdAt: { gte: startOfDay() }, status: { not: "CANCELLED" } } }) : null,
+      p("orders.read") ? this.prisma.labOrder.count({ where: { orgId: org, ...labScope, createdAt: { gte: startOfLocalDay(new Date(), appConfig.labTimezone()) }, status: { not: "CANCELLED" } } }) : null,
       p("specimens.read") ? this.prisma.specimen.count({ where: { orgId: org, ...labScope, status: "PENDING_COLLECTION" } }) : null,
       p("results.read") ? this.prisma.specimen.count({ where: { orgId: org, ...labScope, status: { in: ["RECEIVED", "PROCESSING"] } } }) : null,
       p("results.read") ? this.prisma.result.count({ where: { orgId: org, status: "ENTERED" } }) : null,

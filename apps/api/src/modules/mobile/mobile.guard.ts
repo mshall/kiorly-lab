@@ -1,23 +1,14 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Inject, Injectable, UnauthorizedException } from "@nestjs/common";
 import { createHash, timingSafeEqual } from "node:crypto";
 import type { AuthedRequest } from "../../auth/auth.types";
+import { hasPermission, type Permission } from "../../auth/rbac";
 import { PrismaService } from "../../prisma/prisma.service";
 import { MOBILE_ENTITLEMENT_KEY, MobileEntitlementService } from "./mobile-entitlement.service";
 
 export const sha256 = (s: string) => createHash("sha256").update(s).digest("hex");
 
-const path = (req: AuthedRequest) => req.originalUrl.split("?")[0].replace(/^\/api\/v1/, "").replace(/\/+$/, "");
-
-/**
- * Routes that stay open on EVERY plan (ADR-025 safety-alert inbox + discovery + remote sign-out + auth):
- * /auth/*, GET /mobile/bootstrap, /mobile/alerts*, POST /mobile/upgrade-request (a Basic org must be able to ask), DELETE /mobile/devices/:id.
- */
-export function isMobileExempt(method: string, p: string): boolean {
-  if (p.startsWith("/auth/") || p === "/auth") return true;
-  if (method === "POST" && p === "/mobile/upgrade-request") return true;
-  if (p === "/mobile/bootstrap" || p === "/mobile/alerts" || p.startsWith("/mobile/alerts/")) return true;
-  return method === "DELETE" && /^\/mobile\/devices\/[^/]+$/.test(p);
-}
+import { isMobileExempt, isMobilePlanGated } from "./mobile-gate";
+export { isMobileExempt };
 
 /**
  * Global guard (after AuthGuard). 1) Device binding: X-Kiorly-Device + X-Kiorly-Device-Token must match an ACTIVE device of the caller,
@@ -47,12 +38,12 @@ export class MobileGuard implements CanActivate {
       if (!dev || dev.status !== "ACTIVE" || a.length !== b.length || !timingSafeEqual(a, b)) throw new UnauthorizedException({ code: "DEVICE_REVOKED" });
       if (!dev.lastSeenAt || Date.now() - dev.lastSeenAt.getTime() > 60_000) await this.prisma.mobileDevice.update({ where: { id: dev.id }, data: { lastSeenAt: new Date() } });
     }
-    const p = path(req);
-    const client = h("x-kiorly-client");
-    const isApp = Boolean(client && client.startsWith("kiorly-work"));
-    if ((isApp || p.startsWith("/mobile/")) && !isMobileExempt(req.method, p)) {
+    if (isMobilePlanGated(req)) {
       const e = this.ent.evaluate(user);
       if (!e.enabled) throw new ForbiddenException({ code: "FEATURE_DISABLED", key: MOBILE_ENTITLEMENT_KEY, scope: "org", reason: e.reason });
+      // RBAC deferred by AuthGuard so the plan gate answers first
+      const need = req.deferredPerms as Permission[] | undefined;
+      if (need?.length && !need.every((x) => hasPermission(user.role, x))) throw new ForbiddenException({ code: "FORBIDDEN", required: need });
     }
     return true;
   }

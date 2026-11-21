@@ -11,6 +11,8 @@ export const appConfig = {
   oidcIssuer: () => process.env.KIOREX_OIDC_ISSUER?.replace(/\/+$/, ""),
   oidcAudience: () => process.env.KIOREX_OIDC_AUDIENCE ?? "kiorly-lab",
   mfaEnforced: () => process.env.FORCE_PRIVILEGED_MFA === "true" || process.env.NODE_ENV === "production",
+  /** IANA zone defining "today" for lab-facing day boundaries (mobile summary). The lab has no per-lab timezone column yet; Egypt market default. */
+  labTimezone: () => process.env.LAB_TIMEZONE?.trim() || "Africa/Cairo",
   publicBaseUrl: () => (process.env.PUBLIC_BASE_URL ?? "http://localhost:5191").replace(/\/+$/, ""),
   storageDir: () => process.env.STORAGE_DIR ?? "./.data/storage",
   messagingMode: () => mode(process.env.MESSAGING_MODE),
