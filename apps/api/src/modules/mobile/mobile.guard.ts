@@ -10,10 +10,11 @@ const path = (req: AuthedRequest) => req.originalUrl.split("?")[0].replace(/^\/a
 
 /**
  * Routes that stay open on EVERY plan (ADR-025 safety-alert inbox + discovery + remote sign-out + auth):
- * /auth/*, GET /mobile/bootstrap, /mobile/alerts*, DELETE /mobile/devices/:id.
+ * /auth/*, GET /mobile/bootstrap, /mobile/alerts*, POST /mobile/upgrade-request (a Basic org must be able to ask), DELETE /mobile/devices/:id.
  */
 export function isMobileExempt(method: string, p: string): boolean {
   if (p.startsWith("/auth/") || p === "/auth") return true;
+  if (method === "POST" && p === "/mobile/upgrade-request") return true;
   if (p === "/mobile/bootstrap" || p === "/mobile/alerts" || p.startsWith("/mobile/alerts/")) return true;
   return method === "DELETE" && /^\/mobile\/devices\/[^/]+$/.test(p);
 }

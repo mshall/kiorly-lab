@@ -21,6 +21,7 @@ export const MOBILE_TEMPLATES: Record<string, Template> = {
   SAFETY_ALERT: { kind: "SAFETY", title: "Collector safety alert", titleAr: "تنبيه سلامة لأخصائي السحب", body: "A home-collection safety alert was raised. Check in with the collector.", bodyAr: "تم رفع تنبيه سلامة لزيارة سحب منزلية. تواصل مع أخصائي السحب." },
   RESULT_AWAITING_VALIDATION: { kind: "CLINICAL", title: "Results awaiting sign-off", titleAr: "نتائج بانتظار الاعتماد", body: "Order {orderNumber} is ready for medical validation.", bodyAr: "الطلب {orderNumber} جاهز للاعتماد الطبي." },
   REAGENT_LOW_STOCK: { kind: "OPS", title: "Reagent stock is low", titleAr: "مخزون كاشف منخفض", body: "{item} has no usable stock for the latest run.", bodyAr: "لا يوجد مخزون صالح من {item} للتشغيل الأخير." },
+  UPGRADE_REQUEST: { kind: "OPS", title: "Staff asked to upgrade Kiorly Work", titleAr: "طلب موظف ترقية Kiorly Work", body: "A team member asked for the Kiorly Work staff app (Pro plan). Review your plan in Settings.", bodyAr: "طلب أحد أعضاء الفريق تطبيق Kiorly Work للموظفين (باقة Pro). راجع باقتك من الإعدادات." },
   TEST: { kind: "GENERAL", title: "Kiorly Work test notification", titleAr: "إشعار تجريبي من Kiorly Work", body: "Push is working on this device.", bodyAr: "الإشعارات تعمل على هذا الجهاز." },
 };
 

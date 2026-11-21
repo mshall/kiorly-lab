@@ -9,8 +9,8 @@ import { ENTITLEMENT_KEYS, isKnownFlagKey } from "../../feature-flags/feature-fl
 
 describe("Kiorly Work: entitlement plumbing", () => {
   it("only the safety inbox, bootstrap, auth and remote sign-out are exempt (ADR-025)", () => {
-    for (const [m, p] of [["GET", "/mobile/bootstrap"], ["GET", "/mobile/alerts"], ["POST", "/mobile/alerts/crit_1/ack"], ["DELETE", "/mobile/devices/abc"], ["POST", "/auth/dev-login"]] as const) assert.equal(isMobileExempt(m, p), true, `${m} ${p}`);
-    for (const [m, p] of [["GET", "/mobile/inbox"], ["POST", "/mobile/devices"], ["GET", "/mobile/devices"], ["GET", "/orders"], ["GET", "/mobile/summary"], ["PUT", "/mobile/devices/x/push-token"]] as const) assert.equal(isMobileExempt(m, p), false, `${m} ${p}`);
+    for (const [m, p] of [["GET", "/mobile/bootstrap"], ["GET", "/mobile/alerts"], ["POST", "/mobile/alerts/crit_1/ack"], ["POST", "/mobile/upgrade-request"], ["DELETE", "/mobile/devices/abc"], ["POST", "/auth/dev-login"]] as const) assert.equal(isMobileExempt(m, p), true, `${m} ${p}`);
+    for (const [m, p] of [["GET", "/mobile/inbox"], ["GET", "/mobile/upgrade-request"], ["POST", "/mobile/devices"], ["GET", "/mobile/devices"], ["GET", "/orders"], ["GET", "/mobile/summary"], ["PUT", "/mobile/devices/x/push-token"]] as const) assert.equal(isMobileExempt(m, p), false, `${m} ${p}`);
   });
   it("editions map to plans and the flag is registered", () => {
     assert.deepEqual(PLAN_OF_EDITION, { LITE: "BASIC", PRO: "PRO", CHAIN: "ENTERPRISE" });

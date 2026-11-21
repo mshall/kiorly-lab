@@ -26,6 +26,7 @@ Orders, accessioning, chain of custody, analyzers, Westgard QC, authorised relea
 </div>
 
 > **Synthetic data only.** Demo logins, URLs and reset steps: [Docs/TEST_DATA.md](Docs/TEST_DATA.md) (DEV ONLY, blocked in production).
+> **Demo data for manual testing** (personas, counts, click-path test scripts, role checklists): [DEMO_DATA.md](DEMO_DATA.md) (DEV ONLY).
 
 > **Status: MVP built, standalone LIS checklist done, mock providers only.** Schema is FROZEN-v1 (engineering freeze, human approval NH-LB-023 open). Open human items: [Docs/NEEDS_HUMAN.md](Docs/NEEDS_HUMAN.md).
 

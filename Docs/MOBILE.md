@@ -15,7 +15,7 @@ Not (yet) in `@kiorex/contracts` `flags/catalogue.json` (a test pins the lab fla
 
 Enforcement (`MobileGuard`, global, after AuthGuard):
 - Every `/mobile/*` route and every request with `X-Kiorly-Client: kiorly-work*` without the entitlement -> `403 {code:"FEATURE_DISABLED", key:"mobile_staff_app", scope:"org", reason}`.
-- **Exempt on every plan (ADR-025):** `/auth/*`, `GET /mobile/bootstrap`, `/mobile/alerts*`, `DELETE /mobile/devices/:id`.
+- **Exempt on every plan (ADR-025):** `/auth/*`, `GET /mobile/bootstrap`, `/mobile/alerts*`, `POST /mobile/upgrade-request`, `DELETE /mobile/devices/:id`.
 
 ## New endpoints
 | Method / path | Perm | Notes |
@@ -29,11 +29,14 @@ Enforcement (`MobileGuard`, global, after AuthGuard):
 | `POST /mobile/inbox/:id/read`, `POST /mobile/inbox/read-all`, `POST /mobile/push/test` | own | |
 | `GET /mobile/alerts?status=open\|all` | role-scoped, **no entitlement** | `{items:[Alert], open}`; Alert `{id, kind, severity, title,titleAr, body,bodyAr, subject:{type,id,label}\|null, raisedAt, dueAt, ackedAt, ackedBy, ackedByName, ackNote, escalationLevel?}` |
 | `POST /mobile/alerts/:id/ack {note?}` | per kind (see below), **no entitlement** | Idempotent (first acknowledger kept). Returns the Alert. |
+| `POST /mobile/upgrade-request {featureKey?, note?}` | any signed-in staff, **no entitlement** (exempt like alerts) | Basic-org staff ask the owner for the plan that includes Kiorly Work. `featureKey` = a module key or `general` (400 otherwise); `note` <= 500 chars. Records requester, role, org, feature, note, time (`MobileUpgradeRequest`); a repeat by the same user for the same feature within **24h** returns the original with `deduped:true` (no second notification). Notifies the org owner(s) via the mock mobile push inbox (kind `OPS`, template `UPGRADE_REQUEST`) and audits `mobile.upgrade_requested`. Response `{id, status:"REQUESTED"\|"ALREADY_ENTITLED", featureKey, requestedAt, deduped, notified}` (`ALREADY_ENTITLED` = nothing recorded). |
 | `GET /mobile/summary` | any staff + entitlement | Home counters, each `null` when the role may not see it: `ordersToday, awaitingCollection, inLab, pendingTechValidation, pendingMedicalValidation, openCriticalValues, openQcBlocks, tatBreaches24h, reagents:{lowStock,expiringLots}, unreadInbox, openAlerts` |
 | `GET /mobile/scan?code=` | `specimens.read` | Resolves a specimen **barcode or accession number** (or an **order number**) -> `{type:"SPECIMEN", matchedBy, specimen:{id,accessionNumber,barcode,specimenType,container,status,collectedAt}, order:{id,orderNumber,priority,status,patient}, tests[], custody[last 5], nextActions:[{action,to,requiresScan,allowed}]}` or `{type:"ORDER", order, specimens[]}`; 404 `SPECIMEN_NOT_FOUND`. `allowed` reflects the caller's permission; then call the action endpoint below with `scannedBarcode`. |
 | `GET /mobile/search?q=` (min 2 chars) | per entity permission | `{patients[], orders[], specimens[]}` (8 each) |
 | `GET /mobile/worklist/progress` | `results.read` | `{windowDays:7, sections:[{section,total,pending,inProgress,resulted,validated,released,percentDone}]}` |
 | `GET /mobile/reagents/low-stock` | `inventory.read` | `{lowStock:[{id,code,name,nameAr,unit,onHand,reorderLevel,reorderQty,supplier}], expiring:[{…,expiringLots,expiredQty,nextExpiry}]}` |
+
+`GET /mobile/bootstrap` also returns `upgrade` on non-entitled orgs only (`null` on Pro): `{lockedModules:[key], myRequest:{featureKey,requestedAt}|null, openRequests:number|null, canApprove:boolean}`. `lockedModules` = the modules THIS role would get on Pro (same role rules as the Pro bootstrap), so the app renders only role-relevant locked tiles; `myRequest` = my latest request in the last 24h; `openRequests`/`canApprove` are for owner/admin.
 
 ### Safety alerts (ADR-025) — derived from existing safety data
 | kind | source | visible/ack permission | severity |

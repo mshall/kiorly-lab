@@ -11,19 +11,8 @@ import { MOBILE_ENTITLEMENT_KEY, MobileEntitlementService } from "./mobile-entit
 import { SCAN_REQUIRED, nextSpecimenStatus, type SpecimenAction } from "../specimens/specimen-state";
 import { MobileAlertsService } from "../mobile-alerts/mobile-alerts.service";
 import { sha256 } from "./mobile.guard";
-
-interface ModuleDef { key: string; anyOf: Permission[]; screens: { name: string; perm?: Permission }[] }
-const MODULES: ModuleDef[] = [
-  { key: "lab.phlebotomy", anyOf: ["specimens.collect"], screens: [{ name: "scan" }, { name: "custody" }, { name: "round", perm: "collection.perform" }, { name: "safety", perm: "collection.perform" }] },
-  { key: "lab.accession", anyOf: ["specimens.label", "specimens.receive"], screens: [{ name: "scan" }, { name: "labels", perm: "specimens.label" }, { name: "receive", perm: "specimens.receive" }] },
-  { key: "lab.critical", anyOf: ["critical.read"], screens: [{ name: "inbox" }, { name: "acknowledge", perm: "critical.ack" }, { name: "escalations" }] },
-  { key: "lab.validation", anyOf: ["results.tech_validate", "results.medical_validate"], screens: [{ name: "queue" }, { name: "review" }, { name: "tech-validate", perm: "results.tech_validate" }, { name: "sign-off", perm: "results.medical_validate" }] },
-  { key: "lab.worklist", anyOf: ["results.read"], screens: [{ name: "progress" }, { name: "specimens" }] },
-  { key: "lab.qc", anyOf: ["qc.read"], screens: [{ name: "status" }, { name: "blocks" }, { name: "levey-jennings" }] },
-  { key: "lab.tat", anyOf: ["dashboard.read"], screens: [{ name: "summary" }, { name: "breaches" }] },
-  { key: "lab.orders", anyOf: ["orders.read"], screens: [{ name: "today" }, { name: "detail" }, { name: "search" }] },
-  { key: "lab.reagents", anyOf: ["inventory.read"], screens: [{ name: "low-stock" }, { name: "expiring" }] },
-];
+import { modulesForRole } from "./mobile-modules";
+import { MobileUpgradeService } from "./mobile-upgrade.service";
 
 const ACTION_PERM: Record<SpecimenAction, Permission> = { collect: "specimens.collect", transport: "specimens.collect", receive: "specimens.receive", process: "specimens.process", store: "specimens.process", dispose: "specimens.process", reject: "specimens.reject", retrieve: "specimens.process" };
 const ACTIONS = Object.keys(ACTION_PERM) as SpecimenAction[];
@@ -38,13 +27,11 @@ export class MobileService {
     @Inject(MobilePushService) private readonly push: MobilePushService,
     @Inject(InventoryService) private readonly inventory: InventoryService,
     @Inject(MobileAlertsService) private readonly alerts: MobileAlertsService,
+    @Inject(MobileUpgradeService) private readonly upgrade: MobileUpgradeService,
   ) {}
 
   // ------------------------------------------------------------------ bootstrap
-  modulesFor(role: StaffRole) {
-    const perms = ROLE_PERMISSIONS[role];
-    return MODULES.map((m) => { const enabled = m.anyOf.some((p) => perms.includes(p)); return { key: m.key, enabled, screens: enabled ? m.screens.filter((s) => !s.perm || perms.includes(s.perm)).map((s) => s.name) : [] }; });
-  }
+  modulesFor(role: StaffRole, signatoryLicenceNo?: string | null) { return modulesForRole(role, signatoryLicenceNo); }
 
   async bootstrap(u: AuthUser, req: Pick<AuthedRequest, "headers">) {
     const [tenant, staff] = await Promise.all([this.prisma.tenant.findUniqueOrThrow({ where: { id: u.orgId } }), this.prisma.staffUser.findUniqueOrThrow({ where: { id: u.staffId } })]);
@@ -62,7 +49,9 @@ export class MobileService {
       labs,
       entitlement: { key: MOBILE_ENTITLEMENT_KEY, enabled: e.enabled, requiredPlan: e.requiredPlan, reason: e.reason },
       safetyAlertsOnly: !e.enabled,
-      modules: e.enabled ? this.modulesFor(staff.role) : [],
+      modules: e.enabled ? this.modulesFor(staff.role, staff.signatoryLicenceNo) : [],
+      /** Basic orgs only: what this role would get on PRO (locked tiles), my latest upgrade request, open requests for the owner. */
+      upgrade: e.enabled ? null : await this.upgrade.bootstrapBlock(u, this.modulesFor(staff.role, staff.signatoryLicenceNo).filter((m) => m.enabled).map((m) => m.key)),
       permissions: e.enabled ? ROLE_PERMISSIONS[staff.role] : [],
       device: dev ? { id: dev.id, status: dev.status } : null,
     };
