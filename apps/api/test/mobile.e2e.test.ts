@@ -6,7 +6,7 @@ const APP = { "x-kiorly-client": "kiorly-work/1.0.0" };
 const snapshot = (flags: object[]) => ({ product: "kiorly-lab", version: 1, generatedAt: new Date().toISOString(), flags: flags as never });
 const DEV = "8f14e45f-ceea-467a-9575-5d0e5c3b7d11";
 
-describe("Kiorly Work mobile API", () => {
+describe("Kiorly Team mobile API", () => {
   let t: TestApp;
   let pro: Lab;
   let chain: Lab;

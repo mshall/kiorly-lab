@@ -10,7 +10,7 @@ const Device = z.object({ deviceId: z.string().min(8).max(80), platform: z.enum(
 const UpgradeRequest = z.object({ featureKey: z.string().max(80).optional(), note: z.string().max(500).optional() }).strict();
 const PushToken = z.object({ token: z.string().min(1).max(300), provider: z.enum(["expo", "mock"]) }).strict();
 
-/** Kiorly Work staff app API. Every route except bootstrap / alerts / DELETE devices needs the `mobile_staff_app` entitlement (MobileGuard). */
+/** Kiorly Team staff app API. Every route except bootstrap / alerts / DELETE devices needs the `mobile_staff_app` entitlement (MobileGuard). */
 @ApiTags("mobile")
 @ApiBearerAuth()
 @Controller("mobile")

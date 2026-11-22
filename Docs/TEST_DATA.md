@@ -43,7 +43,7 @@ Synthetic, guarded like the other seeds. Idempotent: skipped when the marker sup
 - **Reception**: 8 appointments tomorrow, queue tickets today (routine + STAT lanes, one served, one called).
 Logins: `supervisor@demo-lab.test`, `finance@demo-lab.test` in addition to the base roles. Order dates in the history are back-shifted with a session-local trigger bypass (needs a superuser role, which the local `postgres` is); on a restricted DB role the seed still works and the dates stay current.
 
-## Kiorly Work mobile (staff app) — `npm run db:seed:mobile -w api` (added 20 Nov 2026)
+## Kiorly Team mobile (staff app) — `npm run db:seed:mobile -w api` (added 20 Nov 2026)
 Run after `db:seed` (+ `db:seed:demo`). Idempotent, guarded like the other demo seeds. Dev-login: `POST /api/v1/auth/dev-login {"orgSlug","email"}`; every tenant has one login per role: `owner|director|signatory|tech|phleb|reception|manager|supervisor|finance` @ `<slug>.test`.
 | Org slug | Plan (edition) | Purpose |
 |---|---|---|

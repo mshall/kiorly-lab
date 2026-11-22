@@ -7,7 +7,7 @@ import { MOBILE_TEMPLATES } from "../../adapters/mobile-push.adapter";
 import { PLAN_OF_EDITION } from "./mobile-entitlement.service";
 import { ENTITLEMENT_KEYS, isKnownFlagKey } from "../../feature-flags/feature-flag-keys";
 
-describe("Kiorly Work: entitlement plumbing", () => {
+describe("Kiorly Team: entitlement plumbing", () => {
   it("only the safety inbox, bootstrap, auth and remote sign-out are exempt (ADR-025)", () => {
     for (const [m, p] of [["GET", "/mobile/bootstrap"], ["GET", "/mobile/alerts"], ["POST", "/mobile/alerts/crit_1/ack"], ["POST", "/mobile/upgrade-request"], ["DELETE", "/mobile/devices/abc"], ["POST", "/auth/dev-login"]] as const) assert.equal(isMobileExempt(m, p), true, `${m} ${p}`);
     for (const [m, p] of [["GET", "/mobile/inbox"], ["GET", "/mobile/upgrade-request"], ["POST", "/mobile/devices"], ["GET", "/mobile/devices"], ["GET", "/orders"], ["GET", "/mobile/summary"], ["PUT", "/mobile/devices/x/push-token"]] as const) assert.equal(isMobileExempt(m, p), false, `${m} ${p}`);

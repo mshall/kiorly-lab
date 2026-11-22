@@ -16,7 +16,7 @@ cd kiorly-lab/apps/api
 npm run db:seed          # base tenant demo-lab (catalogue, QC history incl. a failing run, 6 sample orders) + LIS dataset
 npm run db:seed:demo     # idempotent (skips if "(DEMO)" patients exist): ~34 more orders, QC history, home-collection stops, Kiorex bookings
 npm run db:seed:lis      # the LIS dataset alone (marker supplier "MedSupply (demo)"; idempotent)
-npm run db:seed:mobile   # Kiorly Work tenants chain-lab and basic-lab + alerts (idempotent; run by scripts/seed-all.sh right after db:seed:demo)
+npm run db:seed:mobile   # Kiorly Team tenants chain-lab and basic-lab + alerts (idempotent; run by scripts/seed-all.sh right after db:seed:demo)
 ```
 
 * **No reset:** released reports, QC runs and the audit log are append-only (DB triggers). A full wipe means recreating the `kiorly_lab` database, then both seeds. `seed-all.sh --reset` only re-creates what it can.
@@ -44,7 +44,7 @@ Every tenant has one login per role: `<role>@<slug>.test`, no password. All 27 w
 |---|---|---|---|---|
 | `demo-lab` | Demo Diagnostics (synthetic) | PRO (INTEGRATED) | 9 roles above | full app; the busy tenant |
 | `chain-lab` | Delta Diagnostics Group (synthetic) | CHAIN = ENTERPRISE | same 9 at `@chain-lab.test` | small: a pending phlebotomy order, an in-lab specimen, an awaiting-sign-off order, one escalated critical HB |
-| `basic-lab` | Starter Lab (synthetic) | LITE = BASIC | same 9 at `@basic-lab.test` | web works; Kiorly Work shows the upgrade screen + safety-alert inbox |
+| `basic-lab` | Starter Lab (synthetic) | LITE = BASIC | same 9 at `@basic-lab.test` | web works; Kiorly Team shows the upgrade screen + safety-alert inbox |
 
 Dev HMAC partner clients (DEV ONLY, for the Kiorex / Clinic links): `kl_dev_kiorex`, `kl_dev_clinic`, `kl_dev_nurse` (secrets in the seed / `INTEGRATION.md`).
 
@@ -55,7 +55,7 @@ Dev HMAC partner clients (DEV ONLY, for the Kiorex / Clinic links): `kl_dev_kior
 | Orders (248) | RELEASED 92, AWAITING_COLLECTION 75, CANCELLED 40, IN_LAB 14, AWAITING_VALIDATION 11, COLLECTED 8, VALIDATED 7, PARTIALLY_RESULTED 1. Sources: WALK_IN, KIOREX_BOOKING, KIORLY_NURSE (the base seed plus the demo seed create roughly 40-50; the rest are test leftovers) | Orders (`/orders`), Worklist, Validation, Release |
 | **Critical values** | one alert is deliberately **OPEN** (not escalated): potassium K 6.9 mmol/L on the order whose referring doctor is `DEMO-OPEN-ALERT-001 (Dr Tamer Shawky, DEMO)` (its ack deadline is a year out so the scheduler never escalates it; `db:seed:demo` re-creates or re-opens it idempotently). The older demo alerts are ESCALATED (level 2, the ack deadline has passed) or, where a test acknowledged them, ACKNOWLEDGED: haemoglobin x3 (HB 5.9 g/dL), potassium (K 6.8 mmol/L), a **positive blood culture** (S. aureus, MRSA screen) ; chain-lab has an escalated HB; basic-lab one more (shown in the app inbox) | Critical (`/critical`) |
 | **QC** | 1,580 PASS runs on two analyzers (+ a manual bench); **1 FAIL** (TSH, rule `1_3s`, z = 3.6, level DEMO-L1) (QC_FAILURE alert, severity HIGH); a QC block is cleared by a signatory/supervisor (`qc.clear_block`) | QC (`/qc`) |
-| **TAT breaches** | STAT x3 and URGENT x1 turnaround breaches (alerts) | Dashboard, Kiorly Work Lab -> TAT |
+| **TAT breaches** | STAT x3 and URGENT x1 turnaround breaches (alerts) | Dashboard, Kiorly Team Lab -> TAT |
 | Nurse samples (KNLAB01) | `demo_lo_nl1` RELEASED (signed, report link in the Kiorex vault), `nl2` AWAITING_VALIDATION (results entered + tech validated), `nl3` COLLECTED / specimen in transit (tube `DEMO-NL3-EDTA`), `nl4` REFUSED at hand-off (no order here); order numbers `ORD-2026-000129..131` in the current DB | Accessioning, Validation, Release |
 | Kiorex bookings | `kx_lb_demo_3..7` reach the lab: `3` Mariam AWAITING_COLLECTION, `4` Omar COLLECTED, `5` Dalia and `6` Tarek RELEASED, `7` Heba CANCELLED here (REJECTED on the Kiorex side). `kx_lb_demo_1` (Nourhan, PENDING_PAYMENT), `2` (Mahmoud, PAID) and `8` (Youssef, CANCELLED) exist only in Kiorex | Orders (source Kiorex booking) |
 | Home collection | `HomeCollection` stops for the phlebotomist's route today (124 rows incl. tests) | `/phleb` as `phleb@` |
@@ -81,7 +81,7 @@ Dev HMAC partner clients (DEV ONLY, for the Kiorex / Clinic links): `kl_dev_kior
 
 **L7. Kiorex lab booking.** 1) Kiorex patient web as Omar (`+201000001007`) -> Lab bookings (../kiorex-platform/DEMO_DATA.md K7): `kx_lb_demo_4` is COLLECTED. 2) Lab: Orders (source Kiorex booking): the order for `kx_lb_demo_4` -> enter results, validate, release. *Expected:* Omar's booking becomes RESULT_RELEASED and the result appears in his vault. Dalia (`…1008`) and Tarek (`…1009`) already have released results.
 
-**L8. Edition walkthrough.** `director@chain-lab.test` shows the small chain tenant; `director@basic-lab.test` shows the same web app but the Kiorly Work app is limited to the safety inbox (see ../kiorly-work/DEMO_DATA.md).
+**L8. Edition walkthrough.** `director@chain-lab.test` shows the small chain tenant; `director@basic-lab.test` shows the same web app but the Kiorly Team app is limited to the safety inbox (see ../kiorly-work/DEMO_DATA.md).
 
 **L9. Merge duplicates (supervisor@ or manager@).** Patients -> the two `Ahmed Samy` records -> merge. *Expected:* one survivor, history merged, the merge audited.
 
@@ -97,7 +97,7 @@ Dev HMAC partner clients (DEV ONLY, for the Kiorex / Clinic links): `kl_dev_kior
 | Manager | orders, billing + pricing, staff, inventory, quality, expenses | sign / medically validate, QC run |
 | Supervisor | bench, QC, quality, inventory, analytics, exports | release / sign reports |
 | Finance | billing, pricing, commissions, expenses, exports | clinical data entry |
-| BASIC lab users | web app; app safety inbox only | Kiorly Work modules (403 FEATURE_DISABLED) |
+| BASIC lab users | web app; app safety inbox only | Kiorly Team modules (403 FEATURE_DISABLED) |
 
 ## 7. Known limitations and inconsistencies found
 
@@ -121,7 +121,7 @@ Add these to the secrets manager / task definition of the Lab API. Nothing else 
 | Email | `EMAIL_MODE=real` | `EMAIL_API_URL`, `EMAIL_API_KEY`, `EMAIL_WEBHOOK_SECRET`, `EMAIL_FROM` | Verify the sending domain (SPF/DKIM); webhook `.../webhooks/providers/email` |
 | WhatsApp | `WHATSAPP_MODE=real` | `WHATSAPP_API_URL`, `WHATSAPP_API_KEY`, `WHATSAPP_WEBHOOK_SECRET`, `WHATSAPP_SENDER_ID` | Meta-approved EN + AR templates named exactly like the template ids (`TODO_NEEDS_HUMAN_*`, NH-LB-018); webhook `.../webhooks/providers/whatsapp` |
 | Payment | `PAYMENT_MODE=real` | `PAYMENT_API_URL`, `PAYMENT_API_KEY`, `PAYMENT_WEBHOOK_SECRET` | Merchant account; webhook `.../webhooks/providers/payment`; reconcile `PayLink` vs settlement report |
-| Push (Kiorly Work) | `PUSH_MODE=real` | `PUSH_API_URL` (Expo: `https://exp.host/--/api/v2/push/send`), optional `PUSH_API_KEY` | Expo project / credentials in the mobile build |
+| Push (Kiorly Team) | `PUSH_MODE=real` | `PUSH_API_URL` (Expo: `https://exp.host/--/api/v2/push/send`), optional `PUSH_API_KEY` | Expo project / credentials in the mobile build |
 | Storage | `STORAGE_MODE=real` | `STORAGE_API_URL`, `STORAGE_API_KEY` | Private bucket behind an S3-compatible gateway, retention + KMS |
 
 Then: (1) if the vendor's payload or signature differs from the generic shape, edit only `src/providers/mapping/<kind>.mapping.ts`; (2) call `GET /api/v1/dev/providers/status` (non-production) to confirm each kind shows `real` with the credentials set (booleans); (3) send one real message to your own phone and one 1.00 EGP pay link, check `NotificationAttempt` goes SENT -> DELIVERED and the `PayLink` goes PAID; (4) set `PROVIDER_DEV_TOOLS=false` (it is already off when `NODE_ENV=production`). Run `prisma migrate deploy` first (migration `20261122090000_provider_go_live`: `PayLink`, `ProviderWebhookEvent`, `NotificationPurpose.BILLING`).

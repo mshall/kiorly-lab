@@ -2567,14 +2567,14 @@ model Expense {
   @@index([orgId, date])
 }
 
-// ------------------------------------------------- Kiorly Work (mobile) ----
+// ------------------------------------------------- Kiorly Team (mobile) ----
 
 enum MobileDeviceStatus {
   ACTIVE
   REVOKED
 }
 
-/// Kiorly Work staff app: one row per (staff, device). Device-bound token is stored hashed (sha256), never in clear.
+/// Kiorly Team staff app: one row per (staff, device). Device-bound token is stored hashed (sha256), never in clear.
 model MobileDevice {
   id           String             @id @default(cuid())
   orgId        String
@@ -2620,7 +2620,7 @@ model MobilePush {
   @@index([orgId, staffId, readAt])
 }
 
-/// Kiorly Work: a staff member asked their org owner to upgrade to a plan that includes `mobile_staff_app`. Allowed on Basic (not entitlement-gated).
+/// Kiorly Team: a staff member asked their org owner to upgrade to a plan that includes `mobile_staff_app`. Allowed on Basic (not entitlement-gated).
 /// Repeat requests by the same staff member for the same feature within 24h are de-duplicated by the service.
 model MobileUpgradeRequest {
   id            String   @id @default(cuid())

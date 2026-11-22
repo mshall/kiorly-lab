@@ -15,7 +15,7 @@ import { MobilePushService } from "../adapters/mobile-push.adapter";
 import { PrismaService } from "../prisma/prisma.service";
 
 /**
- * Kiorly Work (mobile) DEMO seed — synthetic, DEV ONLY. Idempotent, guarded (DEMO_SEED_ALLOWED + non-production).
+ * Kiorly Team (mobile) DEMO seed — synthetic, DEV ONLY. Idempotent, guarded (DEMO_SEED_ALLOWED + non-production).
  *   npm run db:seed:mobile -w api          (run AFTER db:seed and db:seed:demo)
  * Tenants (dev-login {orgSlug, email}; every tenant has one login per role: <local>@<slug>.test):
  *   demo-lab   PRO         existing demo tenant, plan confirmed PRO (critical alerts, validation queue, QC block from the base demo)
@@ -80,12 +80,12 @@ async function seedTenant(app: INestApplicationContext, spec: { slug: string; na
 }
 
 async function main() {
-  assertDemoSeedAllowed("Kiorly Lab mobile demo tenants (Kiorly Work)");
+  assertDemoSeedAllowed("Kiorly Lab mobile demo tenants (Kiorly Team)");
   loadEnv();
   const app = await NestFactory.createApplicationContext(AppModule, { logger: ["error"] });
   try {
     const prisma = app.get(PrismaService);
-    console.log("Kiorly Work demo tenants:");
+    console.log("Kiorly Team demo tenants:");
     const demo = await prisma.tenant.findUnique({ where: { slug: "demo-lab" } });
     if (!demo) throw new Error('base demo tenant "demo-lab" missing: run `npm run db:seed -w api` first');
     await prisma.tenant.update({ where: { id: demo.id }, data: { edition: "PRO" } });

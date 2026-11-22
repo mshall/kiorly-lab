@@ -319,7 +319,7 @@ export class ResultsService {
     });
   }
 
-  /** Kiorly Work (mock push): once every current result of the order is technically validated, tell the signatories it awaits sign-off. Informational, never throws. */
+  /** Kiorly Team (mock push): once every current result of the order is technically validated, tell the signatories it awaits sign-off. Informational, never throws. */
   private async notifyAwaitingValidation(tx: Prisma.TransactionClient, orgId: string, orderItemId: string) {
     try {
       const item = await tx.orderItem.findUnique({ where: { id: orderItemId }, select: { orderId: true, order: { select: { orderNumber: true } } } });

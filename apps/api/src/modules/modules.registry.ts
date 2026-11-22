@@ -18,6 +18,6 @@ export const BOUNDED_CONTEXTS = [
   { dir: "quality", name: "QualityModule", prefix: "KLQM", title: "Quality management: QC lots, calibration, EQA, maintenance, NCR/CAPA, document control", safetyPath: false },
   { dir: "inventory", name: "InventoryModule", prefix: "KLINV", title: "Inventory: reagents and consumables, lots/expiry, FEFO consumption per test, suppliers, POs, goods receipt, stock counts, cost per test", safetyPath: false },
   { dir: "analytics", name: "AnalyticsModule", prefix: "KLBIZ04", title: "Statistics and report library: workload, TAT, positivity, revenue per test/referrer/branch, quality, inventory", safetyPath: false },
-  { dir: "mobile", name: "MobileModule", prefix: "KW", title: "Kiorly Work staff app: bootstrap, entitlement mobile_staff_app, devices, mock push inbox, scan/search/summary", safetyPath: false },
-  { dir: "mobile-alerts", name: "MobileAlertsModule", prefix: "KW/ADR-025", title: "Kiorly Work safety-alert inbox (critical values, TAT breaches, QC failures, collector safety) + acknowledge; never entitlement- or flag-gated", safetyPath: true },
+  { dir: "mobile", name: "MobileModule", prefix: "KW", title: "Kiorly Team staff app: bootstrap, entitlement mobile_staff_app, devices, mock push inbox, scan/search/summary", safetyPath: false },
+  { dir: "mobile-alerts", name: "MobileAlertsModule", prefix: "KW/ADR-025", title: "Kiorly Team safety-alert inbox (critical values, TAT breaches, QC failures, collector safety) + acknowledge; never entitlement- or flag-gated", safetyPath: true },
 ] as const;
