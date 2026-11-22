@@ -19,6 +19,6 @@ export function isMobilePlanGated(req: Pick<AuthedRequest, "originalUrl" | "meth
   const p = mobilePath(req);
   const c = req.headers["x-kiorly-client"];
   const client = Array.isArray(c) ? c[0] : c;
-  const isApp = Boolean(client && /^kiorly-(team|work)(\/|$)/.test(client));
+  const isApp = Boolean(client && /^kiorly-team(\/|$)/.test(client));
   return (isApp || p.startsWith("/mobile/")) && !isMobileExempt(req.method, p);
 }

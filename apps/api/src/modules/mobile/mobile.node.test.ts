@@ -57,7 +57,6 @@ describe("plan gate (FEATURE_DISABLED) precedes RBAC (FORBIDDEN) on /mobile rout
   it("gates /mobile/* and app-identified requests, not the exempt ones", () => {
     assert.equal(isMobilePlanGated(req("/mobile/summary", {}) as never), true);
     assert.equal(isMobilePlanGated(req("/orders", {}, undefined, { "x-kiorly-client": "kiorly-team/1.0" }) as never), true);
-    assert.equal(isMobilePlanGated(req("/orders", {}, undefined, { "x-kiorly-client": "kiorly-work/1.0" }) as never), true); // legacy client id
     assert.equal(isMobilePlanGated(req("/orders", {}) as never), false);
     assert.equal(isMobilePlanGated(req("/mobile/alerts", {}) as never), false);
   });
