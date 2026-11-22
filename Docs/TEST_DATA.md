@@ -50,4 +50,4 @@ Run after `db:seed` (+ `db:seed:demo`). Idempotent, guarded like the other demo 
 | `demo-lab` | PRO | full app: open critical alerts (incl. escalated), pathologist validation queue, an open QC block, orders in every state, inbox messages |
 | `chain-lab` | ENTERPRISE (CHAIN) | "Delta Diagnostics Group": a pending phlebotomy order, in-lab specimen, awaiting-sign-off order, one open critical value |
 | `basic-lab` | BASIC (LITE) | upgrade screen + safety-alert inbox only (has an open critical value to acknowledge) |
-Examples: `signatory@demo-lab.test` (sign-off), `phleb@demo-lab.test` (collection round/scan), `tech@demo-lab.test`, `director@basic-lab.test` (BASIC: bootstrap `entitlement.enabled=false`, `/mobile/alerts` works, everything else with `X-Kiorly-Client: kiorly-work` -> 403 FEATURE_DISABLED). Details: `Docs/MOBILE.md`.
+Examples: `signatory@demo-lab.test` (sign-off), `phleb@demo-lab.test` (collection round/scan), `tech@demo-lab.test`, `director@basic-lab.test` (BASIC: bootstrap `entitlement.enabled=false`, `/mobile/alerts` works, everything else with `X-Kiorly-Client: kiorly-team` -> 403 FEATURE_DISABLED). Details: `Docs/MOBILE.md`.

@@ -81,7 +81,7 @@ Dev HMAC partner clients (DEV ONLY, for the Kiorex / Clinic links): `kl_dev_kior
 
 **L7. Kiorex lab booking.** 1) Kiorex patient web as Omar (`+201000001007`) -> Lab bookings (../kiorex-platform/DEMO_DATA.md K7): `kx_lb_demo_4` is COLLECTED. 2) Lab: Orders (source Kiorex booking): the order for `kx_lb_demo_4` -> enter results, validate, release. *Expected:* Omar's booking becomes RESULT_RELEASED and the result appears in his vault. Dalia (`…1008`) and Tarek (`…1009`) already have released results.
 
-**L8. Edition walkthrough.** `director@chain-lab.test` shows the small chain tenant; `director@basic-lab.test` shows the same web app but the Kiorly Team app is limited to the safety inbox (see ../kiorly-work/DEMO_DATA.md).
+**L8. Edition walkthrough.** `director@chain-lab.test` shows the small chain tenant; `director@basic-lab.test` shows the same web app but the Kiorly Team app is limited to the safety inbox (see ../kiorly-team/DEMO_DATA.md).
 
 **L9. Merge duplicates (supervisor@ or manager@).** Patients -> the two `Ahmed Samy` records -> merge. *Expected:* one survivor, history merged, the merge audited.
 

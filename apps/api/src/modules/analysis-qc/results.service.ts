@@ -326,7 +326,7 @@ export class ResultsService {
       if (!item) return;
       const pending = await tx.result.count({ where: { orgId, status: "ENTERED", orderItem: { orderId: item.orderId } } });
       if (pending > 0) return;
-      await this.mobilePush?.notifyRoles(orgId, ["AUTHORIZED_SIGNATORY", "LAB_DIRECTOR"], "RESULT_AWAITING_VALIDATION", { orderNumber: item.order.orderNumber ?? item.orderId }, { relatedType: "LabOrder", relatedId: item.orderId, deepLink: `kiorlywork://lab/validation/${item.orderId}` }, tx);
+      await this.mobilePush?.notifyRoles(orgId, ["AUTHORIZED_SIGNATORY", "LAB_DIRECTOR"], "RESULT_AWAITING_VALIDATION", { orderNumber: item.order.orderNumber ?? item.orderId }, { relatedType: "LabOrder", relatedId: item.orderId, deepLink: `kiorlyteam://lab/validation/${item.orderId}` }, tx);
     } catch { /* informational */ }
   }
 

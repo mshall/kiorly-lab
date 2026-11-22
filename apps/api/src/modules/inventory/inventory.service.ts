@@ -170,7 +170,7 @@ export class InventoryService {
         await this.move(tx, { orgId: r.orgId, labId: r.labId, itemId: rule.itemId, type: "CONSUMPTION", qty: 0, unitCost: D(item.avgUnitCost), refType: r.refType, refId: r.refId, shortfall, memo: "no usable stock", by: r.by });
         cost += shortfall * D(item.avgUnitCost);
         shortfalls++;
-        await this.mobilePush?.notifyRoles(r.orgId, ["BRANCH_MANAGER", "SUPERVISOR", "OWNER"], "REAGENT_LOW_STOCK", { item: item.name }, { relatedType: "InventoryItem", relatedId: item.id, deepLink: "kiorlywork://lab/reagents" }, tx);
+        await this.mobilePush?.notifyRoles(r.orgId, ["BRANCH_MANAGER", "SUPERVISOR", "OWNER"], "REAGENT_LOW_STOCK", { item: item.name }, { relatedType: "InventoryItem", relatedId: item.id, deepLink: "kiorlyteam://lab/reagents" }, tx);
         await this.audit.record({ orgId: r.orgId, actorId: r.by, action: "inventory.shortfall", entityType: "InventoryItem", entityId: rule.itemId, meta: { shortfall, testId: r.testId } }, tx);
       }
     }

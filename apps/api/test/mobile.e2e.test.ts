@@ -2,7 +2,7 @@ import { after, before, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { type Lab, type TestApp, bootApp, call, makeLab, makeOrder, qcPass, toProcessing } from "./helpers/app";
 
-const APP = { "x-kiorly-client": "kiorly-work/1.0.0" };
+const APP = { "x-kiorly-client": "kiorly-team/1.0.0" };
 const snapshot = (flags: object[]) => ({ product: "kiorly-lab", version: 1, generatedAt: new Date().toISOString(), flags: flags as never });
 const DEV = "8f14e45f-ceea-467a-9575-5d0e5c3b7d11";
 

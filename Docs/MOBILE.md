@@ -1,20 +1,20 @@
 # Kiorly Team — Lab mobile API (staff app)
 
-Backend for the **Kiorly Team** Expo staff app (repo `kiorly-work`), Lab module. Base URL `http://localhost:3200/api/v1` (prefix `/api/v1`).
+Backend for the **Kiorly Team** Expo staff app (repo `kiorly-team`), Lab module. Base URL `http://localhost:3200/api/v1` (prefix `/api/v1`).
 Everything below is real, tested code (`apps/api/test/mobile.e2e.test.ts`, `src/modules/mobile/mobile.node.test.ts`). Providers are mocked (`MOBILE_PUSH_MODE=mock` default).
 
 ## Auth (what the app signs in with)
 - **Local/dev (`AUTH_MODE=dev`, default):** `POST /auth/dev-login {orgSlug, email}` -> `{token, user:{id,displayName,role}}`. HS256 JWT, 12 h, `aud=kiorly-lab`, `iss=kiorly-lab-dev`, claims `staffId`, `amr:["pwd","mfa"]`. No password (dev only, refused in production). `GET /auth/dev/orgs` lists orgs for a picker. Used with `Authorization: Bearer <token>`.
-- **Production (`AUTH_MODE=oidc`):** Kiorex Passport RS256 access token (audience `kiorly-lab`, issuer `KIOREX_OIDC_ISSUER`, JWKS at `/jwks`), obtained by the app with OIDC authorization-code + PKCE (public client, redirect `kiorlywork://auth/callback`). The Lab API validates the token (ADR-012/013) and **always takes role and tenant from its own `StaffUser` row** (matched by `subject`), never from the token. Registering the `kiorly-work` public client in Passport is NEEDS_HUMAN (client config lives in kiorex-account).
+- **Production (`AUTH_MODE=oidc`):** Kiorex Passport RS256 access token (audience `kiorly-lab`, issuer `KIOREX_OIDC_ISSUER`, JWKS at `/jwks`), obtained by the app with OIDC authorization-code + PKCE (public client, redirect `kiorlyteam://auth/callback`). The Lab API validates the token (ADR-012/013) and **always takes role and tenant from its own `StaffUser` row** (matched by `subject`), never from the token. Registering the `kiorly-team` public client in Passport is NEEDS_HUMAN (client config lives in kiorex-account).
 - Privileged roles (OWNER, LAB_DIRECTOR, AUTHORIZED_SIGNATORY) need an `mfa|otp|hwk|swk` amr claim when `FORCE_PRIVILEGED_MFA`/production.
-- The app must send `X-Kiorly-Client: kiorly-work/<version>` on every request, plus `X-Kiorly-Device: <device id>` and `X-Kiorly-Device-Token: <token>` after registration.
+- The app must send `X-Kiorly-Client: kiorly-team/<version>` on every request, plus `X-Kiorly-Device: <device id>` and `X-Kiorly-Device-Token: <token>` after registration.
 
 ## Plans and entitlement
 Lab "plan" is the existing tenant `edition`: `LITE` = **BASIC**, `PRO` = **PRO**, `CHAIN` = **ENTERPRISE**. Entitlement `mobile_staff_app` is ON for PRO/ENTERPRISE, OFF for BASIC. A Kiorex control-plane snapshot row `mobile_staff_app` with `values.global|markets|orgs.<id> = "OFF"` switches it off for PRO orgs too (`reason: FLAG_OFF`). It is a commercial entitlement, **not** a safety control. See `FeatureFlagsService.evaluateEntitlement`.
 Not (yet) in `@kiorex/contracts` `flags/catalogue.json` (a test pins the lab flag list to that catalogue); needs a contracts change `mobile_staff_app` (Module, no deps, not launch-locked) before the Kiorex console can list it.
 
 Enforcement (`MobileGuard`, global, after AuthGuard):
-- Every `/mobile/*` route and every request with `X-Kiorly-Client: kiorly-work*` without the entitlement -> `403 {code:"FEATURE_DISABLED", key:"mobile_staff_app", scope:"org", reason}`. **Precedence:** the plan gate answers BEFORE RBAC: `AuthGuard` defers the `@Perm` check on plan-gated routes (`req.deferredPerms`) and `MobileGuard` runs it after the entitlement check, so a BASIC user lacking the permission still gets `FEATURE_DISABLED` (the app routes to the upgrade screen) and `FORBIDDEN` only appears for entitled orgs.
+- Every `/mobile/*` route and every request with `X-Kiorly-Client: kiorly-team*` without the entitlement -> `403 {code:"FEATURE_DISABLED", key:"mobile_staff_app", scope:"org", reason}`. **Precedence:** the plan gate answers BEFORE RBAC: `AuthGuard` defers the `@Perm` check on plan-gated routes (`req.deferredPerms`) and `MobileGuard` runs it after the entitlement check, so a BASIC user lacking the permission still gets `FEATURE_DISABLED` (the app routes to the upgrade screen) and `FORBIDDEN` only appears for entitled orgs.
 - **Exempt on every plan (ADR-025):** `/auth/*`, `GET /mobile/bootstrap`, `/mobile/alerts*`, `POST /mobile/upgrade-request`, `DELETE /mobile/devices/:id`.
 
 ## New endpoints
@@ -88,7 +88,7 @@ List + ack via `/mobile/alerts` (above; works on every plan). Web equivalents: `
 `GET /mobile/search?q=` (new) and for a full result set `GET /orders?search=`, `GET /patients?search=`, `GET /specimens?search=`.
 
 ## Registering the app with Passport (NEEDS_HUMAN)
-OIDC public client `kiorly-work` (PKCE S256, redirect `kiorlywork://auth/callback`, audience `kiorly-lab`) in kiorex-account; until then the app uses dev-login locally.
+OIDC public client `kiorly-team` (PKCE S256, redirect `kiorlyteam://auth/callback`, audience `kiorly-lab`) in kiorex-account; until then the app uses dev-login locally.
 
 ## Release queue (`GET /release-queue`, `reports.read`)
 `{readyToSign, readyToRelease, signedNotReleased}`. `readyToSign` = VALIDATED orders that need a (new) report version: never signed, or carrying a corrected result validated AFTER the current version was signed (an amendment). `readyToRelease` = VALIDATED orders whose current version is signed, has no later amendment and is not released yet; the app must offer "Release", not "Sign" (a second `POST /orders/:id/reports` answers `409 NO_CHANGES_TO_REPORT`). `signedNotReleased` = every signed version without a release record. After release the order leaves all three.

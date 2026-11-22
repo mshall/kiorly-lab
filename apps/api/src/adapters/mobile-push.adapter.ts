@@ -95,7 +95,7 @@ export class MobilePushService {
       const staff = await db.staffUser.findFirst({ where: { id: input.recipientRef, orgId: input.orgId, active: true }, select: { id: true } });
       if (!staff) return;
       const alertKey = input.relatedType === "CriticalAlert" ? `crit_${input.relatedId}` : input.relatedType === "OrderItem" ? `tat_${input.relatedId}` : undefined;
-      await this.send({ orgId: input.orgId, staffId: staff.id, templateId, params: input.params, data: { relatedType: input.relatedType, relatedId: input.relatedId, alertKey, deepLink: alertKey ? `kiorlywork://lab/alerts/${alertKey}` : undefined } }, db);
+      await this.send({ orgId: input.orgId, staffId: staff.id, templateId, params: input.params, data: { relatedType: input.relatedType, relatedId: input.relatedId, alertKey, deepLink: alertKey ? `kiorlyteam://lab/alerts/${alertKey}` : undefined } }, db);
     } catch (e) {
       this.log.warn(`mobile push mirror skipped: ${(e as Error).message}`);
     }
