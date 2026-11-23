@@ -1,7 +1,7 @@
-// Usage: node scripts/axe-check.mjs — axe (wcag2a/aa/21aa) on every console page + the collector PWA, AR+EN x light+dark, against the live stack (:5191/:3200).
+// Usage: node scripts/axe-check.mjs — axe (wcag2a/aa/21aa) on every console page + the collector PWA, AR+EN x light+dark, against the live stack (:5193/:3200).
 import { chromium } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-const base = process.env.BASE ?? "http://localhost:5191";
+const base = process.env.BASE ?? "http://localhost:5193";
 const api = process.env.API ?? "http://127.0.0.1:3200/api/v1";
 const routes = ["/", "/orders", "/orders/new", "/accessioning", "/worklist", "/validation", "/qc", "/release", "/critical", "/billing", "/reports", "/catalogue", "/settings", "/phleb"];
 // signed-out pages (login picker, onboarding, patient result link) and tabs/dialogs on the redesigned screens

@@ -3,7 +3,7 @@
 import { chromium } from "@playwright/test";
 import path from "node:path";
 const phase = process.argv[2] ?? "after";
-const base = process.env.BASE ?? "http://localhost:5191";
+const base = process.env.BASE ?? "http://localhost:5193";
 const api = process.env.API ?? "http://127.0.0.1:3200/api/v1";
 const out = path.resolve(process.cwd(), "../../../_docs/ui-review/lab");
 const post = async (p, b) => (await fetch(`${api}${p}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(b) })).json();

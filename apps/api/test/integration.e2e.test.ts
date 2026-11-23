@@ -145,6 +145,20 @@ describe("integration: Kiorex bookings + Kiorly Clinic handoff (HMAC), outbox, f
     assert.equal(q.body.tests[0].priceMinor, cbc.priceMinor);
     assert.equal(q.body.collectionFeeMinor, 0);
     assert.equal((await post(t, kx, "/integration/v1/tests/quote", { testCodes: ["NOPE"] })).body.code, "UNKNOWN_TESTS");
+    // 1.8.0 Arabic names: present where the lab holds them, absent (never blank) where it does not; Arabic search finds the test
+    const arCode = `AR${Date.now().toString(36).toUpperCase()}`;
+    await t.prisma.testDefinition.create({ data: { orgId: lab.orgId, code: arCode, nameEn: "Vitamin D total", nameAr: "فيتامين د الكلي", specimenType: "serum", prepInstructionsEn: "No fasting needed", prepInstructionsAr: "لا يلزم الصيام", price: "300" } });
+    const noArCode = `NA${Date.now().toString(36).toUpperCase()}`;
+    await t.prisma.testDefinition.create({ data: { orgId: lab.orgId, code: noArCode, nameEn: "Plain english test", specimenType: "exotic", price: "100" } });
+    const arList = (await post(t, kx, `/integration/v1/tests?q=${encodeURIComponent("فيتامين")}`, undefined, { method: "GET" })).body.items.find((x: { code: string }) => x.code === arCode);
+    assert.ok(arList, "Arabic query finds the test");
+    assert.deepEqual([arList.name, arList.nameAr, arList.preparationAr, arList.sampleTypeAr], ["Vitamin D total", "فيتامين د الكلي", "لا يلزم الصيام", "مصل"]);
+    assert.ok((await post(t, kx, "/integration/v1/tests?q=Vitamin", undefined, { method: "GET" })).body.items.some((x: { code: string }) => x.code === arCode), "English query still finds it");
+    const plain = (await post(t, kx, `/integration/v1/tests?q=${noArCode}`, undefined, { method: "GET" })).body.items.find((x: { code: string }) => x.code === noArCode);
+    assert.deepEqual(["nameAr" in plain, "preparationAr" in plain, "sampleTypeAr" in plain], [false, false, false]);
+    const qa = await post(t, kx, "/integration/v1/tests/quote", { labId: lab.labId, testCodes: [arCode, noArCode] });
+    assert.equal(qa.body.tests[0].nameAr, "فيتامين د الكلي");
+    assert.equal("nameAr" in qa.body.tests[1], false);
     assert.equal((await post(t, clinic, "/integration/v1/tests", undefined, { method: "GET" })).status, 404, "clinic handoff clients do not use the marketplace read side");
 
     const from = new Date(Date.now() + 86_400_000).toISOString(), to = new Date(Date.now() + 3 * 86_400_000).toISOString();

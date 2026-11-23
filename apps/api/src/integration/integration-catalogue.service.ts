@@ -6,6 +6,12 @@ import { defaultSlotsFor } from "../modules/orders/home-routing";
 import { PrismaService } from "../prisma/prisma.service";
 
 const minor = (major: number) => Math.round(major * 100);
+/**
+ * Arabic label for the common specimen types (1.8.0 `sampleTypeAr`). The lab holds no Arabic specimen column, so this is a display dictionary;
+ * an unknown type returns undefined and the patient app falls back to the English `sampleType`.
+ */
+const SPECIMEN_AR: Record<string, string> = { blood: "دم", "whole blood": "دم كامل", serum: "مصل", plasma: "بلازما", urine: "بول", stool: "براز", swab: "مسحة", saliva: "لعاب", sputum: "بلغم", csf: "سائل نخاعي", tissue: "عينة نسيج", semen: "سائل منوي" };
+export const specimenAr = (v: string | null | undefined): string | undefined => (v ? SPECIMEN_AR[v.trim().toLowerCase()] : undefined);
 const MAX_SLOT_RANGE_DAYS = 14;
 
 /**
@@ -49,7 +55,7 @@ export class IntegrationCatalogueService {
     const items: Array<Record<string, unknown>> = [];
     for (const lab of labs) {
       for (const d of tests) {
-        items.push({ labId: lab.id, labName: lab.name, code: d.code, name: d.nameEn, priceMinor: minor(await this.prices.resolve({ orgId, testId: d.id })), sampleType: d.specimenType, homeCollection: home, ...(d.prepInstructionsEn ? { preparation: d.prepInstructionsEn } : {}) });
+        items.push({ labId: lab.id, labName: lab.name, code: d.code, name: d.nameEn, ...(d.nameAr ? { nameAr: d.nameAr } : {}), priceMinor: minor(await this.prices.resolve({ orgId, testId: d.id })), sampleType: d.specimenType, ...(specimenAr(d.specimenType) ? { sampleTypeAr: specimenAr(d.specimenType) } : {}), homeCollection: home, ...(d.prepInstructionsEn ? { preparation: d.prepInstructionsEn } : {}), ...(d.prepInstructionsAr ? { preparationAr: d.prepInstructionsAr } : {}) });
       }
     }
     return { items };
@@ -63,7 +69,7 @@ export class IntegrationCatalogueService {
     if (unknown.length) throw new UnprocessableEntityException({ code: "UNKNOWN_TESTS", codes: unknown });
     if (b.collectionType === "HOME" && !(await this.homeOk(orgId, t.marketCode))) throw new UnprocessableEntityException({ code: "HOME_COLLECTION_NOT_AVAILABLE" });
     const tests = [];
-    for (const c of codes) { const d = defs.find((x) => x.code === c)!; tests.push({ code: d.code, name: d.nameEn, priceMinor: minor(await this.prices.resolve({ orgId, testId: d.id })) }); }
+    for (const c of codes) { const d = defs.find((x) => x.code === c)!; tests.push({ code: d.code, name: d.nameEn, ...(d.nameAr ? { nameAr: d.nameAr } : {}), priceMinor: minor(await this.prices.resolve({ orgId, testId: d.id })) }); }
     return { tests, collectionFeeMinor: b.collectionType === "HOME" ? Number(process.env.LAB_HOME_COLLECTION_FEE_MINOR ?? 0) : 0 };
   }
 

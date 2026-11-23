@@ -1,5 +1,6 @@
 import { providerMode } from "../providers/provider-env";
 /** Central, lazily-read configuration. Every third-party provider has MODE=mock|real (default mock). */
+export const DEFAULT_PUBLIC_BASE_URL = "http://localhost:5193";
 export type Mode = "mock" | "real";
 const mode = (v: string | undefined): Mode => (v === "real" ? "real" : "mock");
 
@@ -14,7 +15,8 @@ export const appConfig = {
   mfaEnforced: () => process.env.FORCE_PRIVILEGED_MFA === "true" || process.env.NODE_ENV === "production",
   /** IANA zone defining "today" for lab-facing day boundaries (mobile summary). The lab has no per-lab timezone column yet; Egypt market default. */
   labTimezone: () => process.env.LAB_TIMEZONE?.trim() || "Africa/Cairo",
-  publicBaseUrl: () => (process.env.PUBLIC_BASE_URL ?? "http://localhost:5191").replace(/\/+$/, ""),
+  /** Base of every patient-facing link the Lab emits (secure report link `/r/:token`, `/verify/:id`, mock pay). Dev default = the Lab web dev server (:5193). Set PUBLIC_BASE_URL per environment. */
+  publicBaseUrl: () => (process.env.PUBLIC_BASE_URL?.trim() || DEFAULT_PUBLIC_BASE_URL).replace(/\/+$/, ""),
   storageDir: () => process.env.STORAGE_DIR ?? "./.data/storage",
   /** Legacy aggregate: "real" when ANY of SMS/EMAIL/WHATSAPP is real (per-channel switches: SMS_MODE, EMAIL_MODE, WHATSAPP_MODE). */
   messagingMode: (): Mode => (["SMS", "EMAIL", "WHATSAPP"] as const).some((k) => providerMode(k) === "real") ? "real" : "mock",

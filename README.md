@@ -44,7 +44,7 @@ Kiorly Lab runs the whole path of a sample: an order is entered, the specimen is
 |---|---|
 | **Product** | Kiorly Lab by Kiorex (accent Lab Violet `#7C3AED`); part of the Kiorly provider suite next to Kiorly Clinic and Kiorly Pharmacy |
 | **API** | NestJS 12 + Prisma 7 + PostgreSQL 16, `:3200`, prefix `/api/v1`, Swagger at `/docs`, 98 Prisma models, 69 enums, 16 migrations |
-| **Web** | React 19 + Vite 8 + Tailwind 4 + TanStack Query + i18next (Arabic and English, RTL), Vite `:5191`; lab console, collector PWA `/phleb`, patient secure link `/r/:token`, doctor portal `/portal/:token`, queue board `/queue-board`, report verify `/verify/:id` |
+| **Web** | React 19 + Vite 8 + Tailwind 4 + TanStack Query + i18next (Arabic and English, RTL), Vite `:5193`; lab console, collector PWA `/phleb`, patient secure link `/r/:token`, doctor portal `/portal/:token`, queue board `/queue-board`, report verify `/verify/:id` |
 | **Roles** | `OWNER`, `LAB_DIRECTOR`, `AUTHORIZED_SIGNATORY`, `TECHNOLOGIST`, `PHLEBOTOMIST`, `RECEPTION`, `BRANCH_MANAGER`, `SUPERVISOR`, `FINANCE` |
 | **Editions** | Lite, Pro, Chain (see [Plans](#plans-and-entitlements)) |
 | **Mode** | `STANDALONE` (new self-serve labs) or `INTEGRATED` (existing tenants) |
@@ -106,7 +106,7 @@ Home collection runs on the vendored `@kiorly/field-visit` package: coverage, bu
 
 ```mermaid
 flowchart LR
-  subgraph Web[apps/web :5191]
+  subgraph Web[apps/web :5193]
     CON[Lab console<br/>reception, worklist, QC, release]
     PH[Collector PWA /phleb]
     PT[Patient link /r/:token<br/>Doctor portal]
@@ -260,13 +260,13 @@ cp .env.example apps/api/.env       # DATABASE_URL points to kiorly_lab on :5433
 npm run prisma:generate -w api      # Prisma 7 client -> apps/api/src/generated (gitignored)
 npm run db:setup                    # creates kiorly_lab + kiorly_lab_test, applies migrations
 npm run db:seed -w api              # synthetic demo tenant "demo-lab" plus the LIS dataset (idempotent, guarded)
-npm run dev                         # API :3200 + web :5191
+npm run dev                         # API :3200 + web :5193
 ```
 
 | Service | URL | Notes |
 |---|---|---|
 | API | http://localhost:3200/api/v1 | `/health/live`, `/health/ready`, Swagger at `/docs` |
-| Web | http://localhost:5191 | proxies `/api` |
+| Web | http://localhost:5193 | proxies `/api` |
 | Database | `127.0.0.1:5433` | `kiorly_lab` (tests use `kiorly_lab_test`) |
 
 Sign in at the web URL with dev auth as the **Demo Diagnostics (synthetic)** lab; users, roles and the dev HMAC partner clients (`kl_dev_kiorex`, `kl_dev_clinic`, `kl_dev_nurse`) are listed in [Docs/TEST_DATA.md](Docs/TEST_DATA.md). The seed also leaves an open QC block, a critical haemoglobin alert and a home-collection route for today. Seeds need `DEMO_SEED_ALLOWED=true` and a non-production environment. If another process owns a port, run beside it with `PORT=3201` and `LAB_WEB_PORT=5192 LAB_API_ORIGIN=http://127.0.0.1:3201`.
