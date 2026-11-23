@@ -8,7 +8,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { setLang } from "@/lib/i18n";
 import { fetchAuthConfig, startPassportSignIn } from "@/lib/passport";
-import { currentNavigationType, wantsPassportAutostart } from "@/lib/kiorly-home";
+import { currentNavigationType, readHandoff, wantsPassportAutostart, withoutHandoff } from "@/lib/kiorly-home";
 import { rememberSignInMethod } from "@/lib/sign-in-method";
 import { SignInMethodTabs } from "@/components/sign-in-method-tabs";
 import { useSignInMethod } from "@/components/use-sign-in-method";
@@ -30,16 +30,32 @@ export function LoginPage() {
   const { search } = useLocation();
   // Kiorly Home sends `?sso=passport`: start "Sign in with Kiorex Passport" by itself (once per page load; the Passport SSO session makes it silent).
   const autostarted = useRef(false);
+  // Kiorly Home password handoff: redeem the single-use code once, strip it from the address bar first, then adopt the normal session.
+  const [handoff] = useState(() => readHandoff(window.location.search));
+  const [handoffBusy, setHandoffBusy] = useState(!!handoff.code);
+  const [handoffErr, setHandoffErr] = useState<string | null>(null);
+  const redeemed = useRef(false);
   useEffect(() => {
-    if (token || !passport || autostarted.current || !wantsPassportAutostart(search, currentNavigationType())) return;
+    if (!handoff.code && !handoff.reason) return;
+    window.history.replaceState(window.history.state, "", withoutHandoff(window.location.pathname, window.location.search, window.location.hash));
+    if (!handoff.code || redeemed.current) return;
+    redeemed.current = true;
+    api<{ token: string }>("/auth/handoff/exchange", { body: { code: handoff.code } })
+      .then((r) => { login(r.token); rememberSignInMethod("password"); nav("/", { replace: true }); })
+      .catch(() => { setHandoffBusy(false); setHandoffErr(t("auth.handoffFailed")); });
+  }, [handoff, login, nav, t]);
+  useEffect(() => {
+    if (token || handoff.code || !passport || autostarted.current || !wantsPassportAutostart(search, currentNavigationType())) return;
     autostarted.current = true; void startPassportSignIn(passport, i18n.language);
-  }, [token, passport, search, i18n.language]);
+  }, [token, passport, search, i18n.language, handoff.code]);
   const localLogin = cfg.data?.localLogin ?? true;
   // Two methods only: Kiorex Passport (default) and the password / dev sign-in; the last method that signed this browser in is preselected. No Passport on the API: dev sign-in only.
   const sim = useSignInMethod(cfg.isPending ? undefined : passport !== null);
   const method = localLogin ? sim.method : "passport"; // a Passport-only deployment has no second option
   const showPassport = sim.ready && passport !== null && method === "passport";
   const showLocal = sim.ready && localLogin && (!passport || method === "password");
+  // the handoff could not complete (second factor, expired password, organisation): show the product's own password form
+  useEffect(() => { if (handoff.reason && sim.ready) sim.choose("password"); }, [handoff.reason, sim.ready]); // eslint-disable-line react-hooks/exhaustive-deps
   const orgs = useQuery({ queryKey: ["dev-orgs"], queryFn: () => api<any[]>("/auth/dev/orgs"), retry: false, enabled: localLogin });
   const [slug, setSlug] = useState("");
   const [email, setEmail] = useState("");
@@ -81,6 +97,9 @@ export function LoginPage() {
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">{t("app.product")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{localLogin ? t("auth.devNote") : t("auth.passportNote")}</p>
+          {handoffBusy ? <p role="status" data-testid="handoff-busy" className="mt-4 text-sm text-muted-foreground">{t("auth.handoffBusy")}</p> : null}
+          {handoffErr ? <p role="alert" data-testid="handoff-error" className="mt-4 text-sm text-destructive">{handoffErr}</p> : null}
+          {handoff.reason ? <p role="status" data-testid="handoff-reason" className="mt-4 rounded-lg border border-border bg-muted/50 p-3 text-sm">{t(`auth.handoffReason.${handoff.reason}`, { defaultValue: t("auth.handoffReason.other") })}</p> : null}
           {!sim.ready ? <div role="status" aria-busy="true" aria-label={t("auth.login")} data-testid="signin-loading" className="mt-6 h-40 animate-pulse rounded-xl bg-muted/60" /> : null}
           {sim.ready && passport && localLogin ? <SignInMethodTabs className="mt-6" value={method} onChange={sim.choose} labels={{ group: t("auth.method"), passport: t("auth.methodPassport"), password: t("auth.methodPassword") }} /> : null}
           {showPassport ? (

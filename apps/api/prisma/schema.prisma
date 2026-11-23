@@ -2744,3 +2744,19 @@ model ProviderWebhookEvent {
 
   @@unique([kind, eventId])
 }
+
+/// Kiorly Home sign-in handoff (ADR-038): a single-use, 30-second code that Home gets after a sign-in check and the product web redeems for the normal session.
+/// Only the SHA-256 hash of the code is stored; `subjectId` is the StaffUser.id; `origin` is the Home origin it was issued for.
+model HandoffCode {
+  id        String    @id @default(cuid())
+  codeHash  String    @unique
+  product   String
+  edition   String?
+  origin    String
+  subjectId String
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  @@index([expiresAt])
+}
