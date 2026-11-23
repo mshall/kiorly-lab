@@ -48,7 +48,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: RequiresFlagGuard },
     { provide: APP_GUARD, useClass: EntitlementGuard },
-    // Kiorly Team: device binding (401 DEVICE_REVOKED) + mobile_staff_app entitlement (403 FEATURE_DISABLED)
+    // Kiorly: device binding (401 DEVICE_REVOKED) + mobile_staff_app entitlement (403 FEATURE_DISABLED)
     { provide: APP_GUARD, useClass: MobileGuard },
     { provide: APP_INTERCEPTOR, useClass: ZodInterceptor },
     { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },

@@ -7,7 +7,7 @@ import { MOBILE_TEMPLATES } from "../../adapters/mobile-push.adapter";
 import { PLAN_OF_EDITION } from "./mobile-entitlement.service";
 import { ENTITLEMENT_KEYS, isKnownFlagKey } from "../../feature-flags/feature-flag-keys";
 
-describe("Kiorly Team: entitlement plumbing", () => {
+describe("Kiorly: entitlement plumbing", () => {
   it("only the safety inbox, bootstrap, auth and remote sign-out are exempt (ADR-025)", () => {
     for (const [m, p] of [["GET", "/mobile/bootstrap"], ["GET", "/mobile/alerts"], ["POST", "/mobile/alerts/crit_1/ack"], ["POST", "/mobile/upgrade-request"], ["DELETE", "/mobile/devices/abc"], ["POST", "/auth/dev-login"]] as const) assert.equal(isMobileExempt(m, p), true, `${m} ${p}`);
     for (const [m, p] of [["GET", "/mobile/inbox"], ["GET", "/mobile/upgrade-request"], ["POST", "/mobile/devices"], ["GET", "/mobile/devices"], ["GET", "/orders"], ["GET", "/mobile/summary"], ["PUT", "/mobile/devices/x/push-token"]] as const) assert.equal(isMobileExempt(m, p), false, `${m} ${p}`);
@@ -56,7 +56,9 @@ describe("plan gate (FEATURE_DISABLED) precedes RBAC (FORBIDDEN) on /mobile rout
   const basicNurse = { orgId: "o", staffId: "s", role: "RECEPTION", edition: "LITE", marketCode: "EG" };
   it("gates /mobile/* and app-identified requests, not the exempt ones", () => {
     assert.equal(isMobilePlanGated(req("/mobile/summary", {}) as never), true);
-    assert.equal(isMobilePlanGated(req("/orders", {}, undefined, { "x-kiorly-client": "kiorly-team/1.0" }) as never), true);
+    assert.equal(isMobilePlanGated(req("/orders", {}, undefined, { "x-kiorly-client": "kiorly/1.0" }) as never), true);
+    for (const legacy of ["kiorly-team/1.0", "kiorly-work/1.0"]) assert.equal(isMobilePlanGated(req("/orders", {}, undefined, { "x-kiorly-client": legacy }) as never), true, legacy); // legacy client names
+    assert.equal(isMobilePlanGated(req("/orders", {}, undefined, { "x-kiorly-client": "kiorlyx/1.0" }) as never), false);
     assert.equal(isMobilePlanGated(req("/orders", {}) as never), false);
     assert.equal(isMobilePlanGated(req("/mobile/alerts", {}) as never), false);
   });

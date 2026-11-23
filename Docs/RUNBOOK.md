@@ -1,7 +1,7 @@
 # Kiorly Lab - runbook
 
 ## Running locally
-- **Ports**: API 3200 (`/api/v1`), web 5191, Postgres 5433 (db `kiorly_lab`, tests `kiorly_lab_test`). If another process owns a port, run beside it with `PORT=3201` (API) and `LAB_WEB_PORT=5192 LAB_API_ORIGIN=http://127.0.0.1:3201` (web).
+- **Ports**: API 3200 (`/api/v1`), web 5193, Postgres 5433 (db `kiorly_lab`, tests `kiorly_lab_test`). If another process owns a port, run beside it with `PORT=3201` (API) and `LAB_WEB_PORT=5194 LAB_API_ORIGIN=http://127.0.0.1:3201` (web).
 - **Database**: `npm run db:setup` (creates the databases, applies migrations). New migrations: `apps/api/scripts/new-migration.sh <name>` (non-interactive: diffs against a throwaway shadow DB, writes the folder, applies it).
 - **Seeds** (synthetic, guarded by `DEMO_SEED_ALLOWED=true` + non-production environment): `npm run db:seed -w api` (base tenant `demo-lab` **plus the LIS dataset**), `npm run db:seed:demo -w api` (nurse/Kiorex orders), `npm run db:seed:lis -w api` (LIS dataset only, idempotent; for tenants seeded before the LIS modules existed). Logins `<role>@demo-lab.test` for owner, director, signatory, tech, supervisor, phleb, reception, finance, manager.
 - **Tests**: `npm test` (api unit + e2e on `kiorly_lab_test`, then web), `npm run test:e2e -w api`, `npm run e2e -w web` (Playwright; override ports with `LAB_E2E_API_PORT` / `LAB_E2E_WEB_PORT`).

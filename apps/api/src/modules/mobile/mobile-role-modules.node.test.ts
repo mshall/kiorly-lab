@@ -10,8 +10,8 @@ const modulesFor = (role: StaffRole, licence: string | null | undefined = LICENC
   Object.fromEntries(modulesForRole(role, licence).map((m) => [m.key.replace("lab.", ""), m.enabled ? m.screens : null]));
 const on = (role: StaffRole) => Object.entries(modulesFor(role)).filter(([, v]) => v).map(([k]) => k).sort();
 
-/** Pins the Kiorly Team (staff app) module scoping per Lab role; verified end to end in e2e/test/18-staff-mobile-lab.e2e.ts. */
-describe("Kiorly Team: Lab role -> module scoping", () => {
+/** Pins the Kiorly (staff app) module scoping per Lab role; verified end to end in e2e/test/18-staff-mobile-lab.e2e.ts. */
+describe("Kiorly: Lab role -> module scoping", () => {
   it("phlebotomist: collection, label scan, orders only (no results, QC, reagents, validation, TAT, critical)", () => {
     const m = on("PHLEBOTOMIST");
     for (const k of ["phlebotomy", "accession", "orders"]) assert.ok(m.includes(k), k);

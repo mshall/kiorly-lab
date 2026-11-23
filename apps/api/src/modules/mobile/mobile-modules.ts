@@ -1,7 +1,7 @@
 import { ROLE_PERMISSIONS, SIGNATORY_ROLES, type Permission } from "../../auth/rbac";
 import type { StaffRole } from "../../generated/prisma/client";
 
-/** Kiorly Team module catalogue (role gating by permission). Shared by bootstrap and the upgrade-request feature-key validation. */
+/** Kiorly module catalogue (role gating by permission). Shared by bootstrap and the upgrade-request feature-key validation. */
 export interface ModuleDef { key: string; anyOf: Permission[]; screens: { name: string; perm?: Permission }[] }
 export const MODULES: ModuleDef[] = [
   { key: "lab.phlebotomy", anyOf: ["specimens.collect"], screens: [{ name: "scan" }, { name: "custody" }, { name: "round", perm: "collection.perform" }, { name: "safety", perm: "collection.perform" }] },

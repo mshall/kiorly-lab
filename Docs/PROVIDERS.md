@@ -8,7 +8,7 @@ Every external provider sits behind a port with `<KIND>_MODE=mock|real` (default
 | Email | same | `EMAIL_MODE` | `.../email.mapping.ts` |
 | WhatsApp | same | `WHATSAPP_MODE` | `.../whatsapp.mapping.ts` |
 | Payment (PSP, pay-by-link, refund) | `src/adapters/psp.adapter.ts` -> `src/providers/payment-provider.ts` | `PAYMENT_MODE` | `.../payment.mapping.ts` |
-| Push (Kiorly Team) | `src/adapters/mobile-push.adapter.ts` -> `src/providers/push-provider.ts` | `PUSH_MODE` (legacy `MOBILE_PUSH_MODE`) | n/a (Expo-compatible gateway) |
+| Push (Kiorly) | `src/adapters/mobile-push.adapter.ts` -> `src/providers/push-provider.ts` | `PUSH_MODE` (legacy `MOBILE_PUSH_MODE`) | n/a (Expo-compatible gateway) |
 | Storage | `src/adapters/storage.adapter.ts` (HTTP object store) | `STORAGE_MODE` | n/a (`PUT/GET {url}/{key}`) |
 
 `MESSAGING_MODE` / `PSP_MODE` still work as the default for the three messaging kinds / PAYMENT.

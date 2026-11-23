@@ -13,7 +13,7 @@ export { isMobileExempt };
 /**
  * Global guard (after AuthGuard). 1) Device binding: X-Kiorly-Device + X-Kiorly-Device-Token must match an ACTIVE device of the caller,
  * otherwise 401 DEVICE_REVOKED (remote sign-out takes effect on the next request). 2) Entitlement `mobile_staff_app`: every /mobile/* route and
- * every request that identifies as the app (X-Kiorly-Client: kiorly-team/...) needs the entitlement, except the exempt routes above.
+ * every request that identifies as the app (X-Kiorly-Client: kiorly/...) needs the entitlement, except the exempt routes above.
  */
 @Injectable()
 export class MobileGuard implements CanActivate {
