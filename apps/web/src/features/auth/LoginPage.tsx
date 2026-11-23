@@ -9,6 +9,9 @@ import { useAuth } from "@/lib/auth";
 import { setLang } from "@/lib/i18n";
 import { fetchAuthConfig, startPassportSignIn } from "@/lib/passport";
 import { currentNavigationType, wantsPassportAutostart } from "@/lib/kiorly-home";
+import { rememberSignInMethod } from "@/lib/sign-in-method";
+import { SignInMethodTabs } from "@/components/sign-in-method-tabs";
+import { useSignInMethod } from "@/components/use-sign-in-method";
 import { Button, Field, Select } from "@/components/ui";
 import { ErrorNote } from "@/components/common";
 import { KiorexLogo } from "@/brand/components";
@@ -32,6 +35,11 @@ export function LoginPage() {
     autostarted.current = true; void startPassportSignIn(passport, i18n.language);
   }, [token, passport, search, i18n.language]);
   const localLogin = cfg.data?.localLogin ?? true;
+  // Two methods only: Kiorex Passport (default) and the password / dev sign-in; the last method that signed this browser in is preselected. No Passport on the API: dev sign-in only.
+  const sim = useSignInMethod(cfg.isPending ? undefined : passport !== null);
+  const method = localLogin ? sim.method : "passport"; // a Passport-only deployment has no second option
+  const showPassport = sim.ready && passport !== null && method === "passport";
+  const showLocal = sim.ready && localLogin && (!passport || method === "password");
   const orgs = useQuery({ queryKey: ["dev-orgs"], queryFn: () => api<any[]>("/auth/dev/orgs"), retry: false, enabled: localLogin });
   const [slug, setSlug] = useState("");
   const [email, setEmail] = useState("");
@@ -40,13 +48,13 @@ export function LoginPage() {
   const m = useMutation({
     mutationFn: () => api<{ token: string }>("/auth/dev-login", { body: { orgSlug: org?.slug, email: chosen } }),
     onSuccess: (r) => {
-      login(r.token);
+      login(r.token); rememberSignInMethod("password");
       nav("/");
     },
   });
   const quick = useMutation({
     mutationFn: (v: { slug: string; email: string }) => api<{ token: string }>("/auth/dev-login", { body: { orgSlug: v.slug, email: v.email } }),
-    onSuccess: (r) => { login(r.token); nav("/"); },
+    onSuccess: (r) => { login(r.token); rememberSignInMethod("password"); nav("/"); },
   });
   if (token) return <Navigate to="/" replace />;
   const points = [{ i: FlaskConical, k: "p1" }, { i: ShieldCheck, k: "p2" }, { i: Smartphone, k: "p3" }] as const;
@@ -73,13 +81,14 @@ export function LoginPage() {
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">{t("app.product")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{localLogin ? t("auth.devNote") : t("auth.passportNote")}</p>
-          {passport ? (
-            <div className="mt-6 space-y-3">
-              <Button className="w-full" size="lg" onClick={() => void startPassportSignIn(passport, i18n.language)}>{t("auth.passport")}</Button>
-              {localLogin ? <p className="text-center text-xs text-muted-foreground">{t("auth.passportOr")}</p> : null}
+          {!sim.ready ? <div role="status" aria-busy="true" aria-label={t("auth.login")} data-testid="signin-loading" className="mt-6 h-40 animate-pulse rounded-xl bg-muted/60" /> : null}
+          {sim.ready && passport && localLogin ? <SignInMethodTabs className="mt-6" value={method} onChange={sim.choose} labels={{ group: t("auth.method"), passport: t("auth.methodPassport"), password: t("auth.methodPassword") }} /> : null}
+          {showPassport ? (
+            <div role="tabpanel" id="signin-panel-passport" className="mt-6 space-y-3" data-testid="signin-passport-panel">
+              <Button className="w-full" size="lg" data-testid="signin-passport" onClick={() => void startPassportSignIn(passport!, i18n.language)}>{t("auth.passport")}</Button>
             </div>
           ) : null}
-          {localLogin ? <Surface className="mt-6 space-y-5 p-5 shadow-kx-2">
+          {showLocal ? <Surface className="mt-6 space-y-5 p-5 shadow-kx-2" data-testid="signin-password-panel" {...(passport ? { role: "tabpanel", id: "signin-panel-password" } : {})}>
             {orgs.isLoading ? <div role="status" aria-busy="true" className="space-y-3"><Skeleton className="h-10" /><Skeleton className="h-16" /><Skeleton className="h-16" /></div> : null}
             {orgs.isError ? <ErrorNote error={orgs.error} /> : null}
             {orgs.data?.length === 0 ? <p className="text-sm">{t("auth.noOrgs")}</p> : null}
