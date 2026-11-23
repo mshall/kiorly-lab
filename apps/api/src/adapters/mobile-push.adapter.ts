@@ -3,7 +3,7 @@ import type { StaffRole } from "../generated/prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import type { Db } from "../common/db";
 import { ProviderError, type FetchLike } from "../providers/http";
-import { providerConfig, providerMode } from "../providers/provider-env";
+import { providerMode, validateProviderConfig } from "../providers/provider-env";
 import { sendPush } from "../providers/push-provider";
 
 export type MobileKind = "GENERAL" | "SAFETY" | "CLINICAL" | "OPS";
@@ -45,6 +45,9 @@ export class MobilePushService {
   /** Test seam for the real push gateway. */
   static fetchImpl?: FetchLike;
 
+  /** Android channel id (created by the app, see kiorly-team src/lib/notificationChannels.ts). */
+  static channelFor(kind: MobileKind): string { return kind === "SAFETY" ? "safety" : kind === "CLINICAL" ? "clinical" : kind === "OPS" ? "ops" : "default"; }
+
   static mode(): "mock" | "real" {
     return providerMode("PUSH");
   }
@@ -57,16 +60,19 @@ export class MobilePushService {
       if (FORBIDDEN.test(k) || (typeof v === "string" && /\d+(\.\d+)?\s?(mmol|mg\/dl|g\/dl|x10)/i.test(v))) throw new Error(`mobile push param "${k}" looks like a raw result value`);
     }
     const real = MobilePushService.mode() === "real";
-    if (real && !providerConfig("PUSH").apiUrl) throw new ProviderError("NOT_CONFIGURED", "PUSH_API_URL is not set (PUSH_MODE=real)");
+    if (real && validateProviderConfig(process.env, ["PUSH"]).length) throw new ProviderError("NOT_CONFIGURED", "push provider credentials are not set (PUSH_MODE=real: PUSH_FCM_SERVICE_ACCOUNT_JSON and/or PUSH_EXPO_ENABLED, or PUSH_API_URL)");
     const now = new Date();
     // The in-app inbox row is always written (it is the inbox). Real mode additionally hands the message to the push gateway for registered devices.
     const row = await db.mobilePush.create({
       data: { orgId: input.orgId, staffId: input.staffId, kind: tpl.kind, templateId: input.templateId, title: fill(tpl.title, params), titleAr: fill(tpl.titleAr, params), body: fill(tpl.body, params), bodyAr: fill(tpl.bodyAr, params), data: (input.data ?? {}) as never, status: real ? "SENT" : "DELIVERED", provider: real ? "push" : "mock", deliveredAt: real ? null : now },
     });
     if (real) {
-      const tokens = (await db.mobileDevice.findMany({ where: { orgId: input.orgId, staffId: input.staffId, status: "ACTIVE", pushToken: { not: null } }, select: { pushToken: true } })).map((d) => d.pushToken!).filter(Boolean);
+      const tokens = (await db.mobileDevice.findMany({ where: { orgId: input.orgId, staffId: input.staffId, status: "ACTIVE", pushToken: { not: null } }, select: { pushToken: true } })).map((d) => d.pushToken!).filter((t) => t && !t.startsWith("mock-"));
       try {
-        if (tokens.length) await sendPush(tokens.map((to) => ({ to, title: row.title, body: row.body, data: { ...(input.data ?? {}), pushId: row.id } })), process.env, MobilePushService.fetchImpl);
+        if (tokens.length) {
+          const r = await sendPush(tokens.map((to) => ({ to, title: row.title, body: row.body, data: { ...(input.data ?? {}), pushId: row.id }, channelId: MobilePushService.channelFor(tpl.kind) })), process.env, MobilePushService.fetchImpl);
+          if (r.invalid.length) await db.mobileDevice.updateMany({ where: { orgId: input.orgId, staffId: input.staffId, pushToken: { in: r.invalid } }, data: { pushToken: null, pushProvider: null } }); // dead token (uninstalled): stop pushing to it
+        }
       } catch (e) {
         this.log.warn(`push gateway failed (${e instanceof ProviderError ? e.code : "UNEXPECTED"}) for inbox ${row.id}`);
         await db.mobilePush.update({ where: { id: row.id }, data: { status: "FAILED" } });
