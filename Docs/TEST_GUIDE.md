@@ -42,4 +42,6 @@ http://localhost:5193/login.
 5. **QC failure.** The TSH run (rule `1_3s`) is FAIL and the analyte is blocked; `tech@` runs a passing QC, `signatory@` clears the block.
 6. **Kiorex lab booking** (workspace guide 4.2 step 11), **merge duplicates** (`supervisor@` or `manager@`: the two `Ahmed Samy` records), **editions** (`director@chain-lab.test` small chain, `director@basic-lab.test` Basic).
 
+7. **Staff phone and Passport sessions (`owner@demo-lab.test`).** Settings > Staff: add a technologist with a phone `+201000003101` (international format; duplicates refused), see the Passport column ("Waiting for first sign-in", then "Linked" after that person signs in with Kiorex Passport). Revoking the web session on the Passport account page ends the Lab web session (back-channel logout, within a minute). Automated: `e2e/test/21-staff-web-session-revocation.e2e.ts`.
+
 More: `DEMO_DATA.md` (L1-L9), `Docs/TEST_DATA.md`.
