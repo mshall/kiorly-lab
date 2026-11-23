@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Activity, AlertTriangle, BadgeCheck, BarChart3, BookOpen, BriefcaseMedical, Bug, ClipboardList, CreditCard, FileCheck2, FlaskConical, LayoutDashboard, LineChart, LogOut, Menu, Microscope, Package, ScanBarcode, Settings, ShieldCheck, Smartphone, Snowflake, Ticket, Users, Wallet } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth";
 import { applyTenantDefault, setLang } from "@/lib/i18n";
 import { cn } from "@/lib/cn";
 import { Badge, Button } from "@/components/ui";
+import { routeDenied } from "@/lib/route-access";
 import { KiorlyBrandLockup, KxControlPair, LanguageToggle, ThemeToggle } from "@/brand/ui-kit";
 
 const NAV_GROUPS = [
@@ -52,6 +53,9 @@ export function AppShell() {
   useEffect(() => { applyTenantDefault(me?.tenant.defaultLocale); }, [me?.tenant.defaultLocale]);
   const alerts = useQuery({ queryKey: ["critical-count"], queryFn: () => api<any[]>("/critical-alerts"), enabled: can("critical.read"), refetchInterval: 30_000 });
   const openAlerts = alerts.data?.length ?? 0;
+  // Direct-URL guard: a page whose nav entry is hidden for this role says so instead of sitting on a 403-fed skeleton.
+  const { pathname } = useLocation();
+  const routeBlocked = Boolean(me) && routeDenied(pathname, NAV_GROUPS.flatMap((g) => g.items), can);
   return (
     <div className="flex min-h-screen">
       <aside className={cn("fixed inset-y-0 inset-s-0 z-40 w-64 shrink-0 border-e border-border bg-card p-4 lg:sticky lg:top-0 lg:h-screen overflow-y-auto transition-transform lg:translate-x-0", open ? "translate-x-0" : "max-lg:-translate-x-full max-lg:rtl:translate-x-full")}>
@@ -100,7 +104,13 @@ export function AppShell() {
           </div>
           <Button variant="ghost" size="sm" className="h-10 shrink-0 whitespace-nowrap" aria-label={t("auth.logout")} onClick={() => { logout(); nav("/login"); }}><LogOut aria-hidden className="size-4 rtl:rotate-180 sm:hidden" /><span className="hidden sm:inline">{t("auth.logout")}</span></Button>
         </header>
-        <main id="main" className="mx-auto w-full max-w-7xl flex-1 p-4 sm:p-6"><Outlet /></main>
+        <main id="main" className="mx-auto w-full max-w-7xl flex-1 p-4 sm:p-6">{routeBlocked ? (
+          <div role="alert" data-testid="route-denied" className="mx-auto mt-16 max-w-md space-y-3 text-center">
+            <h1 className="text-xl font-semibold">{t("shell.noAccessTitle")}</h1>
+            <p className="text-sm text-muted-foreground">{t("shell.noAccessBody")}</p>
+            <Link to="/" className="inline-block text-sm font-medium text-primary underline-offset-2 hover:underline">{t("nav.dashboard")}</Link>
+          </div>
+        ) : <Outlet />}</main>
       </div>
     </div>
   );

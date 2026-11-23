@@ -37,6 +37,8 @@
     "analytics": "Analytics"
   },
   "shell": {
+    "noAccessTitle": "You don't have access to this page",
+    "noAccessBody": "Your role does not include this area. Ask the lab owner if you need it.",
     "safetyNote": "QC blocks, authorised release and critical-value escalation are always on and cannot be switched off.",
     "moduleOff": "Lab module is OFF: no new orders",
     "standalone": "Standalone",
