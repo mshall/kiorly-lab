@@ -98,6 +98,6 @@ All providers run on **mock adapters** today (`MODE=mock|real`, default `mock`).
 | Payments (pay links, refunds) | `PAYMENT_MODE=real`, `PAYMENT_PROVIDER=paymob` or `fawry` (unset = neutral gateway) | Paymob: `PAYMENT_API_KEY` S (secret key), `PAYMENT_WEBHOOK_SECRET` S (HMAC), `PAYMENT_PUBLIC_KEY`, `PAYMENT_INTEGRATION_IDS`; Fawry: `PAYMENT_API_KEY` S (secure key), `PAYMENT_MERCHANT_CODE`; both: `PUBLIC_BASE_URL=https://<api>`, optional `PAYMENT_RETURN_URL`, `PAYMENT_API_URL` | Merchant onboarding; Paymob processed-callback = `https://<api>/api/v1/webhooks/providers/payment` (HMAC in the `hmac` query parameter); Fawry webhook same URL; hosted checkout only (direct card charge is refused by design); settlement + payout rails (CFO) |
 | Storage | `STORAGE_MODE=real` | `STORAGE_API_URL/KEY` | unchanged |
 
-**Mobile (Kiorly staff app)**: Android channels `default|safety|clinical|ops` are created by the app and named per push kind by this API. Build/EAS details: `kiorly-team/Docs/NEEDS_HUMAN.md`.
+**Mobile (Kiorly staff app)**: Android channels `default|safety|clinical|ops` are created by the app and named per push kind by this API. Build/EAS details: `kiorly/Docs/NEEDS_HUMAN.md`.
 
 **Unverified against live vendors:** Paymob `transaction_inquiry` / `void_refund` payloads, Fawry `FawryPay.jsp` signature item order and status v2, Meta template layouts, SES SNS variations; exercise each in the vendor sandbox before production.

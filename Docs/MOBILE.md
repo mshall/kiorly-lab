@@ -1,11 +1,11 @@
 # Kiorly — Lab mobile API (staff app)
 
-Backend for the **Kiorly** Expo staff app (repo `kiorly-team`), Lab module. Base URL `http://localhost:3200/api/v1` (prefix `/api/v1`).
+Backend for the **Kiorly** Expo staff app (repo `kiorly`), Lab module. Base URL `http://localhost:3200/api/v1` (prefix `/api/v1`).
 Everything below is real, tested code (`apps/api/test/mobile.e2e.test.ts`, `src/modules/mobile/mobile.node.test.ts`). Providers are mocked (`MOBILE_PUSH_MODE=mock` default).
 
 ## Auth (what the app signs in with)
 - **Local/dev (`AUTH_MODE=dev`, default):** `POST /auth/dev-login {orgSlug, email}` -> `{token, user:{id,displayName,role}}`. HS256 JWT, 12 h, `aud=kiorly-lab`, `iss=kiorly-lab-dev`, claims `staffId`, `amr:["pwd","mfa"]`. No password (dev only, refused in production). `GET /auth/dev/orgs` lists orgs for a picker. Used with `Authorization: Bearer <token>`.
-- **Production (`AUTH_MODE=oidc`):** Kiorex Passport RS256 access token (audience `kiorly-lab`, issuer `KIOREX_OIDC_ISSUER`, JWKS at `/jwks`), obtained by the app with OIDC authorization-code + PKCE (public client, redirect `kiorly://auth/callback`). The Lab API validates the token (ADR-012/013) and **always takes role and tenant from its own `StaffUser` row** (matched by `subject`), never from the token. Registering the `kiorly-team` public client in Passport is NEEDS_HUMAN (client config lives in kiorex-account).
+- **Production (`AUTH_MODE=oidc`):** Kiorex Passport RS256 access token (audience `kiorly-lab`, issuer `KIOREX_OIDC_ISSUER`, JWKS at `/jwks`), obtained by the app with OIDC authorization-code + PKCE (public client, redirect `kiorly://auth/callback`). The Lab API validates the token (ADR-012/013) and **always takes role and tenant from its own `StaffUser` row** (matched by `subject`), never from the token. Registering the `kiorly` public client in Passport is NEEDS_HUMAN (client config lives in kiorex-account).
 - Privileged roles (OWNER, LAB_DIRECTOR, AUTHORIZED_SIGNATORY) need an `mfa|otp|hwk|swk` amr claim when `FORCE_PRIVILEGED_MFA`/production.
 - The app must send `X-Kiorly-Client: kiorly/<version>` on every request, plus `X-Kiorly-Device: <device id>` and `X-Kiorly-Device-Token: <token>` after registration.
 

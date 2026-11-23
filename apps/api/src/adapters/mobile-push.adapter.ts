@@ -45,7 +45,7 @@ export class MobilePushService {
   /** Test seam for the real push gateway. */
   static fetchImpl?: FetchLike;
 
-  /** Android channel id (created by the app, see kiorly-team src/lib/notificationChannels.ts). */
+  /** Android channel id (created by the app, see kiorly src/lib/notificationChannels.ts). */
   static channelFor(kind: MobileKind): string { return kind === "SAFETY" ? "safety" : kind === "CLINICAL" ? "clinical" : kind === "OPS" ? "ops" : "default"; }
 
   static mode(): "mock" | "real" {
