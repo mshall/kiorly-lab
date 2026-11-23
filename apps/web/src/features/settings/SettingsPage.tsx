@@ -1,3 +1,4 @@
+import { SignInDefaultCard } from "./SignInDefaultCard";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -163,6 +164,7 @@ export function SettingsPage() {
           <p className="sm:col-span-2 text-xs text-muted-foreground">{t("set.noTaxNote")}</p>
         </Card>
       ) : null}
+      {tab === "general" ? <SignInDefaultCard /> : null}
       {tab === "templates" ? <TemplatesTab /> : null}
       {tab === "import" ? <ImportTab /> : null}
       {tab === "integrations" ? (

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { KiorlyBrandLockup, KiorlyFootText, KxControlPair, LanguageToggle, Pulse, ThemeToggle, Surface, Skeleton, kcn } from "@/brand/ui-kit";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -10,6 +10,8 @@ import { setLang } from "@/lib/i18n";
 import { fetchAuthConfig, startPassportSignIn } from "@/lib/passport";
 import { currentNavigationType, readHandoff, wantsPassportAutostart, withoutHandoff } from "@/lib/kiorly-home";
 import { rememberSignInMethod } from "@/lib/sign-in-method";
+import { currentOrgHint, rememberSignInOrg } from "@/lib/sign-in-default";
+import { SwitchProductLink } from "@/components/switch-product-link";
 import { SignInMethodTabs } from "@/components/sign-in-method-tabs";
 import { useSignInMethod } from "@/components/use-sign-in-method";
 import { Button, Field, Select } from "@/components/ui";
@@ -25,7 +27,9 @@ export function LoginPage() {
   const { t, i18n } = useTranslation();
   const { token, login } = useAuth();
   const nav = useNavigate();
-  const cfg = useQuery({ queryKey: ["auth-config"], queryFn: fetchAuthConfig, staleTime: 60_000 });
+  // The login page is pre-auth: the org is identified by `?org=`, a tenant subdomain or the org remembered on this browser; the API answers uniformly for unknown orgs.
+  const orgHint = useMemo(() => currentOrgHint(), []);
+  const cfg = useQuery({ queryKey: ["auth-config", orgHint], queryFn: () => fetchAuthConfig(orgHint), staleTime: 60_000 });
   const passport = cfg.data?.passport ?? null;
   const { search } = useLocation();
   // Kiorly Home sends `?sso=passport`: start "Sign in with Kiorex Passport" by itself (once per page load; the Passport SSO session makes it silent).
@@ -50,7 +54,7 @@ export function LoginPage() {
   }, [token, passport, search, i18n.language, handoff.code]);
   const localLogin = cfg.data?.localLogin ?? true;
   // Two methods only: Kiorex Passport (default) and the password / dev sign-in; the last method that signed this browser in is preselected. No Passport on the API: dev sign-in only.
-  const sim = useSignInMethod(cfg.isPending ? undefined : passport !== null);
+  const sim = useSignInMethod(cfg.isPending ? undefined : passport !== null, cfg.data?.defaultMethod);
   const method = localLogin ? sim.method : "passport"; // a Passport-only deployment has no second option
   const showPassport = sim.ready && passport !== null && method === "passport";
   const showLocal = sim.ready && localLogin && (!passport || method === "password");
@@ -64,7 +68,7 @@ export function LoginPage() {
   const m = useMutation({
     mutationFn: () => api<{ token: string }>("/auth/dev-login", { body: { orgSlug: org?.slug, email: chosen } }),
     onSuccess: (r) => {
-      login(r.token); rememberSignInMethod("password");
+      login(r.token); rememberSignInMethod("password"); rememberSignInOrg(org?.slug);
       nav("/");
     },
   });
@@ -76,7 +80,7 @@ export function LoginPage() {
   const points = [{ i: FlaskConical, k: "p1" }, { i: ShieldCheck, k: "p2" }, { i: Smartphone, k: "p3" }] as const;
   return (
     <div className="grid min-h-screen lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
-      <aside className="relative hidden overflow-hidden p-12 text-white lg:flex lg:flex-col lg:justify-between" style={{ background: "linear-gradient(145deg,#3730A3 0%,#2B2680 55%,#0A4F7A 100%)" }}>
+      <aside className="relative hidden overflow-hidden p-12 text-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:justify-between" data-testid="login-brand-panel" style={{ background: "linear-gradient(145deg,#3730A3 0%,#2B2680 55%,#0A4F7A 100%)" }}>
         <div aria-hidden className="pointer-events-none absolute -inset-e-24 -top-24 size-96 rounded-full bg-white/5" />
         <div aria-hidden className="pointer-events-none absolute -bottom-32 -inset-s-20 size-112 rounded-full bg-white/5" />
         <div className="relative w-fit"><KiorexLogo variant="lockup" product="lab" lang={i18n.language} tone="inverse" height={48} /><p data-kx-tagline className="mt-1 text-xs text-white/70">{t("app.tagline")}</p></div>
@@ -137,6 +141,7 @@ export function LoginPage() {
             ) : null}
             <Link to="/onboarding" className="block text-center text-sm font-medium text-primary underline-offset-4 hover:underline">{t("auth.newLab")}</Link>
           </Surface> : null}
+          <div className="mt-6 text-center"><SwitchProductLink /></div>
           {DevTestUsers ? <Suspense fallback={null}><DevTestUsers busy={quick.isPending} onPick={(slug, email) => quick.mutate({ slug, email })} /></Suspense> : null}
           {DevTestUsers ? <ErrorNote error={quick.error} /> : null}
         </div>

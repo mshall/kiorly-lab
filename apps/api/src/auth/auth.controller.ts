@@ -1,5 +1,5 @@
-import { Body, Controller, ForbiddenException, Get, Headers, HttpCode, HttpException, Inject, Post, Res, UnauthorizedException } from "@nestjs/common";
-import type { Response } from "express";
+import { Body, Controller, ForbiddenException, Get, Headers, HttpCode, HttpException, Inject, Post, Query, Req, Res, UnauthorizedException } from "@nestjs/common";
+import type { Request, Response } from "express";
 import { ApiTags } from "@nestjs/swagger";
 import { Public } from "./decorators";
 import { ZBody, z } from "../common/zod";
@@ -11,6 +11,10 @@ import { TokenService } from "./token.service";
 import { appConfig } from "../config/app-config";
 import { HandoffCodes, HandoffError, isHomeOrigin, webBaseUrl } from "./handoff";
 import { PrismaHandoffStore } from "./handoff.store";
+import { deploymentDefaultMethod, orgSignInFacts, resolvePublicSignInConfig } from "./sign-in-config";
+import { makeWindowLimiter } from "./sign-in-default";
+
+const configLimiter = makeWindowLimiter(300, 60_000);
 
 const Exchange = z.object({ code: z.string().min(1).max(2048), codeVerifier: z.string().min(43).max(128), redirectUri: z.string().url().max(512), nonce: z.string().min(1).max(256) }).strict();
 
@@ -37,7 +41,15 @@ export class AuthController {
   private handoffCodes() { return new HandoffCodes(this.handoffStore, "lab"); }
 
   /** Login page configuration: is the dev login offered, and is Kiorex Passport (OIDC + PKCE) available. Nothing secret. */
-  @Public() @Get("config") config() { return this.passport.publicConfig(); }
+  @Public() @Get("config")
+  async config(@Query("org") org: string | undefined, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const base = await this.passport.publicConfig();
+    res.setHeader("Cache-Control", "no-store");
+    // Pre-auth and public: rate limited per client; an unknown or missing org gets the deployment default in the same shape (no org enumeration).
+    if (!configLimiter(req.ip ?? "anon")) throw new HttpException({ statusCode: 429, code: "RATE_LIMITED", message: "Too many requests, try again in a minute" }, 429);
+    const facts = org ? await orgSignInFacts(this.prisma, org) : null;
+    return { ...base, ...resolvePublicSignInConfig({ passportAvailable: base.passport !== null, org: facts, deployment: deploymentDefaultMethod() }) };
+  }
 
   /** Web Passport sign-in: the SPA did authorize + PKCE; the API redeems the code server-side and issues the staff session. */
   @Public() @Post("oidc/exchange") @HttpCode(200) @ZBody(Exchange) exchange(@Body() b: z.infer<typeof Exchange>) { return this.passport.exchange(b); }

@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, getToken, setToken } from "@/lib/api";
 import { takeEndSessionUrl } from "@/lib/passport";
+import { rememberSignInOrg } from "@/lib/sign-in-default";
 
 export interface Me {
   user: { id: string; displayName: string; role: string; signatory: boolean };
@@ -28,6 +29,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setTok] = useState<string | null>(getToken());
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ["me", token], queryFn: () => api<Me>("/auth/me"), enabled: Boolean(token), staleTime: 30_000, retry: false, refetchInterval: 60_000 }); // re-checked every minute: a session Passport ended (back-channel logout) or a deactivated account leaves within a minute even when idle
+  // the next visit to the login page asks the API for THIS organisation's default sign-in method
+  const orgId = q.data?.tenant.id;
+  useEffect(() => { rememberSignInOrg(orgId); }, [orgId]);
   const login = useCallback((t: string) => {
     setToken(t);
     setTok(t);

@@ -89,13 +89,19 @@
     "passportFailed": "Kiorex Passport sign-in failed",
     "handoffBusy": "Signing you in…",
     "handoffFailed": "We could not complete the sign-in from Kiorly. Sign in below.",
-    "handoffReason": {"mfa": "Your account uses a second factor. Sign in here to enter the code.", "password_expired": "Your password has expired. Sign in here to set a new one.", "org": "Choose your organisation here to continue.", "other": "Sign in here to continue."},
+    "handoffReason": {
+      "mfa": "Your account uses a second factor. Sign in here to enter the code.",
+      "password_expired": "Your password has expired. Sign in here to set a new one.",
+      "org": "Choose your organisation here to continue.",
+      "other": "Sign in here to continue."
+    },
     "passportNote": "Sign in with your Kiorex Passport.",
     "method": "Sign-in method",
     "methodPassport": "Kiorex Passport",
     "methodPassword": "Password",
     "passportOr": "or use the development sign-in",
-    "user": "User"
+    "user": "User",
+    "switchProduct": "Switch product"
   },
   "onboarding": {
     "company": "Company name",
@@ -610,7 +616,18 @@
     "modeNote": {
       "STANDALONE": "Nothing is sent to or accepted from partner systems. Orders, results, billing and reports all work inside this laboratory.",
       "INTEGRATED": "Partner clients (Kiorex bookings, Kiorly Clinic hand-off, Kiorly Nurse samples) may send orders and receive released-report events. Local work is unchanged."
-    }
+    },
+    "signinTitle": "Default sign-in method",
+    "signinHint": "Both methods stay available on the sign-in page. This only chooses which one is preselected for your team.",
+    "signinPassport": "Kiorex Passport",
+    "signinPassword": "Password",
+    "signinAuto": "Automatic",
+    "signinAutoHint": "Kiorex Passport when this organisation is linked to Kiorex, otherwise Password.",
+    "signinEffective": "Preselected now: {{method}}",
+    "signinLinked": "Linked to Kiorex",
+    "signinNotLinked": "Not linked to Kiorex",
+    "signinSaved": "Default sign-in method saved",
+    "signinOwnerOnly": "Only the organisation owner or an administrator can change this."
   },
   "phleb": {
     "camera": "Scan with camera",

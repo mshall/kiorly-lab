@@ -8,6 +8,8 @@ import { TokenService } from "../../auth/token.service";
 import { normalizePhone } from "../../auth/passport";
 import { PassportSessions } from "../../auth/passport-sessions.service";
 import { AuditService } from "../../audit/audit.service";
+import { effectiveOrgDefault, type SignInDefaultMethod } from "../../auth/sign-in-default";
+import { tenantLinkedToKiorex } from "../../auth/sign-in-config";
 import { appConfig } from "../../config/app-config";
 import { page } from "../../common/pagination";
 import { open as _open, seal } from "../../common/secret-box";
@@ -180,10 +182,17 @@ export class AdminService {
   // -------------------------------------------------------------- settings
   async getSettings(orgId: string) {
     const t = await this.prisma.tenant.findUniqueOrThrow({ where: { id: orgId } });
-    return { integrationMode: t.integrationMode, defaultLocale: t.defaultLocale, name: t.name, edition: t.edition, marketCode: t.marketCode, currency: t.currency, vatRatePercent: Number(t.vatRatePercent), referringDoctorStatements: t.referringDoctorStatements, qcValidityHours: t.qcValidityHours, safetyContactName: t.safetyContactName, safetyContactPhone: t.safetyContactPhone, homeBufferBeforeMin: t.homeBufferBeforeMin, homeBufferAfterMin: t.homeBufferAfterMin, homeDailyCap: t.homeDailyCap };
+    return { integrationMode: t.integrationMode, defaultLocale: t.defaultLocale, name: t.name, edition: t.edition, marketCode: t.marketCode, currency: t.currency, vatRatePercent: Number(t.vatRatePercent), referringDoctorStatements: t.referringDoctorStatements, qcValidityHours: t.qcValidityHours, safetyContactName: t.safetyContactName, safetyContactPhone: t.safetyContactPhone, homeBufferBeforeMin: t.homeBufferBeforeMin, homeBufferAfterMin: t.homeBufferAfterMin, homeDailyCap: t.homeDailyCap, ...(await this.signInSettings(t)) };
   }
-  async updateSettings(u: AuthUser, b: { integrationMode?: "STANDALONE" | "INTEGRATED"; defaultLocale?: "ar" | "en"; name?: string; vatRatePercent?: number; referringDoctorStatements?: boolean; qcValidityHours?: number; safetyContactName?: string | null; safetyContactPhone?: string | null; homeBufferBeforeMin?: number; homeBufferAfterMin?: number; homeDailyCap?: number | null }) {
+  /** Org default sign-in method: the stored choice (null = automatic), what is effective now, and whether the org is linked to Kiorex. */
+  private async signInSettings(t: { id: string; externalOrgId: string | null; defaultSignInMethod: SignInDefaultMethod | null }) {
+    const linkedToKiorex = await tenantLinkedToKiorex(this.prisma, t);
+    return { defaultSignInMethod: t.defaultSignInMethod, effectiveSignInMethod: effectiveOrgDefault({ stored: t.defaultSignInMethod, linkedToKiorex }), linkedToKiorex };
+  }
+  async updateSettings(u: AuthUser, b: { integrationMode?: "STANDALONE" | "INTEGRATED"; defaultLocale?: "ar" | "en"; name?: string; vatRatePercent?: number; referringDoctorStatements?: boolean; qcValidityHours?: number; safetyContactName?: string | null; safetyContactPhone?: string | null; homeBufferBeforeMin?: number; homeBufferAfterMin?: number; homeDailyCap?: number | null; defaultSignInMethod?: SignInDefaultMethod | null }) {
+    const before = b.defaultSignInMethod !== undefined ? await this.prisma.tenant.findUniqueOrThrow({ where: { id: u.orgId }, select: { defaultSignInMethod: true } }) : null;
     const t = await this.prisma.tenant.update({ where: { id: u.orgId }, data: b });
+    if (before && before.defaultSignInMethod !== t.defaultSignInMethod) await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "settings.default_signin_method", entityType: "Tenant", entityId: u.orgId, meta: { from: before.defaultSignInMethod, to: t.defaultSignInMethod } });
     await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "settings.update", entityType: "Tenant", entityId: u.orgId, meta: { fields: Object.keys(b) } });
     return this.getSettings(t.id);
   }

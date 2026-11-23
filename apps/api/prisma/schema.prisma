@@ -42,6 +42,12 @@ enum IntegrationMode {
   INTEGRATED
 }
 
+/// Default sign-in method preselected on the login page for an organisation (ADR-038 amendment). Both methods stay available.
+enum SignInMethod {
+  PASSWORD
+  PASSPORT
+}
+
 enum StaffRole {
   OWNER
   LAB_DIRECTOR
@@ -325,6 +331,8 @@ model Tenant {
   integrationMode           IntegrationMode @default(INTEGRATED)
   /// UI / report default language.
   defaultLocale             String          @default("ar")
+  /// Preselected sign-in method (both stay offered). null = automatic: PASSPORT when the org is linked to Kiorex, else PASSWORD.
+  defaultSignInMethod       SignInMethod?
   /// QC coverage window for a result (hours). NEEDS_HUMAN (NH-LB-005): pathologist to confirm.
   qcValidityHours           Int             @default(24)
   /// HVSAF: organisation safety contact for phlebotomist alerts (safety control, never a flag). Required before a collector can leave.
