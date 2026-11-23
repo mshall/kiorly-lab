@@ -31,11 +31,11 @@ export class KiorexConnectService {
   }
 
   async get(orgId: string, opts: { pull?: boolean } = {}) {
-    const tenant = await this.prisma.tenant.findUniqueOrThrow({ where: { id: orgId } });
+    let tenant = await this.prisma.tenant.findUniqueOrThrow({ where: { id: orgId } });
     let d = await this.doc(orgId);
     const clients = await this.prisma.integrationClient.count({ where: { orgId, active: true, source: "KIOREX_BOOKING" } });
     const legacy = !d && clients > 0 && tenant.integrationMode === "INTEGRATED";
-    if (opts.pull !== false && d?.request && ["REQUESTED", "CHANGES_REQUESTED", "APPROVED", "PAUSED"].includes(d.status)) { await this.pull(orgId, d); d = await this.doc(orgId); }
+    if (opts.pull !== false && d?.request && ["REQUESTED", "CHANGES_REQUESTED", "APPROVED", "PAUSED"].includes(d.status)) { await this.pull(orgId, d); d = await this.doc(orgId); tenant = await this.prisma.tenant.findUniqueOrThrow({ where: { id: orgId } }); }
     const status: ConnectStatus = d?.status ?? (legacy ? "APPROVED" : "STANDALONE");
     const labs = await this.prisma.lab.findMany({ where: { orgId } });
     const tests = await this.prisma.testDefinition.findMany({ where: { orgId, active: true, sendOut: false }, select: { id: true } });

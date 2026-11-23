@@ -3,7 +3,8 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
-import { ar, en } from "./kiorexConnect.strings";
+const en = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../locales/en.json"), "utf8")).kiorexConnect as Record<string, any>;
+const ar = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../locales/ar.json"), "utf8")).kiorexConnect as Record<string, any>;
 
 const here = dirname(fileURLToPath(import.meta.url));
 const flat = (o: Record<string, unknown>, p = ""): string[] => Object.entries(o).flatMap(([k, v]) => (typeof v === "object" && v ? flat(v as Record<string, unknown>, `${p}${k}.`) : [`${p}${k}`]));

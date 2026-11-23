@@ -6,7 +6,6 @@ import { AlertCircle, CheckCircle2, Clock, Lock, RefreshCw } from "lucide-react"
 import { api } from "@/lib/api";
 import { Button, Card, Input, useToast } from "@/components/ui";
 import { ErrorNote } from "@/components/common";
-import "./kiorexConnect.i18n";
 
 type StepStatus = "done" | "action_needed" | "waiting_kiorex" | "blocked";
 interface Step { key: string; status: StepStatus; optional?: boolean; link?: string; detail?: Record<string, unknown> }

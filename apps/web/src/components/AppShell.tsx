@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import "@/features/kiorex/kiorexConnect.i18n";
 import { Activity, AlertTriangle, BadgeCheck, BarChart3, BookOpen, BriefcaseMedical, Bug, ClipboardList, CreditCard, FileCheck2, FlaskConical, LayoutDashboard, ArrowLeftRight, LineChart, Link2, LogOut, Menu, Microscope, Package, ScanBarcode, Settings, ShieldCheck, Smartphone, Snowflake, Ticket, Users, Wallet } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
