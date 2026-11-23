@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { KiorlyBrandLockup, KiorlyFootText, KxControlPair, LanguageToggle, Pulse, ThemeToggle, Surface, Skeleton, kcn } from "@/brand/ui-kit";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -11,6 +11,10 @@ import { fetchAuthConfig, startPassportSignIn } from "@/lib/passport";
 import { Button, Field, Select } from "@/components/ui";
 import { ErrorNote } from "@/components/common";
 import { KiorexLogo } from "@/brand/components";
+
+// DEV ONLY quick-pick test users. Keep the condition inline: Vite folds `import.meta.env.DEV` to false in production builds, which drops the
+// dynamic import and the whole ../../dev folder (asserted by scripts/check-no-dev-test-users.mjs).
+const DevTestUsers = import.meta.env.DEV && import.meta.env.VITE_DEV_TEST_USERS !== "false" ? lazy(() => import("@/dev/dev-test-users")) : null;
 
 /** Dev sign-in (AUTH_MODE=dev). Production uses Kiorex Account OIDC (NH-LB-016); the app never stores passwords. */
 export function LoginPage() {
@@ -31,6 +35,10 @@ export function LoginPage() {
       login(r.token);
       nav("/");
     },
+  });
+  const quick = useMutation({
+    mutationFn: (v: { slug: string; email: string }) => api<{ token: string }>("/auth/dev-login", { body: { orgSlug: v.slug, email: v.email } }),
+    onSuccess: (r) => { login(r.token); nav("/"); },
   });
   if (token) return <Navigate to="/" replace />;
   const points = [{ i: FlaskConical, k: "p1" }, { i: ShieldCheck, k: "p2" }, { i: Smartphone, k: "p3" }] as const;
@@ -93,6 +101,8 @@ export function LoginPage() {
             ) : null}
             <Link to="/onboarding" className="block text-center text-sm font-medium text-primary underline-offset-4 hover:underline">{t("auth.newLab")}</Link>
           </Surface> : null}
+          {DevTestUsers ? <Suspense fallback={null}><DevTestUsers busy={quick.isPending} onPick={(slug, email) => quick.mutate({ slug, email })} /></Suspense> : null}
+          {DevTestUsers ? <ErrorNote error={quick.error} /> : null}
         </div>
       </main>
     </div>
