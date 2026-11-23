@@ -1,4 +1,5 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { randomUUID } from "node:crypto";
 import { SignJWT, jwtVerify, type JWTPayload } from "jose";
 import { appConfig } from "../config/app-config";
 import { hasMfa, passportConfig, peekAlg, verifyPassportAccessToken } from "./passport";
@@ -13,6 +14,8 @@ export interface VerifiedToken {
   /** Passport token carried an MFA assurance (acr/amr). */
   mfa?: boolean;
   claims?: JWTPayload;
+  /** Passport web session: the `PassportSession` row id (`jti`), checked against back-channel logout on every request. */
+  sessionId?: string;
 }
 
 export const DEV_ISSUER = "kiorly-lab-dev";
@@ -40,9 +43,10 @@ export class TokenService {
   }
 
   /** Web session after Passport sign-in (the browser never holds the Passport tokens). */
-  async issueSession(staffId: string, mfa: boolean, ttlSeconds = 8 * 3600): Promise<string> {
+  async issueSession(staffId: string, mfa: boolean, ttlSeconds = 3600, sessionId?: string): Promise<string> {
     return new SignJWT({ staffId, amr: mfa ? ["passport", "mfa"] : ["passport"] })
       .setProtectedHeader({ alg: "HS256" })
+      .setJti(sessionId ?? randomUUID())
       .setSubject(`passport-session:${staffId}`)
       .setIssuer(SESSION_ISSUER)
       .setAudience(appConfig.oidcAudience())
@@ -63,7 +67,8 @@ export class TokenService {
         });
         if (payload.iss === DEV_ISSUER && (appConfig.isProd() || appConfig.authMode() !== "dev")) throw new Error("dev auth is disabled");
         if (!payload.sub) throw new Error("no sub");
-        return { sub: payload.sub, staffId: typeof payload.staffId === "string" ? payload.staffId : undefined, amr: Array.isArray(payload.amr) ? (payload.amr as string[]) : [] };
+        if (payload.iss === SESSION_ISSUER && !payload.jti) throw new Error("session id missing");
+        return { sub: payload.sub, staffId: typeof payload.staffId === "string" ? payload.staffId : undefined, amr: Array.isArray(payload.amr) ? (payload.amr as string[]) : [], ...(payload.iss === SESSION_ISSUER ? { sessionId: String(payload.jti) } : {}) };
       }
       const cfg = passportConfig();
       if (!cfg) throw new Error("Passport tokens are not accepted");

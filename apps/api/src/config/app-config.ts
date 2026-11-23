@@ -8,8 +8,16 @@ export const appConfig = {
   isProd: () => process.env.NODE_ENV === "production",
   isTest: () => process.env.NODE_ENV === "test",
   authMode: (): "dev" | "oidc" => (process.env.AUTH_MODE === "oidc" ? "oidc" : "dev"),
-  /** Dev-only HS256 secret. In production AUTH_MODE must be oidc. */
-  jwtDevSecret: () => process.env.JWT_DEV_SECRET ?? "dev-only-secret-change-me-dev-only-secret",
+  /**
+   * HS256 secret for dev tokens and the Passport web session. Outside production a dev default exists; in production it is REQUIRED
+   * (`JWT_SECRET` as injected by the infra secret, or `AUTH_JWT_SECRET`) so sessions are never signed with a well-known key.
+   */
+  jwtDevSecret: () => {
+    const s = process.env.JWT_DEV_SECRET || process.env.AUTH_JWT_SECRET || process.env.JWT_SECRET;
+    if (s) return s;
+    if (process.env.NODE_ENV === "production") throw new Error("JWT_SECRET (or AUTH_JWT_SECRET) is required in production");
+    return "dev-only-secret-change-me-dev-only-secret";
+  },
   oidcIssuer: () => process.env.KIOREX_OIDC_ISSUER?.replace(/\/+$/, ""),
   oidcAudience: () => process.env.KIOREX_OIDC_AUDIENCE ?? "kiorly-lab",
   mfaEnforced: () => process.env.FORCE_PRIVILEGED_MFA === "true" || process.env.NODE_ENV === "production",

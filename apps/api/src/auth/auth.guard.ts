@@ -7,6 +7,7 @@ import { IS_PUBLIC, PERMS } from "./decorators";
 import { hasPermission, mfaSatisfied, type Permission } from "./rbac";
 import { TokenService } from "./token.service";
 import { PassportService } from "./passport.service";
+import { PassportSessions } from "./passport-sessions.service";
 import { passportConfig } from "./passport";
 import { isMobilePlanGated } from "../modules/mobile/mobile-gate";
 
@@ -21,6 +22,7 @@ export class AuthGuard implements CanActivate {
     @Inject(TokenService) private readonly tokens: TokenService,
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Optional() @Inject(PassportService) private readonly passport?: PassportService,
+    @Optional() @Inject(PassportSessions) private readonly sessions?: PassportSessions,
   ) {}
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
@@ -30,6 +32,11 @@ export class AuthGuard implements CanActivate {
     const raw = Array.isArray(h) ? h[0] : h;
     if (!raw?.startsWith("Bearer ")) throw new UnauthorizedException({ code: "UNAUTHENTICATED" });
     const tok = await this.tokens.verify(raw.slice(7));
+    // a Passport web session ends with the Passport session (back-channel logout); raw Passport access tokens (staff app) are checked by sid/sub
+    if (this.sessions) {
+      if (tok.sessionId) await this.sessions.assertActive(tok.sessionId);
+      else if (tok.passport) await this.sessions.assertBearerActive(tok.claims as never);
+    }
     // product tokens carry the staff id; a raw Passport access token (staff mobile app) maps by subject, linking by verified phone on first login
     const cfg = tok.passport ? passportConfig() : null;
     const staff = tok.passport && cfg && this.passport

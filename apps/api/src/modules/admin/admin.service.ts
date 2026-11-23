@@ -5,6 +5,8 @@ import { normalizeDistrictId } from "@kiorly/field-visit";
 import type { AuthUser } from "../../auth/auth.types";
 import { PERMISSIONS, ROLE_PERMISSIONS } from "../../auth/rbac";
 import { TokenService } from "../../auth/token.service";
+import { normalizePhone } from "../../auth/passport";
+import { PassportSessions } from "../../auth/passport-sessions.service";
 import { AuditService } from "../../audit/audit.service";
 import { appConfig } from "../../config/app-config";
 import { page } from "../../common/pagination";
@@ -26,6 +28,7 @@ export class AdminService {
     @Inject(TokenService) private readonly tokens: TokenService,
     @Inject(FeatureFlagsService) private readonly flags: FeatureFlagsService,
     @Inject(StarterCatalogueService) private readonly starter: StarterCatalogueService,
+    @Inject(PassportSessions) private readonly sessions: PassportSessions,
   ) {}
 
   // ------------------------------------------------------------------ auth
@@ -88,8 +91,24 @@ export class AdminService {
   }
 
   // ----------------------------------------------------------------- staff
-  listStaff(orgId: string) {
-    return this.prisma.staffUser.findMany({ where: { orgId }, select: { id: true, email: true, displayName: true, role: true, labIds: true, signatoryLicenceNo: true, active: true, phone: true }, orderBy: { displayName: "asc" } });
+  async listStaff(orgId: string) {
+    const rows = await this.prisma.staffUser.findMany({ where: { orgId }, select: { id: true, email: true, displayName: true, role: true, labIds: true, signatoryLicenceNo: true, active: true, phone: true, subject: true }, orderBy: { displayName: "asc" } });
+    return rows.map(({ subject, ...s }) => ({ ...s, passportLinked: !!subject }));
+  }
+
+  /** Names and roles for pickers (collection managers): no phone numbers, e-mail or Passport state. */
+  lookupStaff(orgId: string) {
+    return this.prisma.staffUser.findMany({ where: { orgId, active: true }, select: { id: true, displayName: true, role: true, labIds: true }, orderBy: { displayName: "asc" } });
+  }
+
+  /** Staff phone: strict E.164 (formatting characters tolerated), unique inside the tenant; null/"" clears it. Never logged. */
+  private async cleanPhone(orgId: string, raw: string | null | undefined, exceptId?: string): Promise<string | null> {
+    if (raw === null || raw === undefined || raw.trim() === "") return null;
+    const phone = normalizePhone(raw);
+    if (!phone) throw new BadRequestException({ code: "INVALID_PHONE", message: "Phone must be in international format, e.g. +201000002004" });
+    const clash = await this.prisma.staffUser.findFirst({ where: { orgId, phone, ...(exceptId ? { id: { not: exceptId } } : {}) }, select: { id: true } });
+    if (clash) throw new ConflictException({ code: "PHONE_TAKEN", message: "Another staff member already uses this phone number" });
+    return phone;
   }
 
   async createStaff(u: AuthUser, b: { email: string; displayName: string; role: StaffRole; labIds?: string[]; signatoryLicenceNo?: string; subject?: string; phone?: string }) {
@@ -97,9 +116,11 @@ export class AdminService {
     if (["AUTHORIZED_SIGNATORY", "LAB_DIRECTOR"].includes(b.role) && !b.signatoryLicenceNo) throw new BadRequestException({ code: "LICENCE_REQUIRED_FOR_SIGNATORY" });
     if (await this.prisma.staffUser.findFirst({ where: { orgId: u.orgId, email: b.email.toLowerCase() } })) throw new ConflictException({ code: "EMAIL_TAKEN" });
     await this.assertLabs(u.orgId, b.labIds);
-    const s = await this.prisma.staffUser.create({ data: { orgId: u.orgId, email: b.email.toLowerCase(), displayName: b.displayName, role: b.role, labIds: b.labIds ?? [], signatoryLicenceNo: b.signatoryLicenceNo, subject: b.subject, phone: b.phone } });
-    await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "staff.create", entityType: "StaffUser", entityId: s.id, meta: { role: b.role } });
-    return s;
+    const phone = await this.cleanPhone(u.orgId, b.phone);
+    const s = await this.prisma.staffUser.create({ data: { orgId: u.orgId, email: b.email.toLowerCase(), displayName: b.displayName, role: b.role, labIds: b.labIds ?? [], signatoryLicenceNo: b.signatoryLicenceNo, subject: b.subject, phone } });
+    await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "staff.create", entityType: "StaffUser", entityId: s.id, meta: { role: b.role, linkKeySet: !!phone } });
+    const { subject, ...out } = s;
+    return { ...out, passportLinked: !!subject };
   }
 
   async updateStaff(u: AuthUser, id: string, b: { displayName?: string; role?: StaffRole; labIds?: string[]; signatoryLicenceNo?: string | null; active?: boolean; phone?: string | null }) {
@@ -111,9 +132,19 @@ export class AdminService {
     const lic = b.signatoryLicenceNo === undefined ? s.signatoryLicenceNo : b.signatoryLicenceNo;
     if (["AUTHORIZED_SIGNATORY", "LAB_DIRECTOR"].includes(role) && !lic) throw new BadRequestException({ code: "LICENCE_REQUIRED_FOR_SIGNATORY" });
     await this.assertLabs(u.orgId, b.labIds);
-    const out = await this.prisma.staffUser.update({ where: { id }, data: { displayName: b.displayName, role: b.role, labIds: b.labIds, signatoryLicenceNo: b.signatoryLicenceNo, active: b.active, phone: b.phone } });
-    await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "staff.update", entityType: "StaffUser", entityId: id, meta: { fields: Object.keys(b) } });
-    return out;
+    const phone = b.phone === undefined ? undefined : await this.cleanPhone(u.orgId, b.phone, id);
+    let row;
+    try {
+      row = await this.prisma.staffUser.update({ where: { id }, data: { displayName: b.displayName, role: b.role, labIds: b.labIds, signatoryLicenceNo: b.signatoryLicenceNo, active: b.active, phone } });
+    } catch (e) {
+      if ((e as { code?: string }).code === "P2002") throw new ConflictException({ code: "PHONE_TAKEN", message: "Another staff member already uses this phone number" });
+      throw e;
+    }
+    await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "staff.update", entityType: "StaffUser", entityId: id, meta: { fields: Object.keys(b).filter((k) => k !== "phone"), linkKeyChanged: b.phone !== undefined } });
+    // deactivating a staff member ends their Kiorex Passport web sessions straight away
+    if (b.active === false && s.active) await this.sessions.revokeForStaff(id, "staff_deactivated");
+    const { subject, ...out } = row;
+    return { ...out, passportLinked: !!subject };
   }
 
   private async assertLabs(orgId: string, labIds?: string[]) {

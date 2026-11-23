@@ -10,7 +10,7 @@ export const schemaSmoke = {
     "CriticalAlert", "OutboxEvent", "AuditLog", "Invoice", "Payment", "LedgerEntry", "PriceList", "PriceListItem", "B2bAccount", "AnalyzerMessage", "ReportShareLink", "NotificationAttempt", "IntegrationClient", "CollectionSlot", "AutoVerificationRule", "CashClose", "SendOutCost", "SlaAlert", "IdempotencyRecord", "SequenceCounter",
   ],
   /** Child/reference tables that inherit tenancy through a parent FK. */
-  unscoped: ["Tenant", "TestAnalyte", "TestPackageItem", "OrderItem", "FlagSnapshotCache", "InvoiceLine", "ProviderWebhookEvent"],
+  unscoped: ["Tenant", "TestAnalyte", "TestPackageItem", "OrderItem", "FlagSnapshotCache", "InvoiceLine", "ProviderWebhookEvent", "PassportRevocation", "LogoutTokenSeen"],
   async invariants(prisma: PrismaClient) {
     const seed = async (tx: Prisma.TransactionClient) => {
       const tenant = await tx.tenant.create({ data: { name: "t" } });

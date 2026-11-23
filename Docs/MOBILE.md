@@ -88,7 +88,7 @@ List + ack via `/mobile/alerts` (above; works on every plan). Web equivalents: `
 `GET /mobile/search?q=` (new) and for a full result set `GET /orders?search=`, `GET /patients?search=`, `GET /specimens?search=`.
 
 ## Registering the app with Passport (NEEDS_HUMAN)
-OIDC public client `kiorly` (legacy `kiorly-team` kept) (PKCE S256, redirect `kiorly://auth/callback`, audience `kiorly-lab`) in kiorex-account; until then the app uses dev-login locally.
+OIDC public client `kiorly` (legacy `kiorly-team` kept) (PKCE S256, redirect `kiorly://auth/callback`, audience `kiorly-lab`) in `kiorex-account/config/idp.json` (local, staging and production); locally the API runs dual (`AUTH_ACCEPT_PASSPORT=true`) so Passport tokens and dev-login both work. A Passport session ended elsewhere is refused by `sid` (back-channel logout, `PassportRevocation`).
 
 ## Release queue (`GET /release-queue`, `reports.read`)
 `{readyToSign, readyToRelease, signedNotReleased}`. `readyToSign` = VALIDATED orders that need a (new) report version: never signed, or carrying a corrected result validated AFTER the current version was signed (an amendment). `readyToRelease` = VALIDATED orders whose current version is signed, has no later amendment and is not released yet; the app must offer "Release", not "Sign" (a second `POST /orders/:id/reports` answers `409 NO_CHANGES_TO_REPORT`). `signedNotReleased` = every signed version without a release record. After release the order leaves all three.

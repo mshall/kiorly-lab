@@ -1,6 +1,88 @@
 {
   "openapi": "3.0.0",
   "paths": {
+    "/api/v1/auth/config": {
+      "get": {
+        "operationId": "AuthController_config",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/oidc/exchange": {
+      "post": {
+        "operationId": "AuthController_exchange",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2048
+                  },
+                  "codeVerifier": {
+                    "type": "string",
+                    "minLength": 43,
+                    "maxLength": 128
+                  },
+                  "redirectUri": {
+                    "type": "string",
+                    "maxLength": 512,
+                    "format": "uri"
+                  },
+                  "nonce": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "code",
+                  "codeVerifier",
+                  "redirectUri",
+                  "nonce"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/oidc/backchannel-logout": {
+      "post": {
+        "operationId": "AuthController_backchannelLogout",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/health/live": {
       "get": {
         "operationId": "HealthController_live",
@@ -24,6 +106,21 @@
           }
         },
         "summary": "Liveness probe",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/api/v1/health/providers": {
+      "get": {
+        "operationId": "HealthController_providers",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Active mode (mock|real), vendor and readiness of every external provider (no secrets)",
         "tags": [
           "health"
         ]
@@ -280,6 +377,10 @@
                   },
                   "subject": {
                     "type": "string"
+                  },
+                  "phone": {
+                    "type": "string",
+                    "maxLength": 32
                   }
                 },
                 "required": [
@@ -379,6 +480,17 @@
                   },
                   "active": {
                     "type": "boolean"
+                  },
+                  "phone": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 32
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 },
                 "additionalProperties": false
@@ -9831,6 +9943,27 @@
             "name": "x-kiorex-signature",
             "required": true,
             "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "provider-webhooks"
+        ]
+      },
+      "get": {
+        "operationId": "ProviderWebhooksController_handshake",
+        "parameters": [
+          {
+            "name": "kind",
+            "required": true,
+            "in": "path",
             "schema": {
               "type": "string"
             }

@@ -9,8 +9,28 @@ import { Badge, Button, Card, CardTitle, Empty, Field, Input, Select, Table, Tab
 import { Surface } from "@/brand/ui-kit";
 import { ErrorNote, PageHeader } from "@/components/common";
 import { AuditViewer, ImportTab, TemplatesTab } from "./SettingsExtras";
+import { isE164, normalizeStaffPhone } from "@/lib/staff-phone";
 
 const ROLES = ["OWNER", "LAB_DIRECTOR", "AUTHORIZED_SIGNATORY", "TECHNOLOGIST", "SUPERVISOR", "PHLEBOTOMIST", "RECEPTION", "FINANCE", "BRANCH_MANAGER"];
+
+/** Staff mobile number (E.164): links the person's Kiorex Passport on first Passport sign-in. Saved through PUT /staff/:id; the API validates and enforces uniqueness. */
+function StaffPhoneCell({ staff, onSaved }: { staff: any; onSaved: () => void }) {
+  const { t } = useTranslation();
+  const [v, setV] = useState<string>(staff.phone ?? "");
+  const dirty = (normalizeStaffPhone(v) ?? "") !== (staff.phone ?? "") && v.trim() !== (staff.phone ?? "");
+  const bad = v.trim() !== "" && !isE164(v);
+  const save = useMutation({ mutationFn: () => api(`/staff/${staff.id}`, { method: "PUT", body: { phone: v.trim() === "" ? null : normalizeStaffPhone(v) } }), onSuccess: onSaved });
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center gap-2">
+        <Input className="h-8 w-44 text-xs" dir="ltr" type="tel" inputMode="tel" placeholder="+201000002010" value={v} aria-invalid={bad || undefined} aria-label={`${staff.displayName} · ${t("set.phone")}`} onChange={(e) => setV(e.target.value)} />
+        {dirty ? <Button size="sm" variant="outline" disabled={bad || save.isPending} onClick={() => save.mutate()}>{t("set.savePhone")}</Button> : null}
+      </div>
+      {bad ? <p role="alert" className="text-xs text-[hsl(var(--danger-text))]">{t("set.phoneInvalid")}</p> : null}
+      <ErrorNote error={save.error} />
+    </div>
+  );
+}
 
 /** HVBK01: the districts a lab collects in (comma separated); saved through PUT /labs/:id/coverage. */
 function CoverageEditor({ lab, onSaved }: { lab: any; onSaved: () => void }) {
@@ -33,7 +53,7 @@ export function SettingsPage() {
   const qc = useQueryClient();
   const toast = useToast();
   const [tab, setTab] = useState("staff");
-  const [s, setS] = useState({ email: "", displayName: "", role: "TECHNOLOGIST", signatoryLicenceNo: "" });
+  const [s, setS] = useState({ email: "", displayName: "", role: "TECHNOLOGIST", signatoryLicenceNo: "", phone: "" });
   const [lab, setLab] = useState({ name: "", code: "" });
   const [secret, setSecret] = useState<any>(null);
   const staff = useQuery({ queryKey: ["staff"], queryFn: () => api<any[]>("/staff"), enabled: can("staff.manage") });
@@ -44,7 +64,7 @@ export function SettingsPage() {
   const inbox = useQuery({ queryKey: ["inbox"], queryFn: () => api<any[]>("/dev/inbox?limit=50"), enabled: tab === "integrations" && can("settings.manage") });
   const [g, setG] = useState<any>(null);
   const refresh = () => void qc.invalidateQueries();
-  const addStaff = useMutation({ mutationFn: () => api("/staff", { body: { ...s, signatoryLicenceNo: s.signatoryLicenceNo || undefined } }), onSuccess: () => { setS({ ...s, email: "", displayName: "", signatoryLicenceNo: "" }); refresh(); toast(t("common.saved")); } });
+  const addStaff = useMutation({ mutationFn: () => api("/staff", { body: { ...s, signatoryLicenceNo: s.signatoryLicenceNo || undefined, phone: normalizeStaffPhone(s.phone) ?? undefined } }), onSuccess: () => { setS({ ...s, email: "", displayName: "", signatoryLicenceNo: "", phone: "" }); refresh(); toast(t("common.saved")); } });
   const patchStaff = useMutation({ mutationFn: (v: { id: string; body: object }) => api(`/staff/${v.id}`, { method: "PUT", body: v.body }), onSuccess: refresh });
   const addLab = useMutation({ mutationFn: () => api("/labs", { body: lab }), onSuccess: () => { setLab({ name: "", code: "" }); refresh(); } });
   const save = useMutation({ mutationFn: () => api("/settings", { method: "PUT", body: g }), onSuccess: () => { refresh(); toast(t("common.saved")); } });
@@ -65,17 +85,19 @@ export function SettingsPage() {
       <Tabs tabs={tabs} value={tab} onChange={setTab} />
       {tab === "staff" ? (
         <div className="space-y-4">
-          <Card className="grid gap-3 sm:grid-cols-5">
+          <p className="text-sm text-muted-foreground">{t("set.staffPassportNote")}</p>
+          <Card className="grid gap-3 sm:grid-cols-6">
             <Field label={t("auth.email")}><Input value={s.email} onChange={(e) => setS({ ...s, email: e.target.value })} type="email" /></Field>
             <Field label={t("common.name")}><Input value={s.displayName} onChange={(e) => setS({ ...s, displayName: e.target.value })} /></Field>
             <Field label={t("set.role")}><Select value={s.role} onChange={(e) => setS({ ...s, role: e.target.value })}>{ROLES.map((r) => <option key={r} value={r}>{t(`role.${r}`)}</option>)}</Select></Field>
+            <Field label={t("set.phone")} hint={t("set.phoneHint")}><Input dir="ltr" type="tel" inputMode="tel" placeholder="+201000002010" value={s.phone} aria-invalid={(s.phone.trim() !== "" && !isE164(s.phone)) || undefined} onChange={(e) => setS({ ...s, phone: e.target.value })} /></Field>
             <Field label={t("set.licence")} hint={t("set.licenceHint")}><Input value={s.signatoryLicenceNo} onChange={(e) => setS({ ...s, signatoryLicenceNo: e.target.value })} /></Field>
-            <div className="flex items-end"><Button disabled={!s.email || !s.displayName} onClick={() => addStaff.mutate()}>{t("common.add")}</Button></div>
-            <div className="sm:col-span-5"><ErrorNote error={addStaff.error ?? patchStaff.error} /></div>
+            <div className="flex items-end"><Button disabled={!s.email || !s.displayName || (s.phone.trim() !== "" && !isE164(s.phone))} onClick={() => addStaff.mutate()}>{t("common.add")}</Button></div>
+            <div className="sm:col-span-6"><ErrorNote error={addStaff.error ?? patchStaff.error} /></div>
           </Card>
-          <Table head={[t("common.name"), t("auth.email"), t("set.role"), t("set.licence"), t("common.status")]}>
+          <Table head={[t("common.name"), t("auth.email"), t("set.phone"), t("set.passport"), t("set.role"), t("set.licence"), t("common.status")]}>
             {staff.data?.map((x) => (
-              <tr key={x.id}><Td><span className="flex items-center gap-2.5"><span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-full bg-accent text-xs font-semibold text-accent-foreground">{x.displayName.trim().slice(0, 1).toUpperCase()}</span><span dir="auto" className="font-medium">{x.displayName}</span></span></Td><Td className="text-xs text-muted-foreground"><bdi dir="ltr">{x.email}</bdi></Td><Td><Select className="h-9 min-w-44 text-xs" aria-label={`${x.displayName} · ${t("set.role")}`} value={x.role} onChange={(e) => patchStaff.mutate({ id: x.id, body: { role: e.target.value } })}>{ROLES.map((r) => <option key={r} value={r}>{t(`role.${r}`)}</option>)}</Select></Td><Td className="text-xs">{x.signatoryLicenceNo ?? "-"}</Td><Td><Button size="sm" variant={x.active ? "outline" : "secondary"} onClick={() => patchStaff.mutate({ id: x.id, body: { active: !x.active } })}>{x.active ? t("set.active") : t("common.inactive")}</Button></Td></tr>
+              <tr key={x.id}><Td><span className="flex items-center gap-2.5"><span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-full bg-accent text-xs font-semibold text-accent-foreground">{x.displayName.trim().slice(0, 1).toUpperCase()}</span><span dir="auto" className="font-medium">{x.displayName}</span></span></Td><Td className="text-xs text-muted-foreground"><bdi dir="ltr">{x.email}</bdi></Td><Td><StaffPhoneCell key={`${x.id}:${x.phone ?? ""}`} staff={x} onSaved={refresh} /></Td><Td><Badge tone={x.passportLinked ? "ok" : x.phone ? "warn" : "muted"}>{x.passportLinked ? t("set.passportLinked") : x.phone ? t("set.passportPending") : t("set.passportNoPhone")}</Badge></Td><Td><Select className="h-9 min-w-44 text-xs" aria-label={`${x.displayName} · ${t("set.role")}`} value={x.role} onChange={(e) => patchStaff.mutate({ id: x.id, body: { role: e.target.value } })}>{ROLES.map((r) => <option key={r} value={r}>{t(`role.${r}`)}</option>)}</Select></Td><Td className="text-xs">{x.signatoryLicenceNo ?? "-"}</Td><Td><Button size="sm" variant={x.active ? "outline" : "secondary"} onClick={() => patchStaff.mutate({ id: x.id, body: { active: !x.active } })}>{x.active ? t("set.active") : t("common.inactive")}</Button></Td></tr>
             ))}
           </Table>
         </div>

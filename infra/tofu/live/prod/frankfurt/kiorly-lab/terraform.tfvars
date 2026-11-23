@@ -32,6 +32,13 @@ uploads = { versioning = true, kms = true } # S3 for reports/scans; analyzer bri
 env_vars = {
   NODE_ENV        = "production"
   SWAGGER_ENABLED = "false"
+  # Kiorex Passport staff sign-in (INTEGRATION.md "Staff sign-in with Kiorex Passport"). Config only: the client is registered from
+  # kiorex-account/config/idp.json (clients kiorly-lab-web, kiorly); nothing secret here. The session HS256 key comes from the JWT_SECRET runtime secret.
+  AUTH_MODE                    = "oidc"
+  KIOREX_OIDC_ISSUER           = "https://account.kiorex.com"
+  OIDC_WEB_CLIENT_ID           = "kiorly-lab-web" # NEEDS_HUMAN S6: replace with the Cognito app client id (identity stack output client_ids) when the IdP is applied
+  OIDC_SESSION_MAX_AGE_SECONDS = "3600"           # fallback re-validation: a Passport web session never outlives this (60..28800), even if a back-channel logout is missed
+  PUBLIC_BASE_URL              = "https://lab.kiorly.com"
 }
 
 domain             = "lab.kiorly.com"

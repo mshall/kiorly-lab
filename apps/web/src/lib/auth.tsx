@@ -27,7 +27,7 @@ const C = createContext<Ctx | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setTok] = useState<string | null>(getToken());
   const qc = useQueryClient();
-  const q = useQuery({ queryKey: ["me", token], queryFn: () => api<Me>("/auth/me"), enabled: Boolean(token), staleTime: 30_000, retry: false });
+  const q = useQuery({ queryKey: ["me", token], queryFn: () => api<Me>("/auth/me"), enabled: Boolean(token), staleTime: 30_000, retry: false, refetchInterval: 60_000 }); // re-checked every minute: a session Passport ended (back-channel logout) or a deactivated account leaves within a minute even when idle
   const login = useCallback((t: string) => {
     setToken(t);
     setTok(t);

@@ -20,6 +20,14 @@ export interface PassportConfig {
   webClientId: string;
   /** First Passport login matches an existing staff row by verified phone (never in production unless OIDC_PHONE_LINK=true). */
   phoneLink: boolean;
+  /** Max age of a web session started with Passport (seconds). Short on purpose: it is the fallback re-validation when a back-channel logout is missed. */
+  sessionMaxAgeSeconds: number;
+}
+
+/** `OIDC_SESSION_MAX_AGE_SECONDS`: default 1 h, clamped to 60 s .. 8 h (the previous fixed session length). */
+export function sessionMaxAge(v: string | undefined): number {
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? Math.min(8 * 3600, Math.max(60, Math.floor(n))) : 3600;
 }
 
 const list = (v: string | undefined, d: string[]) => (v?.trim() ? v.split(",").map((s) => s.trim()).filter(Boolean) : d);
@@ -37,6 +45,7 @@ export function passportConfig(env: NodeJS.ProcessEnv = process.env): PassportCo
     audiences: list(env.KIOREX_OIDC_AUDIENCE, ["kiorex-api", "kiorly-lab"]),
     allowedClients: list(env.OIDC_ALLOWED_CLIENTS, ["kiorly", "kiorly-team", webClientId]),
     webClientId,
+    sessionMaxAgeSeconds: sessionMaxAge(env.OIDC_SESSION_MAX_AGE_SECONDS),
     phoneLink: env.OIDC_PHONE_LINK ? env.OIDC_PHONE_LINK === "true" : !prod,
   };
 }
@@ -56,7 +65,7 @@ export async function discover(issuer: string, fetchImpl: typeof fetch = fetch):
 export const resetDiscoveryCache = () => discoveryCache.clear();
 
 const jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
-const jwks = (url: string) => { let j = jwksCache.get(url); if (!j) { j = createRemoteJWKSet(new URL(url)); jwksCache.set(url, j); } return j; };
+export const jwks = (url: string) => { let j = jwksCache.get(url); if (!j) { j = createRemoteJWKSet(new URL(url)); jwksCache.set(url, j); } return j; };
 
 export const peekAlg = (token: string): string | undefined => { try { return decodeProtectedHeader(token).alg; } catch { return undefined; } };
 
