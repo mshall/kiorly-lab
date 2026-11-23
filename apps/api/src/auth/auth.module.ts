@@ -1,6 +1,8 @@
 import { Global, Module } from "@nestjs/common";
+import { AuthController } from "./auth.controller";
+import { PassportService } from "./passport.service";
 import { TokenService } from "./token.service";
 
 @Global()
-@Module({ providers: [TokenService], exports: [TokenService] })
+@Module({ controllers: [AuthController], providers: [TokenService, PassportService], exports: [TokenService, PassportService] })
 export class AuthModule {}

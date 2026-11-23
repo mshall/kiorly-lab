@@ -52,6 +52,19 @@ async function ensureDevNurseClient(prisma: PrismaService, orgId: string) {
   await prisma.integrationClient.upsert({ where: { key: d.clientKey }, create: { key: d.clientKey, ...data }, update: data });
 }
 
+/** Passport demo persona (phone +20100000<n>, sub 01HZKXD...<n>) -> demo-lab staff local part. Keep in sync with kiorex-account/config/seed-users.json and TEST_DATA.md. */
+const PASSPORT_DEMO_STAFF: Record<string, number> = { tech: 2005, signatory: 2009, owner: 2010 };
+
+/** DEV only: link the Passport demo personas to their staff rows so "Sign in with Kiorex Passport" (OTP 000000) works locally. Idempotent. */
+async function linkPassportDemoStaff(prisma: PrismaService, orgId: string) {
+  if (process.env.NODE_ENV === "production") return;
+  const subMap: Record<string, string> = (() => { try { return JSON.parse(process.env.DEMO_SUB_MAP_JSON || "{}"); } catch { return {}; } })();
+  for (const [local, n] of Object.entries(PASSPORT_DEMO_STAFF)) {
+    const phone = `+20100000${n}`;
+    await prisma.staffUser.updateMany({ where: { orgId, email: `${local}@${SLUG}.test` }, data: { phone, subject: subMap[phone] ?? `01HZKXD${String(n).padStart(19, "0")}` } });
+  }
+}
+
 async function main() {
   assertDemoSeedAllowed("Kiorly Lab base demo tenant (demo-lab)");
   loadEnv();
@@ -61,6 +74,7 @@ async function main() {
   if (existing) {
     await ensureDevKiorexClient(prisma, existing.id);
     await ensureDevNurseClient(prisma, existing.id);
+    await linkPassportDemoStaff(prisma, existing.id);
     // Tenants seeded before field safety (KLORD04) have no safety contact, which blocks starting any home collection (SAFETY_CONTACT_REQUIRED): backfill the synthetic dev one, never overwrite a real one.
     if (!existing.safetyContactPhone) await prisma.tenant.update({ where: { id: existing.id }, data: { safetyContactName: "Demo safety contact (synthetic)", safetyContactPhone: "+201000000900" } });
     console.log(`demo tenant "${SLUG}" already exists: dev Kiorex client ${PARTNER_DEV_DEFAULTS.lab.clientKey} ensured`);
@@ -74,6 +88,7 @@ async function main() {
     const s = await prisma.staffUser.create({ data: { orgId: tenant.id, email: `${local}@${SLUG}.test`, displayName: name, role, signatoryLicenceNo: lic } });
     users[role] = { staffId: s.id, orgId: tenant.id, role, displayName: name, labIds: [], marketCode: "EG", edition: "PRO", signatoryLicenceNo: lic };
   }
+  await linkPassportDemoStaff(prisma, tenant.id);
   await app.get(StarterCatalogueService).load(tenant.id);
   const mk = (name: string, kind: "ANALYZER" | "MANUAL_BENCH", protocol?: "ASTM_E1394" | "HL7_V2") => prisma.instrument.create({ data: { orgId: tenant.id, labId: lab.id, name, kind, protocol, simulated: kind === "ANALYZER", model: kind === "ANALYZER" ? "Simulated analyzer" : undefined } });
   const astm = await mk("Sim Hematology (ASTM)", "ANALYZER", "ASTM_E1394");

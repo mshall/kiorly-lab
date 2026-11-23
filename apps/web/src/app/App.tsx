@@ -5,6 +5,7 @@ import { Spinner } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
 import { LoginPage } from "@/features/auth/LoginPage";
+import { AuthCallback } from "@/features/auth/AuthCallback";
 import { OnboardingPage } from "@/features/auth/OnboardingPage";
 
 const OrdersPage = lazy(() => import("@/features/orders/OrdersPage").then((m) => ({ default: m.OrdersPage })));
@@ -48,6 +49,7 @@ export function App() {
     <Suspense fallback={<div className="p-8"><Spinner /></div>}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/onboarding" element={<OnboardingPage />} />
         <Route path="/r/:token" element={<PublicReportPage />} />
         <Route path="/portal/:token" element={<DoctorPortalPage />} />

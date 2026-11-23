@@ -83,6 +83,11 @@
     "newLab": "Set up a new lab",
     "noOrgs": "No labs found yet. Create one or run the demo seed.",
     "org": "Lab",
+    "passport": "Sign in with Kiorex Passport",
+    "passportBusy": "Signing you in with Kiorex Passport…",
+    "passportFailed": "Kiorex Passport sign-in failed",
+    "passportNote": "Sign in with your Kiorex Passport.",
+    "passportOr": "or use the development sign-in",
     "user": "User"
   },
   "onboarding": {

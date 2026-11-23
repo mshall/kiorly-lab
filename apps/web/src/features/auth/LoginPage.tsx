@@ -7,6 +7,7 @@ import { Check, FlaskConical, ShieldCheck, Smartphone } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { setLang } from "@/lib/i18n";
+import { fetchAuthConfig, startPassportSignIn } from "@/lib/passport";
 import { Button, Field, Select } from "@/components/ui";
 import { ErrorNote } from "@/components/common";
 import { KiorexLogo } from "@/brand/components";
@@ -16,7 +17,10 @@ export function LoginPage() {
   const { t, i18n } = useTranslation();
   const { token, login } = useAuth();
   const nav = useNavigate();
-  const orgs = useQuery({ queryKey: ["dev-orgs"], queryFn: () => api<any[]>("/auth/dev/orgs"), retry: false });
+  const cfg = useQuery({ queryKey: ["auth-config"], queryFn: fetchAuthConfig, staleTime: 60_000 });
+  const passport = cfg.data?.passport ?? null;
+  const localLogin = cfg.data?.localLogin ?? true;
+  const orgs = useQuery({ queryKey: ["dev-orgs"], queryFn: () => api<any[]>("/auth/dev/orgs"), retry: false, enabled: localLogin });
   const [slug, setSlug] = useState("");
   const [email, setEmail] = useState("");
   const org = orgs.data?.find((o) => o.slug === (slug || orgs.data?.[0]?.slug));
@@ -52,8 +56,14 @@ export function LoginPage() {
             <KxControlPair><ThemeToggle labels={{ theme: t("theme.label"), light: t("theme.light"), dark: t("theme.dark"), system: t("theme.system") }} /><LanguageToggle onChange={setLang} /></KxControlPair>
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">{t("app.product")}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{t("auth.devNote")}</p>
-          <Surface className="mt-6 space-y-5 p-5 shadow-kx-2">
+          <p className="mt-1 text-sm text-muted-foreground">{localLogin ? t("auth.devNote") : t("auth.passportNote")}</p>
+          {passport ? (
+            <div className="mt-6 space-y-3">
+              <Button className="w-full" size="lg" onClick={() => void startPassportSignIn(passport, i18n.language)}>{t("auth.passport")}</Button>
+              {localLogin ? <p className="text-center text-xs text-muted-foreground">{t("auth.passportOr")}</p> : null}
+            </div>
+          ) : null}
+          {localLogin ? <Surface className="mt-6 space-y-5 p-5 shadow-kx-2">
             {orgs.isLoading ? <div role="status" aria-busy="true" className="space-y-3"><Skeleton className="h-10" /><Skeleton className="h-16" /><Skeleton className="h-16" /></div> : null}
             {orgs.isError ? <ErrorNote error={orgs.error} /> : null}
             {orgs.data?.length === 0 ? <p className="text-sm">{t("auth.noOrgs")}</p> : null}
@@ -82,7 +92,7 @@ export function LoginPage() {
               </>
             ) : null}
             <Link to="/onboarding" className="block text-center text-sm font-medium text-primary underline-offset-4 hover:underline">{t("auth.newLab")}</Link>
-          </Surface>
+          </Surface> : null}
         </div>
       </main>
     </div>

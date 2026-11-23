@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, getToken, setToken } from "@/lib/api";
+import { takeEndSessionUrl } from "@/lib/passport";
 
 export interface Me {
   user: { id: string; displayName: string; role: string; signatory: boolean };
@@ -16,7 +17,8 @@ interface Ctx {
   me: Me | undefined;
   loading: boolean;
   login: (t: string) => void;
-  logout: () => void;
+  /** Clears the app session; returns true when the browser is being sent to end the Kiorex Passport session too. */
+  logout: () => boolean;
   can: (p: string) => boolean;
   flagOn: (k: string) => boolean;
 }
@@ -35,9 +37,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null);
     setTok(null);
     qc.clear();
+    // Passport-started session: end the Passport session too (RP-initiated logout with id_token_hint), otherwise "Sign in with Kiorex Passport" would silently sign the user back in
+    const end = takeEndSessionUrl();
+    if (end) window.location.assign(end);
+    return Boolean(end);
   }, [qc]);
   useEffect(() => {
-    const h = () => setTok(null);
+    const h = () => { setTok(null); takeEndSessionUrl(); };
     window.addEventListener("kiorly:logout", h);
     return () => window.removeEventListener("kiorly:logout", h);
   }, []);

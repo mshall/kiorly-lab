@@ -89,20 +89,20 @@ export class AdminService {
 
   // ----------------------------------------------------------------- staff
   listStaff(orgId: string) {
-    return this.prisma.staffUser.findMany({ where: { orgId }, select: { id: true, email: true, displayName: true, role: true, labIds: true, signatoryLicenceNo: true, active: true }, orderBy: { displayName: "asc" } });
+    return this.prisma.staffUser.findMany({ where: { orgId }, select: { id: true, email: true, displayName: true, role: true, labIds: true, signatoryLicenceNo: true, active: true, phone: true }, orderBy: { displayName: "asc" } });
   }
 
-  async createStaff(u: AuthUser, b: { email: string; displayName: string; role: StaffRole; labIds?: string[]; signatoryLicenceNo?: string; subject?: string }) {
+  async createStaff(u: AuthUser, b: { email: string; displayName: string; role: StaffRole; labIds?: string[]; signatoryLicenceNo?: string; subject?: string; phone?: string }) {
     if (b.role === "OWNER" && u.role !== "OWNER") throw new ForbiddenException({ code: "ONLY_OWNER_CAN_GRANT_OWNER" });
     if (["AUTHORIZED_SIGNATORY", "LAB_DIRECTOR"].includes(b.role) && !b.signatoryLicenceNo) throw new BadRequestException({ code: "LICENCE_REQUIRED_FOR_SIGNATORY" });
     if (await this.prisma.staffUser.findFirst({ where: { orgId: u.orgId, email: b.email.toLowerCase() } })) throw new ConflictException({ code: "EMAIL_TAKEN" });
     await this.assertLabs(u.orgId, b.labIds);
-    const s = await this.prisma.staffUser.create({ data: { orgId: u.orgId, email: b.email.toLowerCase(), displayName: b.displayName, role: b.role, labIds: b.labIds ?? [], signatoryLicenceNo: b.signatoryLicenceNo, subject: b.subject } });
+    const s = await this.prisma.staffUser.create({ data: { orgId: u.orgId, email: b.email.toLowerCase(), displayName: b.displayName, role: b.role, labIds: b.labIds ?? [], signatoryLicenceNo: b.signatoryLicenceNo, subject: b.subject, phone: b.phone } });
     await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "staff.create", entityType: "StaffUser", entityId: s.id, meta: { role: b.role } });
     return s;
   }
 
-  async updateStaff(u: AuthUser, id: string, b: { displayName?: string; role?: StaffRole; labIds?: string[]; signatoryLicenceNo?: string | null; active?: boolean }) {
+  async updateStaff(u: AuthUser, id: string, b: { displayName?: string; role?: StaffRole; labIds?: string[]; signatoryLicenceNo?: string | null; active?: boolean; phone?: string | null }) {
     const s = await this.prisma.staffUser.findFirst({ where: { id, orgId: u.orgId } });
     if (!s) throw new NotFoundException({ code: "STAFF_NOT_FOUND" });
     if ((b.role === "OWNER" || s.role === "OWNER") && u.role !== "OWNER") throw new ForbiddenException({ code: "ONLY_OWNER_CAN_CHANGE_OWNER" });
@@ -111,7 +111,7 @@ export class AdminService {
     const lic = b.signatoryLicenceNo === undefined ? s.signatoryLicenceNo : b.signatoryLicenceNo;
     if (["AUTHORIZED_SIGNATORY", "LAB_DIRECTOR"].includes(role) && !lic) throw new BadRequestException({ code: "LICENCE_REQUIRED_FOR_SIGNATORY" });
     await this.assertLabs(u.orgId, b.labIds);
-    const out = await this.prisma.staffUser.update({ where: { id }, data: { displayName: b.displayName, role: b.role, labIds: b.labIds, signatoryLicenceNo: b.signatoryLicenceNo, active: b.active } });
+    const out = await this.prisma.staffUser.update({ where: { id }, data: { displayName: b.displayName, role: b.role, labIds: b.labIds, signatoryLicenceNo: b.signatoryLicenceNo, active: b.active, phone: b.phone } });
     await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "staff.update", entityType: "StaffUser", entityId: id, meta: { fields: Object.keys(b) } });
     return out;
   }

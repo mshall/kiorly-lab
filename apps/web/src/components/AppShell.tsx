@@ -8,7 +8,7 @@ import { useAuth } from "@/lib/auth";
 import { applyTenantDefault, setLang } from "@/lib/i18n";
 import { cn } from "@/lib/cn";
 import { Badge, Button } from "@/components/ui";
-import { routeDenied } from "@/lib/route-access";
+import { routeDenied, type GuardedNavItem } from "@/lib/route-access";
 import { KiorlyBrandLockup, KxControlPair, LanguageToggle, ThemeToggle } from "@/brand/ui-kit";
 
 const NAV_GROUPS = [
@@ -55,7 +55,7 @@ export function AppShell() {
   const openAlerts = alerts.data?.length ?? 0;
   // Direct-URL guard: a page whose nav entry is hidden for this role says so instead of sitting on a 403-fed skeleton.
   const { pathname } = useLocation();
-  const routeBlocked = Boolean(me) && routeDenied(pathname, NAV_GROUPS.flatMap((g) => g.items), can);
+  const routeBlocked = Boolean(me) && routeDenied(pathname, NAV_GROUPS.flatMap((g): readonly GuardedNavItem[] => g.items), can);
   return (
     <div className="flex min-h-screen">
       <aside className={cn("fixed inset-y-0 inset-s-0 z-40 w-64 shrink-0 border-e border-border bg-card p-4 lg:sticky lg:top-0 lg:h-screen overflow-y-auto transition-transform lg:translate-x-0", open ? "translate-x-0" : "max-lg:-translate-x-full max-lg:rtl:translate-x-full")}>
@@ -102,7 +102,7 @@ export function AppShell() {
             <div className="font-medium">{me?.user.displayName}</div>
             <div className="text-muted-foreground">{me ? t(`role.${me.user.role}`) : ""}</div>
           </div>
-          <Button variant="ghost" size="sm" className="h-10 shrink-0 whitespace-nowrap" aria-label={t("auth.logout")} onClick={() => { logout(); nav("/login"); }}><LogOut aria-hidden className="size-4 rtl:rotate-180 sm:hidden" /><span className="hidden sm:inline">{t("auth.logout")}</span></Button>
+          <Button variant="ghost" size="sm" className="h-10 shrink-0 whitespace-nowrap" aria-label={t("auth.logout")} onClick={() => { if (!logout()) nav("/login"); }}><LogOut aria-hidden className="size-4 rtl:rotate-180 sm:hidden" /><span className="hidden sm:inline">{t("auth.logout")}</span></Button>
         </header>
         <main id="main" className="mx-auto w-full max-w-7xl flex-1 p-4 sm:p-6">{routeBlocked ? (
           <div role="alert" data-testid="route-denied" className="mx-auto mt-16 max-w-md space-y-3 text-center">

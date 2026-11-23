@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, ForbiddenException, Inject, Injectable, UnauthorizedException } from "@nestjs/common";
+import { CanActivate, ExecutionContext, ForbiddenException, Inject, Injectable, Optional, UnauthorizedException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { appConfig } from "../config/app-config";
 import { PrismaService } from "../prisma/prisma.service";
@@ -6,6 +6,8 @@ import type { AuthedRequest } from "./auth.types";
 import { IS_PUBLIC, PERMS } from "./decorators";
 import { hasPermission, mfaSatisfied, type Permission } from "./rbac";
 import { TokenService } from "./token.service";
+import { PassportService } from "./passport.service";
+import { passportConfig } from "./passport";
 import { isMobilePlanGated } from "../modules/mobile/mobile-gate";
 
 /**
@@ -18,6 +20,7 @@ export class AuthGuard implements CanActivate {
     @Inject(Reflector) private readonly reflector: Reflector,
     @Inject(TokenService) private readonly tokens: TokenService,
     @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Optional() @Inject(PassportService) private readonly passport?: PassportService,
   ) {}
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
@@ -27,10 +30,14 @@ export class AuthGuard implements CanActivate {
     const raw = Array.isArray(h) ? h[0] : h;
     if (!raw?.startsWith("Bearer ")) throw new UnauthorizedException({ code: "UNAUTHENTICATED" });
     const tok = await this.tokens.verify(raw.slice(7));
-    const staff = await this.prisma.staffUser.findFirst({
-      where: tok.staffId ? { id: tok.staffId, active: true } : { subject: tok.sub, active: true },
-      include: { tenant: true },
-    });
+    // product tokens carry the staff id; a raw Passport access token (staff mobile app) maps by subject, linking by verified phone on first login
+    const cfg = tok.passport ? passportConfig() : null;
+    const staff = tok.passport && cfg && this.passport
+      ? await this.passport.resolveStaff(tok.claims ?? { sub: tok.sub }, cfg)
+      : await this.prisma.staffUser.findFirst({
+        where: tok.staffId ? { id: tok.staffId, active: true } : { subject: tok.sub, active: true },
+        include: { tenant: true },
+      });
     if (!staff) throw new UnauthorizedException({ code: "UNKNOWN_STAFF" });
     if (!mfaSatisfied(staff.role, tok.amr, appConfig.mfaEnforced())) throw new ForbiddenException({ code: "MFA_REQUIRED" });
     req.user = {

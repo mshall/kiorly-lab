@@ -376,6 +376,8 @@ model StaffUser {
   id                 String    @id @default(cuid())
   orgId              String
   subject            String?
+  /// Verified E.164 phone used to link the staff row to its Kiorex Passport on first Passport sign-in (identity only, never clinical).
+  phone              String?
   email              String?
   displayName        String
   role               StaffRole
@@ -391,6 +393,7 @@ model StaffUser {
   @@unique([orgId, subject])
   @@unique([orgId, email])
   @@index([orgId, role])
+  @@index([phone])
 }
 
 // ------------------------------------------------------------- catalogue ----
