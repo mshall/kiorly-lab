@@ -197,7 +197,7 @@ export function PhlebApp() {
       {msg ? <p className="m-3 rounded-md bg-[hsl(var(--success)/0.12)] p-2 text-sm text-[hsl(var(--success))]">{msg}</p> : null}
       {safetyMsg ? <p className={safetyMsg.tone === "ok" ? "m-3 rounded-md bg-[hsl(var(--success)/0.12)] p-2 text-sm text-[hsl(var(--success))]" : "m-3 rounded-md bg-[hsl(var(--danger-text)/0.12)] p-2 text-sm text-[hsl(var(--danger-text))]"} role="status">{safetyMsg.text}</p> : null}
       <main className="space-y-3 p-3">
-        {route.isLoading ? <Spinner /> : route.isError ? <p className="text-sm text-[hsl(var(--danger-text))]">{t("phleb.loadError")}</p> : !route.data?.length ? <Empty>{t("phleb.noStops")}</Empty> : route.data.map((h: any, i: number) => (
+        {route.isLoading ? <Spinner /> : route.isError ? <p className="text-sm text-[hsl(var(--danger-text))]">{!can("collection.perform") ? t("phleb.collectorsOnly") : t("phleb.loadError")}</p> : !route.data?.length ? <Empty>{t("phleb.noStops")}</Empty> : route.data.map((h: any, i: number) => (
           <Card key={h.id} className={`space-y-3 ${["COLLECTED", "FAILED", "ABORTED_UNSAFE"].includes(h.status) ? "bg-muted/50" : ""}`}>
             <div className="flex items-center gap-2"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{h.routeSequence ?? i + 1}</span><span className="flex-1 font-semibold">{h.order.patient.fullName}</span><StatusBadge value={h.status} /></div>
             <div className="text-xs text-muted-foreground"><bdi dir="ltr" className="tabular-nums">{new Date(h.slotStart).toISOString().slice(11, 16)}–{new Date(h.slotEnd).toISOString().slice(11, 16)}</bdi> (UTC)</div>

@@ -598,6 +598,7 @@
     "console": "Console",
     "dismiss": "Dismiss failed",
     "failReason": "Reason if visit failed",
+    "collectorsOnly": "This route is for phlebotomists and collectors. Your role cannot open it.",
     "loadError": "Could not load the route",
     "markFailed": "Mark visit failed",
     "mismatch": "A scanned code does not match these tubes.",
