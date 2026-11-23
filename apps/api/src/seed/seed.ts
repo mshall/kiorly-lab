@@ -53,7 +53,7 @@ async function ensureDevNurseClient(prisma: PrismaService, orgId: string) {
 }
 
 /** Passport demo persona (phone +20100000<n>, sub 01HZKXD...<n>) -> demo-lab staff local part. Keep in sync with kiorex-account/config/seed-users.json and TEST_DATA.md. */
-const PASSPORT_DEMO_STAFF: Record<string, number> = { tech: 2005, signatory: 2009, owner: 2010 };
+const PASSPORT_DEMO_STAFF: Record<string, number> = { tech: 2005, signatory: 2009, owner: 2010, manager: 2031 /* Demo Multi-Workspace Owner (Kiorly Home picker: Clinic + Pharmacy + Lab) */ };
 
 /** DEV only: link the Passport demo personas to their staff rows so "Sign in with Kiorex Passport" (OTP 000000) works locally. Idempotent. */
 async function linkPassportDemoStaff(prisma: PrismaService, orgId: string) {

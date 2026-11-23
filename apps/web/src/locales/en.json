@@ -80,6 +80,7 @@
     "email": "Email",
     "login": "Sign in",
     "logout": "Sign out",
+    "switchWorkspace": "Switch workspace",
     "newLab": "Set up a new lab",
     "noOrgs": "No labs found yet. Create one or run the demo seed.",
     "org": "Lab",

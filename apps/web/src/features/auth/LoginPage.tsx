@@ -1,6 +1,6 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { KiorlyBrandLockup, KiorlyFootText, KxControlPair, LanguageToggle, Pulse, ThemeToggle, Surface, Skeleton, kcn } from "@/brand/ui-kit";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Check, FlaskConical, ShieldCheck, Smartphone } from "lucide-react";
@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { setLang } from "@/lib/i18n";
 import { fetchAuthConfig, startPassportSignIn } from "@/lib/passport";
+import { currentNavigationType, wantsPassportAutostart } from "@/lib/kiorly-home";
 import { Button, Field, Select } from "@/components/ui";
 import { ErrorNote } from "@/components/common";
 import { KiorexLogo } from "@/brand/components";
@@ -23,6 +24,13 @@ export function LoginPage() {
   const nav = useNavigate();
   const cfg = useQuery({ queryKey: ["auth-config"], queryFn: fetchAuthConfig, staleTime: 60_000 });
   const passport = cfg.data?.passport ?? null;
+  const { search } = useLocation();
+  // Kiorly Home sends `?sso=passport`: start "Sign in with Kiorex Passport" by itself (once per page load; the Passport SSO session makes it silent).
+  const autostarted = useRef(false);
+  useEffect(() => {
+    if (token || !passport || autostarted.current || !wantsPassportAutostart(search, currentNavigationType())) return;
+    autostarted.current = true; void startPassportSignIn(passport, i18n.language);
+  }, [token, passport, search, i18n.language]);
   const localLogin = cfg.data?.localLogin ?? true;
   const orgs = useQuery({ queryKey: ["dev-orgs"], queryFn: () => api<any[]>("/auth/dev/orgs"), retry: false, enabled: localLogin });
   const [slug, setSlug] = useState("");
