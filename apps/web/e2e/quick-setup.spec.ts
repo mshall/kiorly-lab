@@ -213,3 +213,120 @@ test("Lab Arabic RTL dark, responsive 360-2560, keyboard, skip and dismissal rem
   // dismissal API contract: refused while work is pending
   expect((await request.post(`${API}/setup/dismiss`, { headers: auth(org.token), data: {} })).status()).toBe(400);
 });
+
+
+test("Lab first report through the real browser: bench pipeline, then Sign + Release from the checklist, step flips, finished state", async ({ page, request }) => {
+  const slug = `qs-${uniq()}`;
+  const onb = await request.post(`${API}/onboarding/tenants`, { data: { name: "QS Report Co", slug, labName: "QS Report Lab", labCode: "QSR", ownerName: "QS Owner", ownerEmail: `owner@${slug}.test`, edition: "PRO", loadStarterCatalogue: true } });
+  expect(onb.ok(), await onb.text()).toBeTruthy();
+  const { token: owner, labId } = (await onb.json()) as { token: string; labId: string };
+  const postJson = async (path: string, token: string, data: unknown) => {
+    const r = await request.post(`${API}${path}`, { headers: auth(token), data });
+    expect(r.ok(), `${path}: ${await r.text()}`).toBeTruthy();
+    return r.json();
+  };
+  for (const [email, name, role, lic] of [["tech", "QS Tech", "TECHNOLOGIST", undefined], ["tech2", "QS Tech Two", "TECHNOLOGIST", undefined], ["sig", "Dr QS Signatory", "AUTHORIZED_SIGNATORY", "QS-LIC-1"], ["rec", "QS Reception", "RECEPTION", undefined]] as const) {
+    await postJson("/staff", owner, { email: `${email}@${slug}.test`, displayName: name, role, ...(lic ? { signatoryLicenceNo: lic } : {}) });
+  }
+  const [tech, tech2, sig, rec] = await Promise.all(["tech", "tech2", "sig", "rec"].map((e) => devToken(request, slug, `${e}@${slug}.test`)));
+  const as = async (token: string) => { await signInWith(page, token); };
+
+  // order (API), then collect / receive / process in the UI with the label scan, exactly as in golden-flow.spec.ts
+  const order = (await postJson("/orders", rec!, { patient: { fullName: "QS Report Patient", dateOfBirth: "1990-05-10", phone: "+201000000444" }, testCodes: ["CBC"], identifiersChecked: ["dateOfBirth", "phone"], consentChannels: ["PRINTED", "PATIENT_LINK_OTP"] })) as { id: string; specimens: { barcode: string }[]; accessionNumber?: string };
+  const barcode = order.specimens[0]!.barcode;
+  const act = async (token: string, action: string) => {
+    await as(token);
+    await page.goto("/accessioning");
+    await page.getByLabel("Scan or type a barcode").fill(barcode);
+    await page.getByRole("button", { name: "Open", exact: true }).first().click();
+    await page.getByLabel("Scan the specimen label").fill(barcode);
+    await page.getByRole("button", { name: action }).click();
+    await expect(page.getByText(/Chain of custody/)).toBeVisible();
+  };
+  await act(rec!, "Mark collected");
+  await act(tech!, "Receive");
+  await act(tech!, "Start processing");
+  const inst = (await (await request.get(`${API}/instruments`, { headers: auth(tech!) })).json()) as { id: string }[];
+  const bench = inst.length ? inst[0]!.id : ((await postJson("/instruments", owner, { name: "Bench", kind: "MANUAL_BENCH" })) as { id: string }).id;
+  const mats = (await (await request.get(`${API}/qc/materials`, { headers: auth(tech!) })).json()) as { id: string; targetMean: number; analyte: { code: string } }[];
+  for (const m of mats.filter((x) => ["HB", "WBC", "PLT"].includes(x.analyte.code))) await postJson("/qc/runs", tech!, { instrumentId: bench, materialId: m.id, value: Number(m.targetMean) });
+  await as(tech!);
+  await page.goto("/worklist");
+  for (const [code, v] of Object.entries({ HB: "13.4", WBC: "7.1", PLT: "260" })) {
+    await page.getByLabel(`${code} Value`).fill(v);
+    await page.getByRole("button", { name: "Enter", exact: true }).first().click();
+    await expect(page.getByText(v, { exact: false }).first()).toBeVisible();
+  }
+  await as(tech2!);
+  await page.goto("/worklist");
+  await expect(page.getByLabel("Re-key value")).toHaveCount(3);
+  for (const v of ["13.4", "7.1", "260"]) {
+    await page.getByLabel("Re-key value").first().fill(v);
+    await page.getByRole("button", { name: "Confirm", exact: true }).first().click();
+    await page.waitForTimeout(300);
+  }
+  await as(tech!);
+  await page.goto("/validation");
+  await page.getByLabel("select all").check();
+  await page.getByRole("button", { name: /Technically validate \(3\)/ }).click();
+  await expect(page.getByText(/Nothing waiting for validation/)).toBeVisible();
+  await as(sig!);
+  await page.goto("/validation");
+  await page.getByRole("tab", { name: "Medical validation" }).click();
+  await page.getByLabel("select all").check();
+  await page.getByRole("button", { name: /Medically validate \(3\)/ }).click();
+  await expect(page.getByText(/Nothing waiting for validation/)).toBeVisible();
+
+  // the owner finishes the other steps through the API so that "first report" is the last one; the signatory then does it from the checklist
+  expect((await request.put(`${API}/labs/${labId}`, { headers: auth(owner), data: { licenceNo: "MOH-QS-9001", address: "9 Corniche, Cairo" } })).ok()).toBeTruthy();
+  for (const [key, entityId] of [["lab_coverage", labId], ["safety_contact", undefined], ["connect_kiorex", undefined]] as const) {
+    const r = await request.patch(`${API}/setup/steps/${key}`, { headers: auth(owner), data: { action: "skip", ...(entityId ? { entityId } : {}) } });
+    expect(r.ok(), `${key}: ${await r.text()}`).toBeTruthy();
+  }
+  await as(sig!);
+  await expect(checklist(page)).toBeVisible();
+  await expect(row(page, "first_report")).toHaveAttribute("data-status", "pending");
+  await expect(row(page, "first_report")).toHaveAttribute("data-next", "true");
+  await openStep(page, "first_report", /\/release/);
+  await page.getByRole("button", { name: "Sign report" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Sign report" }).click();
+  await expect(page.getByText(/Signed, awaiting release/)).toBeVisible();
+  await page.getByRole("button", { name: "Release", exact: true }).click();
+  await page.getByRole("checkbox", { name: /Patient link/ }).check();
+  await page.getByRole("dialog").getByRole("button", { name: "Release", exact: true }).click();
+
+  // finished-state UI in Lab: the bar turns green, the row animates, then the celebration card appears and Dismiss is remembered
+  await expect(bar(page)).toHaveAttribute("data-success", "true", { timeout: 30_000 });
+  await expect(page).toHaveURL(/\/$/, { timeout: 15_000 });
+  // every step is done, so the list gives way to the celebration card (the row itself is no longer rendered)
+  await expect(checklist(page)).toHaveAttribute("data-all-done", "true");
+  await expect(page.getByTestId("setup-complete")).toBeVisible();
+  expect(await pct(page)).toBe(100);
+  await page.getByTestId("setup-dismiss").click();
+  await expect(checklist(page)).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole("navigation").first()).toBeVisible();
+  await expect(checklist(page)).toHaveCount(0);
+  const plan = (await (await request.get(`${API}/setup`, { headers: auth(owner) })).json()) as { allDone: boolean; dismissedAt: string | null };
+  expect(plan.allDone && plan.dismissedAt).toBeTruthy();
+});
+
+/** Screenshots of the checklist for the design review (QS_SHOTS_DIR=../../_docs/test-flow/quick-setup): EN/AR x light/dark x 390/1440, a fresh lab with a few steps done. */
+test("Lab checklist screenshots", async ({ page, request }) => {
+  test.skip(!process.env.QS_SHOTS_DIR, "set QS_SHOTS_DIR to capture");
+  test.setTimeout(480_000);
+  const org = await freshLab(request, { starter: true });
+  expect((await request.put(`${API}/labs/${org.labId}`, { headers: auth(org.token), data: { licenceNo: "MOH-QS-7001", address: "7 Corniche, Cairo" } })).ok()).toBeTruthy();
+  for (const lang of ["en", "ar"] as const) {
+    for (const theme of ["light", "dark"] as const) {
+      for (const width of [390, 1440]) {
+        await page.addInitScript((th) => { try { localStorage.setItem("kx-theme", th); } catch { /* ignore */ } }, theme);
+        await page.setViewportSize({ width, height: 900 });
+        await signInWith(page, org.token, lang);
+        await expect(checklist(page)).toBeVisible();
+        await page.waitForTimeout(1800);
+        await checklist(page).screenshot({ path: `${process.env.QS_SHOTS_DIR}/lab-${lang}-${theme}-${width}.png` });
+      }
+    }
+  }
+});
