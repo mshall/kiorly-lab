@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { SetupBar, SetupChecklist } from "@/setup/setup-core";
 import { useAuth } from "@/lib/auth";
-import { homeUrlFromEnv, switchWorkspaceHref } from "@/lib/kiorly-home";
+import { homeUrlFromEnv, LOCAL_HOME_URL, switchWorkspaceHref } from "@/lib/kiorly-home";
 import { applyTenantDefault, setLang } from "@/lib/i18n";
 import { cn } from "@/lib/cn";
 import { Badge, Button } from "@/components/ui";
@@ -51,7 +51,7 @@ const NAV_GROUPS = [
 export function AppShell() {
   const { t } = useTranslation();
   const { me, can, logout, flagOn } = useAuth();
-  const switchHref = switchWorkspaceHref(homeUrlFromEnv({ VITE_KIORLY_HOME_URL: import.meta.env.VITE_KIORLY_HOME_URL as string | undefined, DEV: import.meta.env.DEV }));
+  const switchHref = switchWorkspaceHref(homeUrlFromEnv({ VITE_KIORLY_HOME_URL: import.meta.env.VITE_KIORLY_HOME_URL as string | undefined, DEV: import.meta.env.DEV, localDefault: import.meta.env.DEV ? LOCAL_HOME_URL : undefined }));
   const [open, setOpen] = useState(false);
   const nav = useNavigate();
   useEffect(() => { applyTenantDefault(me?.tenant.defaultLocale); }, [me?.tenant.defaultLocale]);
