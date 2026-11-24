@@ -12,6 +12,10 @@ export class PrismaExceptionFilter implements ExceptionFilter {
     if (/append-only|immutable|cannot be released|check_violation|result_release_requires|report_version_signed|critical_alert_deadline/i.test(msg)) {
       return res.status(HttpStatus.CONFLICT).json({ statusCode: 409, code: "SAFETY_INVARIANT", message: msg.split("\n").pop()?.slice(0, 300) });
     }
+    // Client faults that used to answer 500 (EDGE-49): Prisma argument validation (?from=garbage -> Invalid Date) and malformed / out-of-range values
+    if (e.name === "PrismaClientValidationError" || ["P2000", "P2006", "P2007", "P2020", "P2023", "P2033"].includes(e.code ?? "")) {
+      return res.status(HttpStatus.BAD_REQUEST).json({ statusCode: 400, code: "INVALID_INPUT", message: "A value in the request is malformed or out of range" });
+    }
     if (process.env.NODE_ENV !== "production") console.error("[prisma]", e.code ?? e.name, msg.split("\n").slice(-3).join(" ").slice(0, 400));
     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ statusCode: 500, code: "INTERNAL_ERROR" });
   }
