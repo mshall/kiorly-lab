@@ -10,5 +10,5 @@ import { KiorexConnectService } from "./kiorex-connect.service";
 import { KiorexFrontDoorController } from "./kiorex-front-door.controller";
 import { KiorexFrontDoorService } from "./kiorex-front-door.service";
 
-@Module({ imports: [OrdersModule, ReleaseModule], controllers: [IntegrationController, FlagWebhookController, KiorexConnectController, KiorexFrontDoorController], providers: [IntegrationAuthService, IntegrationCatalogueService, KiorexConnectService, KiorexFrontDoorService] })
+@Module({ imports: [OrdersModule, ReleaseModule], controllers: [IntegrationController, FlagWebhookController, KiorexConnectController, KiorexFrontDoorController], providers: [IntegrationAuthService, IntegrationCatalogueService, KiorexConnectService, KiorexFrontDoorService], exports: [IntegrationAuthService] })
 export class IntegrationModule {}

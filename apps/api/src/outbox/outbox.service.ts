@@ -5,9 +5,9 @@ import { randomUUID } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import type { Db } from "../common/db";
 
-/** Event types this product emits. LabResultReleased is a published contract (kiorex-contracts); the rest are local drafts (see Docs/NEEDS_HUMAN NH-LB-025). */
+/** Event types this product emits. LabResultReleased and the provider-link registry events (ReferralLinkCreated, ReferralLinkRevoked, 1.12.0 `product` LAB, GRW-P4-B1) are published contracts (kiorex-contracts); the rest are local drafts (see Docs/NEEDS_HUMAN NH-LB-025). */
 export const LOCAL_EVENT_TYPES = ["LabOrderCreated", "LabOrderStatusChanged", "LabCriticalEscalated", "LabReportCorrected", "LabInvoiceIssued", "LabPaymentRecorded"] as const;
-export const CONTRACT_EVENT_TYPES = ["LabResultReleased"] as const;
+export const CONTRACT_EVENT_TYPES = ["LabResultReleased", "ReferralLinkCreated", "ReferralLinkRevoked"] as const;
 
 export interface EnqueueInput {
   orgId: string;

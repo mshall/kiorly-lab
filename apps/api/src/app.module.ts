@@ -33,6 +33,7 @@ import { RegistryModule } from "./modules/registry/registry.module";
 import { ReleaseModule } from "./modules/release/release.module";
 import { SpecimensModule } from "./modules/specimens/specimens.module";
 import { SetupModule } from "./modules/setup/setup.module";
+import { GrowthModule } from "./modules/growth/growth.module";
 import { MobileGuard } from "./modules/mobile/mobile.guard";
 import { MobileModule } from "./modules/mobile/mobile.module";
 import { MobileAlertsModule } from "./modules/mobile-alerts/mobile-alerts.module";
@@ -42,7 +43,7 @@ import { PrismaModule } from "./prisma/prisma.module";
 @Module({
   imports: [
     PrismaModule, AuthModule, AuditModule, OutboxModule, AdaptersModule, KernelModule, CoreModule, FeatureFlagsModule, HealthModule,
-    AdminModule, CatalogueModule, OrdersModule, SpecimensModule, AnalysisQcModule, AnalyzersModule, CriticalModule, FieldSafetyModule, ReleaseModule, BusinessModule, ProvidersModule, RegistryModule, ReceptionModule, PreanalyticsModule, MicrobiologyModule, HistopathologyModule, QualityModule, InventoryModule, AnalyticsModule, MobileAlertsModule, MobileModule, IntegrationModule, SetupModule,
+    AdminModule, CatalogueModule, OrdersModule, SpecimensModule, AnalysisQcModule, AnalyzersModule, CriticalModule, FieldSafetyModule, ReleaseModule, BusinessModule, ProvidersModule, RegistryModule, ReceptionModule, PreanalyticsModule, MicrobiologyModule, HistopathologyModule, QualityModule, InventoryModule, AnalyticsModule, MobileAlertsModule, MobileModule, IntegrationModule, SetupModule, GrowthModule,
   ],
   providers: [
     // order matters: authenticate first, then flag, then plan entitlement

@@ -1,0 +1,18 @@
+import { Module } from "@nestjs/common";
+import { IntegrationModule } from "../../integration/integration.module";
+import { GrowthInsightsService } from "./growth-insights.service";
+import { GrowthMobileController } from "./growth-mobile.controller";
+import { GrowthMobileService } from "./growth-mobile.service";
+import { LinkRegistryLookupController } from "./link-registry.lookup.controller";
+import { ProviderLinksController } from "./provider-links.controller";
+import { ProviderLinksService } from "./provider-links.service";
+import { PublicLinkController } from "./public-link.controller";
+
+/** GRW-P4-B1 provider links for Kiorly Lab. Prisma, audit, outbox and flags come from global modules; the request HMAC check from IntegrationModule. Docs/GROWTH.md. */
+@Module({
+  imports: [IntegrationModule],
+  controllers: [ProviderLinksController, GrowthMobileController, PublicLinkController, LinkRegistryLookupController],
+  providers: [ProviderLinksService, GrowthInsightsService, GrowthMobileService],
+  exports: [ProviderLinksService],
+})
+export class GrowthModule {}

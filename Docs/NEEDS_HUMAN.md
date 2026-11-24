@@ -83,6 +83,8 @@ All providers run on **mock adapters** today (`MODE=mock|real`, default `mock`).
 - **NH-LB-044** Discount approval threshold (20% of list price needs `billing.pricing`), commission rules, credit-limit policy and payer coverage semantics are engineering defaults; finance owner to confirm.
 - **NH-LB-045** QC lot warning window (30 days), EQA z-score thresholds (|z| 2 / 3, ISO 13528 convention), delta-check defaults and the document review period (12 months) pending the lab director.
 - **NH-LB-046** Report footer legal wording and signature policy still placeholders in templates (see NH-LB-017); Arabic report layout needs a pathologist review of the bilingual template.
+- **NH-LB-047 Growth links (GRW-P4-B1)**: the Growth role matrix, plan link limits, AR and EN wording and the five recommendation texts are PROPOSED_DEFAULT and need a founder decision and a native Arabic review. See `Docs/GROWTH.md`.
+- **NH-LB-048 kiorly.link and the Kiorex lab page**: the public short-link base (`LINK_SHORT_BASE_URL`, NH-008) is unset (the API resolver URL is printed in QR codes until then, so reprint the cards when the domain exists). The Kiorex landing route and its use of the signed touch are confirmed with the Kiorex team in P4-B2.
 
 
 ## Provider go-live checklist (config only: no code change)

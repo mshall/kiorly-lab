@@ -29,4 +29,9 @@ export const FEATURE_FLAG_KEYS_FOR_UI: readonly string[] = FLAG_KEYS;
  * FLAG_DEFINITIONS (a test pins that list to the contract). They are evaluated from the same Kiorex snapshot (global/market/org OFF) by
  * FeatureFlagsService.evaluateEntitlement. TODO(contracts): add `mobile_staff_app` (class Module, no deps, not launch-locked) for each product.
  */
-export const ENTITLEMENT_KEYS = ["mobile_staff_app"] as const;
+export const ENTITLEMENT_KEYS = ["mobile_staff_app", "growth.provider_links"] as const;
+/**
+ * `growth.provider_links` (GRW-P4-B1) is the Clinic's flag key (catalogue product kiorly-clinic). The shared catalogue has no kiorly-lab row for it yet, and
+ * a test pins this file's FLAG_DEFINITIONS to the catalogue, so it is evaluated like `mobile_staff_app`: same snapshot layers, default ON.
+ * TODO(contracts): add a kiorly-lab row (class Module, depends lab.module, not launch-locked); then it moves into FLAG_DEFINITIONS.
+ */
