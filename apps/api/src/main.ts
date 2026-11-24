@@ -5,10 +5,12 @@ import { configureApp } from "./app.setup";
 import { loadEnv } from "./config/env";
 import { assertProviderConfig } from "./providers/provider-env";
 import { homeOrigins } from "./auth/handoff";
+import { warnIfLeadSigningMissing } from "./providers/lead-signing-status";
 
 async function bootstrap() {
   loadEnv();
   assertProviderConfig(); // fail fast: <KIND>_MODE=real without URL / key / webhook secret / sender never boots (names only, no values logged)
+  warnIfLeadSigningMissing(); // production without KIOREX_LEAD_SIGNING_SECRET: a notice only (names, never values)
   const app = await NestFactory.create(AppModule, { rawBody: true });
   // Kiorly (Expo web, dev) and the lab web app; native apps do not use CORS. Override with CORS_ORIGINS in other environments.
   // Kiorly Home (sign-in handoff) is allow-listed too: KIORLY_HOME_ORIGINS (from config/domains.json), local default only outside production.
