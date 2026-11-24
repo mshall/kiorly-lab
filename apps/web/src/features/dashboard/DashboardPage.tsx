@@ -1,3 +1,4 @@
+import { KiorexHomeCard } from "@/features/kiorex/KiorexFrontDoor";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -23,6 +24,7 @@ export function DashboardPage() {
   return (
     <>
       <PageHeader title={t("dash.title")} sub={t("dash.sub", { name: me?.tenant.name })} />
+      <KiorexHomeCard />
       {(d.openCriticalAlerts > 0 || d.openQcBlocks > 0) && (
         <ul aria-label={t("dash.attention")} className="mb-5 space-y-2">
           {d.openCriticalAlerts > 0 && <li><Link to="/critical" className="flex items-center gap-3 rounded-xl border-2 border-[hsl(var(--danger-text))] bg-[hsl(var(--danger-text)/0.08)] px-4 py-3 font-bold text-[hsl(var(--danger-text))]"><span className="kx-pulse-dot" aria-hidden="true" />{t("crit.banner", { n: d.openCriticalAlerts })}</Link></li>}

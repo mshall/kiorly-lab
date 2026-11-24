@@ -20,6 +20,7 @@ const CriticalPage = lazy(() => import("@/features/release/CriticalPage").then((
 const BillingPage = lazy(() => import("@/features/billing/BillingPage").then((m) => ({ default: m.BillingPage })));
 const ReportsPage = lazy(() => import("@/features/reports/ReportsPage").then((m) => ({ default: m.ReportsPage })));
 const CataloguePage = lazy(() => import("@/features/catalogue/CataloguePage").then((m) => ({ default: m.CataloguePage })));
+const KiorexFrontDoor = lazy(() => import("@/features/kiorex/KiorexFrontDoor").then((m) => ({ default: m.KiorexFrontDoor })));
 const KiorexConnectPage = lazy(() => import("@/features/kiorex/KiorexConnectPage").then((m) => ({ default: m.KiorexConnectPage })));
 const SettingsPage = lazy(() => import("@/features/settings/SettingsPage").then((m) => ({ default: m.SettingsPage })));
 const PatientsPage = lazy(() => import("@/features/patients/PatientsPage").then((m) => ({ default: m.PatientsPage })));
@@ -82,7 +83,8 @@ export function App() {
           <Route path="reports" element={<ReportsPage />} />
           <Route path="catalogue" element={<CataloguePage />} />
           <Route path="settings" element={<SettingsPage />} />
-          <Route path="kiorex-connect" element={<KiorexConnectPage />} />
+          <Route path="kiorex-connect" element={<KiorexFrontDoor />} />
+          <Route path="kiorex-connect/steps" element={<KiorexConnectPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
