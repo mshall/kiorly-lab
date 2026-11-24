@@ -1,4 +1,5 @@
-import { BadRequestException, Inject, Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
+import { listingPause } from "./kiorex-listing-pause";
+import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
 import { assertFlagOn } from "../feature-flags/flag-gate";
 import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
 import { KERNEL_ENTITLEMENTS, KERNEL_PRICE_BOOK, type EntitlementsPort, type PriceBookPort } from "../kernel-adapter/ports";
@@ -30,6 +31,7 @@ export class IntegrationCatalogueService {
   private async gate(orgId: string) {
     const t = await this.prisma.tenant.findUniqueOrThrow({ where: { id: orgId } });
     assertFlagOn(this.flags, "lab.kiorex_bookings", { orgId, market: t.marketCode });
+    if ((await listingPause(this.prisma, orgId)).paused) throw new ConflictException({ code: "LISTING_PAUSED", message: "This lab paused its Kiorex listing" });
     return t;
   }
   private async homeOk(orgId: string, market: string) {
@@ -37,6 +39,7 @@ export class IntegrationCatalogueService {
   }
 
   async labs(orgId: string) {
+    if ((await listingPause(this.prisma, orgId)).paused) return { items: [] }; // paused by the owner: nothing is offered, existing bookings are untouched
     const t = await this.gate(orgId);
     const home = await this.homeOk(orgId, t.marketCode);
     return { items: (await this.prisma.lab.findMany({ where: { orgId }, orderBy: { createdAt: "asc" } })).map((l) => ({ id: l.id, name: l.name, homeCollection: home })) };

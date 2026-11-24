@@ -13,6 +13,7 @@ import { HandoffCodes, HandoffError, isHomeOrigin, webBaseUrl } from "./handoff"
 import { PrismaHandoffStore } from "./handoff.store";
 import { deploymentDefaultMethod, orgSignInFacts, resolvePublicSignInConfig } from "./sign-in-config";
 import { makeWindowLimiter } from "./sign-in-default";
+import { PgRateLimiter, type RawSql } from "../common/pg-rate-limit";
 
 const configLimiter = makeWindowLimiter(300, 60_000);
 
@@ -20,11 +21,12 @@ const Exchange = z.object({ code: z.string().min(1).max(2048), codeVerifier: z.s
 
 const HandoffLogin = z.object({ orgSlug: z.string().min(1).max(100), email: z.string().email().max(254), password: z.string().max(256).optional() }).strict();
 const HandoffExchange = z.object({ code: z.string().max(128) }).strict();
-const attempts = new Map<string, { n: number; t: number }>();
-function throttle(key: string) {
-  const now = Date.now(); const a = attempts.get(key);
-  if (!a || now - a.t > 60_000) { attempts.set(key, { n: 1, t: now }); return; }
-  if (++a.n > 10) throw new HttpException({ statusCode: 429, code: "RATE_LIMITED", message: "Too many sign-in attempts, try again in a minute" }, 429);
+/** Sign-in throttle: 10 attempts per key per minute, counted in Postgres so it holds across API instances. */
+let pgLimiter: PgRateLimiter | undefined;
+async function throttle(prisma: PrismaService, key: string) {
+  pgLimiter ??= new PgRateLimiter(prisma as unknown as RawSql);
+  const r = await pgLimiter.hit(`signin:${key}`, Number(process.env.SIGNIN_RATE_PER_MINUTE) || 10, 60_000);
+  if (!r.ok) throw new HttpException({ statusCode: 429, code: "RATE_LIMITED", message: "Too many sign-in attempts, try again in a minute", retryAfterSec: r.retryAfterSec }, 429);
 }
 
 @ApiTags("auth")
@@ -75,7 +77,7 @@ export class AuthController {
     res.setHeader("Cache-Control", "no-store");
     if (!isHomeOrigin(origin)) throw new ForbiddenException({ code: "HANDOFF_ORIGIN_NOT_ALLOWED", message: "This sign-in start is not allowed from here" });
     if (appConfig.isProd() || appConfig.authMode() !== "dev") throw new HttpException({ statusCode: 404, code: "LOCAL_LOGIN_DISABLED", message: "Sign in with Kiorex Passport" }, 404);
-    throttle(`${b.orgSlug}|${b.email.toLowerCase()}`);
+    await throttle(this.prisma, `${b.orgSlug}|${b.email.toLowerCase()}`);
     const t = await this.prisma.tenant.findUnique({ where: { slug: b.orgSlug } });
     const s = t ? await this.prisma.staffUser.findFirst({ where: { orgId: t.id, email: b.email.toLowerCase(), active: true } }) : null;
     if (!s) throw new UnauthorizedException({ statusCode: 401, code: "LOGIN_FAILED", message: "Invalid organisation or e-mail" });

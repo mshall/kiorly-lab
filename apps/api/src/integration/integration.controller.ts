@@ -1,4 +1,5 @@
-import { BadRequestException, Controller, Get, Header, HttpCode, Inject, NotFoundException, Param, Post, Query, Req, StreamableFile } from "@nestjs/common";
+import { listingPause } from "./kiorex-listing-pause";
+import { BadRequestException, ConflictException, Controller, Get, Header, HttpCode, Inject, NotFoundException, Param, Post, Query, Req, StreamableFile } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { OrderSource } from "../generated/prisma/client";
 import { Public } from "../auth/decorators";
@@ -86,6 +87,7 @@ export class IntegrationController {
     const parsed = InboundOrder.safeParse(req.body);
     if (!parsed.success) throw new BadRequestException({ code: "VALIDATION_FAILED", issues: parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })) });
     const b = parsed.data;
+    if (client.source === "KIOREX_BOOKING" && (await listingPause(this.prisma, client.orgId)).paused) throw new ConflictException({ code: "LISTING_PAUSED", message: "This lab paused its Kiorex listing and is not taking new bookings" });
     const tenant = await this.prisma.tenant.findUniqueOrThrow({ where: { id: client.orgId } });
     const actor: Actor = { orgId: client.orgId, staffId: `system:${client.source.toLowerCase()}`, labIds: [], marketCode: tenant.marketCode, system: true };
     const home = b.collection?.type === "HOME";

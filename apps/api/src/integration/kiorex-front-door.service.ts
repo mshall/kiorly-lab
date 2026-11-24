@@ -4,6 +4,7 @@ import type { AuthUser } from "../auth/auth.types";
 import { PrismaService } from "../prisma/prisma.service";
 import { kiorexHost } from "./kiorex-connect.core";
 import { KiorexConnectService } from "./kiorex-connect.service";
+import { cleanPauseReason, listingPause, LISTING_ENTITY, LISTING_PAUSED_ACTION, LISTING_RESUMED_ACTION } from "./kiorex-listing-pause";
 import { cleanTalkToUs, frontDoorState, leadHeaders, leadSigningSecret, LeadInputError, newLeadNonce, type TalkToUsInput } from "./kiorex-front-door.core";
 
 const ENTITY = "KiorexFrontDoor"; const MARK = "kiorex_front_door.mark";
@@ -38,7 +39,21 @@ export class KiorexFrontDoorService {
       const last = await this.prisma.labOrder.findMany({ where, orderBy: { createdAt: "desc" }, take: 8, select: { id: true, createdAt: true, status: true, labId: true, collectionType: true } });
       recent = last.map((o) => ({ id: o.id, createdAt: o.createdAt, status: o.status, lab: lname.get(o.labId) ?? "", collection: o.collectionType }));
     }
-    return { state, status: c.status, legacy: c.legacy, started: !!m.started || !!c.terms, interestedAt: m.interest ?? null, leadAt: m.lead ?? null, month, recent, labs, connect: c };
+    return { state, listing: await listingPause(this.prisma, orgId), status: c.status, legacy: c.legacy, started: !!m.started || !!c.terms, interestedAt: m.interest ?? null, leadAt: m.lead ?? null, month, recent, labs, connect: c };
+  }
+
+  /** Owner pauses the WHOLE Kiorex listing (every lab): the catalogue is empty and new Kiorex bookings are refused (409 LISTING_PAUSED). Only a live listing can be paused. */
+  async pauseListing(u: AuthUser, reason?: unknown) {
+    const st = await this.get(u.orgId);
+    if (st.state !== "LIVE") throw err(ConflictException, "NOT_LIVE", "Only a live Kiorex listing can be paused");
+    if (st.listing.paused) return st;
+    await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: LISTING_PAUSED_ACTION, entityType: LISTING_ENTITY, entityId: u.orgId, meta: { reason: cleanPauseReason(reason) ?? null } });
+    return this.get(u.orgId);
+  }
+  async resumeListing(u: AuthUser) {
+    if (!(await listingPause(this.prisma, u.orgId)).paused) return this.get(u.orgId);
+    await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: LISTING_RESUMED_ACTION, entityType: LISTING_ENTITY, entityId: u.orgId });
+    return this.get(u.orgId);
   }
 
   async interest(orgId: string) {

@@ -12,9 +12,10 @@ import { schemaSmoke } from "./schema.lab.cases";
 const modelNames = Object.values(Prisma.ModelName);
 const scalarFields = (m: Prisma.ModelName): string[] => Object.keys(Prisma[`${m}ScalarFieldEnum`]);
 
+loadEnv(); // DATABASE_URL (test database) must be set before PrismaService is constructed, also when this file runs alone or after others
+
 describe("schema smoke (FROZEN-v1)", () => {
   const prisma = new PrismaService();
-  before(() => loadEnv());
   after(async () => { await prisma.$disconnect(); });
 
   it("schema.prisma carries the FROZEN-v1 banner", () => {

@@ -396,6 +396,8 @@ model StaffUser {
   /// AUTHORIZED_SIGNATORY / LAB_DIRECTOR: medical validation credentials.
   signatoryLicenceNo String?
   active             Boolean   @default(true)
+  /// Home cards this user dismissed (e.g. "kiorex-home"); per user, server-side.
+  dismissedCards     Json      @default("[]")
   createdAt          DateTime  @default(now())
 
   tenant Tenant @relation(fields: [orgId], references: [id])
@@ -2768,5 +2770,16 @@ model HandoffCode {
   expiresAt DateTime
   usedAt    DateTime?
 
+  @@index([expiresAt])
+}
+
+/// Shared rate-limit counters (PgRateLimiter): one row per (key|windowMs, aligned window). Backs the sign-in throttles across API instances; expired rows are swept opportunistically.
+model RateLimitBucket {
+  key         String
+  windowStart DateTime
+  count       Int
+  expiresAt   DateTime
+
+  @@id([key, windowStart])
   @@index([expiresAt])
 }

@@ -27,8 +27,8 @@ export function KiorexConnectPage() {
   const payout = mut((v: string) => api<Connect>("/kiorex-connect/payout", { method: "PUT", body: { label: v } }), t("kiorexConnect.payout.saved"));
   const upload = mut((f: File) => f.arrayBuffer().then((b) => api<Connect>("/kiorex-connect/licence", { method: "POST", body: { name: f.name, contentBase64: btoa(String.fromCharCode(...new Uint8Array(b))) } })), t("kiorexConnect.licenceUpload.uploaded"));
   const request = mut((rotate: boolean) => api<Connect>("/kiorex-connect/request", { method: "POST", body: { rotate, ...(code.trim() ? { enrolmentCode: code.trim() } : {}) } }).then((r) => { setCode(""); return r; }), t("kiorexConnect.requested"));
-  const rotate = mut((_: void) => api<Connect>("/kiorex-connect/request", { method: "POST", body: { rotate: true } })); // no "request sent" toast: the secrets card says what happened
-  const refresh = mut((_: void) => api<Connect>("/kiorex-connect/refresh", { method: "POST" }));
+  const rotate = mut(() => api<Connect>("/kiorex-connect/request", { method: "POST", body: { rotate: true } })); // no "request sent" toast: the secrets card says what happened
+  const refresh = mut(() => api<Connect>("/kiorex-connect/refresh", { method: "POST" }));
   const d = q.data;
   return (
     <div className="space-y-4" data-testid="kiorex-connect">
