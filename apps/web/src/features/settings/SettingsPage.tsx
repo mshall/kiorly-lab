@@ -1,5 +1,6 @@
 import { SignInDefaultCard } from "./SignInDefaultCard";
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "@/lib/api";
@@ -53,7 +54,11 @@ export function SettingsPage() {
   const { can, me } = useAuth();
   const qc = useQueryClient();
   const toast = useToast();
-  const [tab, setTab] = useState("staff");
+  const [search] = useSearchParams();
+  const [tab, setTab] = useState(search.get("tab") ?? "staff");
+  // Quick setup deep link: ?tab=labs&setup=lab_licence&entity=<labId> preselects the lab to complete
+  const [labPick, setLabPick] = useState<string>(search.get("entity") ?? "");
+  const [labDraft, setLabDraft] = useState<{ id: string; licenceNo: string; address: string } | null>(null);
   const [s, setS] = useState({ email: "", displayName: "", role: "TECHNOLOGIST", signatoryLicenceNo: "", phone: "" });
   const [lab, setLab] = useState({ name: "", code: "" });
   const [secret, setSecret] = useState<any>(null);
@@ -67,8 +72,11 @@ export function SettingsPage() {
   const refresh = () => void qc.invalidateQueries();
   const addStaff = useMutation({ mutationFn: () => api("/staff", { body: { ...s, signatoryLicenceNo: s.signatoryLicenceNo || undefined, phone: normalizeStaffPhone(s.phone) ?? undefined } }), onSuccess: () => { setS({ ...s, email: "", displayName: "", signatoryLicenceNo: "", phone: "" }); refresh(); toast(t("common.saved")); } });
   const patchStaff = useMutation({ mutationFn: (v: { id: string; body: object }) => api(`/staff/${v.id}`, { method: "PUT", body: v.body }), onSuccess: refresh });
+  const saveLab = useMutation({ mutationFn: (v: { id: string; licenceNo: string; address: string }) => api(`/labs/${v.id}`, { method: "PUT", body: { licenceNo: v.licenceNo.trim() || null, address: v.address.trim() || null } }), onSuccess: () => { setLabDraft(null); refresh(); } });
   const addLab = useMutation({ mutationFn: () => api("/labs", { body: lab }), onSuccess: () => { setLab({ name: "", code: "" }); refresh(); } });
-  const save = useMutation({ mutationFn: () => api("/settings", { method: "PUT", body: g }), onSuccess: () => { refresh(); toast(t("common.saved")); } });
+  const SETTINGS_FIELDS = ["integrationMode", "defaultLocale", "name", "vatRatePercent", "referringDoctorStatements", "qcValidityHours", "safetyContactName", "safetyContactPhone", "homeBufferBeforeMin", "homeBufferAfterMin", "homeDailyCap"] as const;
+  /** PUT /settings is strict: send only the editable fields (the GET also returns read-only ones such as edition, currency and the sign-in state). */
+  const save = useMutation({ mutationFn: () => api("/settings", { method: "PUT", body: Object.fromEntries(SETTINGS_FIELDS.filter((k) => g && k in g).map((k) => [k, g[k]])) }), onSuccess: () => { refresh(); toast(t("common.saved")); } });
   const newClient = useMutation({ mutationFn: (source: string) => api<any>("/integration-clients", { body: { source } }), onSuccess: (r) => { setSecret(r); refresh(); } });
   const starter = useMutation({ mutationFn: () => api<any>("/onboarding/starter-catalogue", { body: {} }), onSuccess: (r) => toast(t("set.starterLoaded", { tests: r.tests })) });
   const form = g ?? settings.data;
@@ -136,6 +144,18 @@ export function SettingsPage() {
       {tab === "labs" ? (
         <div className="space-y-4">
           {can("settings.manage") ? <Card className="flex flex-wrap items-end gap-3"><Field label={t("common.name")}><Input value={lab.name} onChange={(e) => setLab({ ...lab, name: e.target.value })} /></Field><Field label={t("onboarding.labCode")}><Input value={lab.code} maxLength={6} onChange={(e) => setLab({ ...lab, code: e.target.value.toUpperCase() })} /></Field><Button disabled={!lab.name || !lab.code} onClick={() => addLab.mutate()}>{t("common.add")}</Button><div className="w-full"><ErrorNote error={addLab.error} /></div></Card> : null}
+          {can("settings.manage") && labs.data?.length ? (() => {
+            const cur = labs.data.find((l: any) => l.id === labPick) ?? labs.data[0];
+            const f = labDraft && labDraft.id === cur.id ? labDraft : { id: cur.id, licenceNo: cur.licenceNo ?? "", address: cur.address ?? "" };
+            return (
+              <Card className="grid gap-3 sm:grid-cols-2" data-testid="lab-licence-form">
+                <Field label={t("common.name")}><Select value={cur.id} onChange={(e) => { setLabPick(e.target.value); setLabDraft(null); }}>{labs.data.map((l: any) => <option key={l.id} value={l.id}>{l.name}</option>)}</Select></Field>
+                <Field label={t("set.licence")}><Input data-setup-target="lab_licence" value={f.licenceNo} onChange={(e) => setLabDraft({ ...f, licenceNo: e.target.value })} /></Field>
+                <Field label={t("set.address", "Address")} className="sm:col-span-2"><Input value={f.address} onChange={(e) => setLabDraft({ ...f, address: e.target.value })} /></Field>
+                <div className="sm:col-span-2"><Button disabled={saveLab.isPending} onClick={() => saveLab.mutate(f)}>{t("common.save")}</Button></div>
+              </Card>
+            );
+          })() : null}
           <Table head={[t("onboarding.labCode"), t("common.name"), t("set.licence"), t("set.coverage")]}>{labs.data?.map((l) => <tr key={l.id}><Td className="font-mono">{l.code}</Td><Td>{l.name}</Td><Td>{l.licenceNo ?? "-"}</Td><Td>{can("settings.manage") ? <CoverageEditor lab={l} onSaved={refresh} /> : (l.coverageDistricts ?? []).join(", ")}</Td></tr>)}</Table>
         </div>
       ) : null}
@@ -153,14 +173,14 @@ export function SettingsPage() {
           <div className="sm:col-span-2 rounded-md border border-border p-3" data-testid="safety-settings">
             <p className="mb-2 text-sm font-semibold">{t("set.safety")}</p>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label={t("set.safetyName")}><Input value={form.safetyContactName ?? ""} onChange={(e) => setG({ ...form, safetyContactName: e.target.value || null })} /></Field>
+              <Field label={t("set.safetyName")}><Input data-setup-target="safety_contact" value={form.safetyContactName ?? ""} onChange={(e) => setG({ ...form, safetyContactName: e.target.value || null })} /></Field>
               <Field label={t("set.safetyPhone")} hint={t("set.safetyHint")}><Input type="tel" value={form.safetyContactPhone ?? ""} onChange={(e) => setG({ ...form, safetyContactPhone: e.target.value || null })} /></Field>
               <Field label={t("set.homeBuffers")}><div className="flex gap-2"><Input type="number" min={0} max={180} value={form.homeBufferBeforeMin} onChange={(e) => setG({ ...form, homeBufferBeforeMin: Number(e.target.value) })} /><Input type="number" min={0} max={180} value={form.homeBufferAfterMin} onChange={(e) => setG({ ...form, homeBufferAfterMin: Number(e.target.value) })} /></div></Field>
               <Field label={t("set.homeCap")}><Input type="number" min={1} max={50} value={form.homeDailyCap ?? ""} onChange={(e) => setG({ ...form, homeDailyCap: e.target.value ? Number(e.target.value) : null })} /></Field>
             </div>
           </div>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.referringDoctorStatements} onChange={(e) => setG({ ...form, referringDoctorStatements: e.target.checked })} />{t("set.statements")}</label>
-          <div className="sm:col-span-2 flex flex-wrap items-center gap-2"><Button disabled={!g || save.isPending} onClick={() => save.mutate()}>{t("common.save")}</Button><Button variant="outline" onClick={() => starter.mutate()}>{t("set.loadStarter")}</Button><ErrorNote error={save.error} /></div>
+          <div className="sm:col-span-2 flex flex-wrap items-center gap-2"><Button disabled={!g || save.isPending} onClick={() => save.mutate()}>{t("common.save")}</Button><Button variant="outline" data-setup-target="starter_catalogue" onClick={() => starter.mutate()}>{t("set.loadStarter")}</Button><ErrorNote error={save.error} /></div>
           <p className="sm:col-span-2 text-xs text-muted-foreground">{t("set.noTaxNote")}</p>
         </Card>
       ) : null}

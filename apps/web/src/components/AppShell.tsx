@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Activity, AlertTriangle, BadgeCheck, BarChart3, BookOpen, BriefcaseMedical, Bug, ClipboardList, CreditCard, FileCheck2, FlaskConical, LayoutDashboard, ArrowLeftRight, LineChart, Link2, LogOut, Menu, Microscope, Package, ScanBarcode, Settings, ShieldCheck, Smartphone, Snowflake, Ticket, Users, Wallet } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { SetupBar, SetupChecklist } from "@/setup/setup-core";
 import { useAuth } from "@/lib/auth";
 import { homeUrlFromEnv, switchWorkspaceHref } from "@/lib/kiorly-home";
 import { applyTenantDefault, setLang } from "@/lib/i18n";
@@ -108,7 +109,7 @@ export function AppShell() {
           {switchHref ? <a href={switchHref} data-testid="switch-workspace" title={t("auth.switchWorkspace")} aria-label={t("auth.switchWorkspace")} className="inline-flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-sm font-medium text-primary underline-offset-4 hover:underline"><ArrowLeftRight aria-hidden className="size-4 rtl:rotate-180 sm:hidden" /><span className="hidden sm:inline">{t("auth.switchWorkspace")}</span></a> : null}
           <Button variant="ghost" size="sm" className="h-10 shrink-0 whitespace-nowrap" aria-label={t("auth.logout")} onClick={() => { if (!logout()) nav("/login"); }}><LogOut aria-hidden className="size-4 rtl:rotate-180 sm:hidden" /><span className="hidden sm:inline">{t("auth.logout")}</span></Button>
         </header>
-        <main id="main" className="mx-auto w-full max-w-7xl flex-1 p-4 sm:p-6">{routeBlocked ? (
+        <main id="main" className="mx-auto w-full max-w-7xl flex-1 p-4 sm:p-6"><SetupBar />{pathname === "/" && !routeBlocked ? <SetupChecklist /> : null}{routeBlocked ? (
           <div role="alert" data-testid="route-denied" className="mx-auto mt-16 max-w-md space-y-3 text-center">
             <h1 className="text-xl font-semibold">{t("shell.noAccessTitle")}</h1>
             <p className="text-sm text-muted-foreground">{t("shell.noAccessBody")}</p>
