@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Activity, AlertTriangle, BadgeCheck, BarChart3, BookOpen, BriefcaseMedical, Bug, ClipboardList, CreditCard, FileCheck2, FlaskConical, LayoutDashboard, ArrowLeftRight, LineChart, Link2, LogOut, Menu, Microscope, Package, ScanBarcode, Settings, ShieldCheck, Smartphone, Snowflake, Ticket, Users, Wallet } from "lucide-react";
+import { Megaphone, Activity, AlertTriangle, BadgeCheck, BarChart3, BookOpen, BriefcaseMedical, Bug, ClipboardList, CreditCard, FileCheck2, FlaskConical, LayoutDashboard, ArrowLeftRight, LineChart, Link2, LogOut, Menu, Microscope, Package, ScanBarcode, Settings, ShieldCheck, Smartphone, Snowflake, Ticket, Users, Wallet } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { SetupBar, SetupChecklist } from "@/setup/setup-core";
@@ -40,6 +40,7 @@ const NAV_GROUPS = [
     { to: "/finance", key: "finance", icon: Wallet, perm: "billing.read" },
     { to: "/analytics", key: "analytics", icon: LineChart, perm: "analytics.read" },
     { to: "/reports", key: "reports", icon: BarChart3, perm: "dashboard.read" },
+    { to: "/growth", key: "growth", icon: Megaphone, perm: "referrers.read" },
   ] },
   { key: "admin", items: [
     { to: "/catalogue", key: "catalogue", icon: BookOpen, perm: "catalogue.read" },

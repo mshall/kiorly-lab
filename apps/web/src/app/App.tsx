@@ -22,6 +22,7 @@ const ReportsPage = lazy(() => import("@/features/reports/ReportsPage").then((m)
 const CataloguePage = lazy(() => import("@/features/catalogue/CataloguePage").then((m) => ({ default: m.CataloguePage })));
 const KiorexFrontDoor = lazy(() => import("@/features/kiorex/KiorexFrontDoor").then((m) => ({ default: m.KiorexFrontDoor })));
 const KiorexConnectPage = lazy(() => import("@/features/kiorex/KiorexConnectPage").then((m) => ({ default: m.KiorexConnectPage })));
+const GrowthPage = lazy(() => import("@/features/growth/GrowthPage").then((m) => ({ default: m.GrowthPage })));
 const SettingsPage = lazy(() => import("@/features/settings/SettingsPage").then((m) => ({ default: m.SettingsPage })));
 const PatientsPage = lazy(() => import("@/features/patients/PatientsPage").then((m) => ({ default: m.PatientsPage })));
 const PatientProfilePage = lazy(() => import("@/features/patients/PatientProfilePage").then((m) => ({ default: m.PatientProfilePage })));
@@ -69,6 +70,7 @@ export function App() {
           <Route path="quality" element={<QualityPage />} />
           <Route path="inventory" element={<InventoryPage />} />
           <Route path="finance" element={<FinancePage />} />
+          <Route path="growth" element={<GrowthPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="orders" element={<OrdersPage />} />
           <Route path="orders/new" element={<NewOrderPage />} />
