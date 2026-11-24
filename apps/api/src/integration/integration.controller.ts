@@ -8,6 +8,7 @@ import { z } from "../common/zod";
 import { OrdersService, type Actor } from "../modules/orders/orders.service";
 import { ReportsService } from "../modules/release/reports.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { acquisitionColumns, creditLinkOnce, parseAcquisitionBlock } from "../modules/growth/acquisition-fact";
 import { IntegrationAuthService } from "./integration-auth.service";
 import { IntegrationCatalogueService } from "./integration-catalogue.service";
 
@@ -35,6 +36,8 @@ export const InboundOrder = z.object({
     consentToken: z.string().min(8).max(512),
     samples: z.array(z.object({ label: z.string().regex(/^[\x21-\x7e]{3,40}$/), specimenType: z.string().min(2).max(60), container: z.string().max(60).optional() }).strict()).min(1).max(20),
   }).strict().optional(),
+  /** GRW-P4-B2 optional Kiorex acquisition block (contracts 1.12.0 `ProductAcquisitionBlock`); validated leniently by `parseAcquisitionBlock`: a malformed or foreign block is ignored, never a 400. */
+  acquisition: z.record(z.string(), z.unknown()).optional(),
 }).strict();
 
 const Quote = z.object({ labId: z.string().optional(), testCodes: z.array(z.string().min(1)).min(1).max(30), collectionType: z.enum(["HOME", "WALK_IN"]).optional() }).strict();
@@ -102,6 +105,14 @@ export class IntegrationController {
       collectionType: home ? "HOME" : "IN_LAB", identifiersChecked: b.identifiersChecked, nurseCollection: b.nurseCollection,
       homeCollection: home ? { address: b.collection?.address ?? "", districtId: b.collection?.districtId, contactPhone: b.collection?.contactPhone, geo: b.collection?.geo, ...(slot ? { slotId: slot.id } : { slotStart: b.collection?.windowStart, slotEnd: b.collection?.windowEnd }) } : undefined,
     });
+    // GRW-P4-B2: only a Kiorex booking can carry the block; stored and counted once, in one transaction, and only when this call created the order
+    const block = created && client.source === "KIOREX_BOOKING" ? parseAcquisitionBlock(b.acquisition, "LAB") : null;
+    if (block) {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.labOrder.updateMany({ where: { id: order.id, orgId: client.orgId, acquisitionOrigin: null }, data: await acquisitionColumns(tx, client.orgId, block) });
+        await creditLinkOnce(tx, client.orgId, order.id, "orders");
+      });
+    }
     return { orderId: order.id, orderNumber: order.orderNumber, status: order.status, created };
   }
 

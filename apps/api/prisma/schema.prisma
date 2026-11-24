@@ -662,6 +662,13 @@ model LabOrder {
   /// Incremented on every audited edit (OrderRevision).
   revision             Int              @default(0)
   appointmentId        String?
+  /// GRW-P4-B2: Kiorex product acquisition block (origin only; never patient data). Counters credit the cited link of THIS organisation once per order.
+  acquisitionOrigin             String?
+  acquisitionDecisionRef        String?
+  acquisitionReason             String?
+  acquisitionLinkId             String?
+  acquisitionOrderCountedAt     DateTime?
+  acquisitionCompletedCountedAt DateTime?
   createdBy            String
   createdAt            DateTime         @default(now())
 

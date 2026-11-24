@@ -16,6 +16,7 @@ import { qcBlockers } from "../analysis-qc/qc-gate";
 import { renderReportPdf, type ReportModel } from "./report-pdf";
 import { DeliveryService } from "./delivery.service";
 import { TemplatesService } from "./templates.service";
+import { creditLinkOnce } from "../growth/acquisition-fact";
 
 /** Contract enum (kiorex-contracts LabResultReleased.channels) for each internal release channel. */
 export const CONTRACT_CHANNEL: Record<ReleaseChannel, "PATIENT_LINK" | "KIOREX_VAULT" | "KIORLY_CLINIC" | "PRINTED" | null> = {
@@ -163,6 +164,7 @@ export class ReportsService {
       }
       const allChannels = (await tx.releaseRecord.findMany({ where: { reportVersionId: rv.id } })).map((r) => CONTRACT_CHANNEL[r.channel]).filter((c): c is NonNullable<typeof c> => c !== null);
       await this.orderStatus.refreshOrder(tx, rv.orderId);
+      await creditLinkOnce(tx, u.orgId, rv.orderId, "completed", now); // GRW-P4-B2: counted once per order, no-op without a PROVIDER_LED acquisition block
 
       // 3) outbox (contract-validated, no raw values) — same transaction
       if (allChannels.length) await this.outbox.enqueue(
