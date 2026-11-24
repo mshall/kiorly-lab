@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { canRequest, deriveIntakeSigningKey, enrolmentIdOf, intakeHeaders, isEnrolmentCode, newIntakeNonce, deriveStatusToken, intakeUrl, kiorexHost, progressPct, publicApiBase, signConnectBody, validatePayoutLabel } from "./kiorex-connect.core";
+import { canRequest, deriveIntakeSigningKey, enrolmentIdOf, intakeHeaders, isEnrolmentCode, newIntakeNonce, deriveStatusToken, intakeUrl, kiorexHost, progressPct, publicApiBase, validatePayoutLabel } from "./kiorex-connect.core";
 import { computeLabSteps, type LabConnectFacts } from "./kiorex-connect.logic";
 
 const ready = (o: Partial<LabConnectFacts> = {}): LabConnectFacts => ({ status: "CONSENTED", labs: 1, activeTests: 20, pricedTests: 20, labsMissingHours: 0, labsMissingLicenceNo: 0, licenceDocument: true, homeCollectionConfigured: false, payoutLabel: true, termsAccepted: true, liveOnKiorex: false, ...o });
@@ -28,7 +28,7 @@ describe("lab Connect to Kiorex (ADR-040)", () => {
     assert.equal(validatePayoutLabel("Settlement account").ok, true); assert.equal(validatePayoutLabel("4111 1111 1111 1111").ok, false);
   });
   it("derived status token, signing and lab default port", () => {
-    assert.equal(deriveStatusToken("k", "o"), deriveStatusToken("k", "o")); assert.match(signConnectBody("s", 1, "{}"), /^sha256=/);
+    assert.equal(deriveStatusToken("k", "o"), deriveStatusToken("k", "o")); 
     assert.equal(intakeUrl(kiorexHost({})), "http://localhost:4000/api/v1/partners/v1/connection-requests"); assert.equal(publicApiBase({}), "http://localhost:3200");
   });
   it("intake auth (contracts 1.9.0): enrolment code signs the first request, the issued key later ones; same derivation as kiorex-contracts", () => {

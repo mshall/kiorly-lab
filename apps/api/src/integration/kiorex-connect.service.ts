@@ -8,7 +8,7 @@ import { StorageAdapter } from "../adapters/storage.adapter";
 import { KIOREX_TERMS_VERSION, canRequest, deriveStatusToken, intakeHeaders, intakeUrl, isEnrolmentCode, kiorexHost, newClientKey, newIntakeNonce, newSecret, progressPct, publicApiBase, validatePayoutLabel, type ConnectStatus } from "./kiorex-connect.core";
 import { computeLabSteps } from "./kiorex-connect.logic";
 
-interface Doc { status: ConnectStatus; terms?: { at: string; userId: string; version: string }; payoutLabel?: string; licenceDocument?: { at: string; bytes: number }; request?: { id: string; submittedAt: string; clientKey: string }; /** AES-GCM sealed intake key issued by Kiorex (shown once there); signs later requests */ intakeKeyEnc?: string; kiorex?: { status: string; at: string }; contactEmail?: string }
+interface Doc { status: ConnectStatus; terms?: { at: string; userId: string; version: string }; payoutLabel?: string; licenceDocument?: { at: string; bytes: number }; request?: { id: string; submittedAt: string; clientKey: string }; kiorex?: { status: string; at: string }; contactEmail?: string }
 const err = (E: new (b: object) => Error, code: string, message: string, extra: object = {}) => new E({ code, message, ...extra });
 const kek = () => process.env.INTEGRATION_KEK ?? "dev-kek-change-me-dev-kek-change-me!";
 const ENTITY = "KiorexConnect";
@@ -23,8 +23,17 @@ export class KiorexConnectService {
 
   private async doc(orgId: string): Promise<Doc | undefined> {
     const row = await this.prisma.auditLog.findFirst({ where: { orgId, entityType: ENTITY, action: "kiorex_connect.state" }, orderBy: { at: "desc" } });
-    return (row?.meta as unknown as Doc | undefined) ?? undefined;
+    if (!row?.meta) return undefined;
+    const { intakeKeyEnc: _legacy, ...doc } = row.meta as unknown as Doc & { intakeKeyEnc?: string }; // pre-column snapshots carried the sealed key: never copy it forward (it now lives in Tenant.kiorexIntakeKeyEnc)
+    void _legacy;
+    return doc;
   }
+  /** The intake key Kiorex issued, unsealed (undefined until the first request was accepted). */
+  async intakeKey(orgId: string): Promise<string | undefined> {
+    const t = await this.prisma.tenant.findUnique({ where: { id: orgId }, select: { kiorexIntakeKeyEnc: true } });
+    return t?.kiorexIntakeKeyEnc ? unseal(t.kiorexIntakeKeyEnc) : undefined;
+  }
+  private storeIntakeKey(orgId: string, key: string) { return this.prisma.tenant.update({ where: { id: orgId }, data: { kiorexIntakeKeyEnc: seal(key) } }); }
   private async save(orgId: string, actorId: string | null, patch: (d: Doc) => Doc) {
     const next = patch((await this.doc(orgId)) ?? { status: "STANDALONE" });
     await this.audit.record({ orgId, actorId, action: "kiorex_connect.state", entityType: ENTITY, entityId: orgId, meta: next as unknown as Record<string, unknown> });
@@ -45,7 +54,7 @@ export class KiorexConnectService {
       labsMissingLicenceNo: labs.filter((l) => !l.licenceNo?.trim()).length, licenceDocument: !!d?.licenceDocument, homeCollectionConfigured: labs.some((l) => l.coverageDistricts.length > 0),
       payoutLabel: !!d?.payoutLabel, termsAccepted: !!d?.terms, liveOnKiorex: status === "APPROVED",
     });
-    return { legacy, status, progress: legacy ? 100 : progressPct(steps), canRequest: !legacy && canRequest(steps, status), steps, kiorex: d?.kiorex ?? null, requestId: d?.request?.id ?? null, clientKey: d?.request?.clientKey ?? null, enrolmentCodeRequired: !d?.intakeKeyEnc, termsVersion: KIOREX_TERMS_VERSION, payoutLabel: d?.payoutLabel ?? null, terms: d?.terms ? { at: d.terms.at, version: d.terms.version } : null, licenceDocument: d?.licenceDocument ?? null, mode: tenant.integrationMode };
+    return { legacy, status, progress: legacy ? 100 : progressPct(steps), canRequest: !legacy && canRequest(steps, status), steps, kiorex: d?.kiorex ?? null, requestId: d?.request?.id ?? null, clientKey: d?.request?.clientKey ?? null, enrolmentCodeRequired: !tenant.kiorexIntakeKeyEnc, termsVersion: KIOREX_TERMS_VERSION, payoutLabel: d?.payoutLabel ?? null, terms: d?.terms ? { at: d.terms.at, version: d.terms.version } : null, licenceDocument: d?.licenceDocument ?? null, mode: tenant.integrationMode };
   }
 
   async acceptTerms(u: AuthUser, version: string) {
@@ -75,7 +84,7 @@ export class KiorexConnectService {
     const rotating = !!o.rotate && state.status === "APPROVED";
     if (!rotating && !state.canRequest && state.status !== "REQUESTED") throw err(ConflictException, "CONNECT_NOT_READY", "Finish every required step first", { open: state.steps.filter((s) => !s.optional && !["request", "live"].includes(s.key) && s.status !== "done").map((s) => s.key) });
     // the first request needs the one-time enrolment code Kiorex ops handed over; later ones are signed with the intake key Kiorex issued then
-    const code = o.enrolmentCode?.trim(); const intakeKey = d0?.intakeKeyEnc ? unseal(d0.intakeKeyEnc) : undefined;
+    const code = o.enrolmentCode?.trim(); const intakeKey = await this.intakeKey(u.orgId);
     if (code && !isEnrolmentCode(code)) throw err(BadRequestException, "ENROLMENT_CODE_INVALID", "That enrolment code is not valid. Copy it exactly as Kiorex gave it to you");
     if (!code && !intakeKey) throw err(ConflictException, "ENROLMENT_CODE_REQUIRED", "Enter the enrolment code Kiorex gave you");
     const t = await this.prisma.tenant.findUniqueOrThrow({ where: { id: u.orgId } }); const host = kiorexHost();
@@ -93,7 +102,8 @@ export class KiorexConnectService {
     catch { await undo(); throw err(ConflictException, "KIOREX_UNREACHABLE", "Kiorex could not be reached. Nothing was sent. Try again."); }
     if (!res.ok) { await undo(); throw err(ConflictException, res.status === 401 ? "ENROLMENT_CODE_REJECTED" : res.status === 429 ? "KIOREX_BUSY" : "KIOREX_REJECTED_REQUEST", res.status === 401 ? "Kiorex did not accept the enrolment code. Check it, or ask Kiorex for a new one" : "Kiorex did not accept the request", { status: res.status }); }
     const sent = (await res.json()) as { id: string; intakeKey?: string };
-    await this.save(u.orgId, u.staffId, (d) => ({ ...d, status: rotating ? d.status : "REQUESTED", request: { id: sent.id, submittedAt: new Date().toISOString(), clientKey }, contactEmail: o.contactEmail ?? d.contactEmail, ...(sent.intakeKey ? { intakeKeyEnc: seal(sent.intakeKey) } : {}) }));
+    await this.save(u.orgId, u.staffId, (d) => ({ ...d, status: rotating ? d.status : "REQUESTED", request: { id: sent.id, submittedAt: new Date().toISOString(), clientKey }, contactEmail: o.contactEmail ?? d.contactEmail}));
+    if (sent.intakeKey) await this.storeIntakeKey(u.orgId, sent.intakeKey);
     await this.prisma.tenant.update({ where: { id: u.orgId }, data: { integrationMode: "INTEGRATED" } });
     await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: rotating ? "kiorex_connect.credentials_rotated" : "kiorex_connect.requested", entityType: ENTITY, entityId: u.orgId, meta: { requestId: sent.id, clientKey } });
     return { ...(await this.get(u.orgId, { pull: false })), ...(rotating ? { credentials: { clientKey, clientSecret, webhookSecret, shownOnce: true } } : {}) };

@@ -333,6 +333,8 @@ model Tenant {
   defaultLocale             String          @default("ar")
   /// Preselected sign-in method (both stay offered). null = automatic: PASSPORT when the org is linked to Kiorex, else PASSWORD.
   defaultSignInMethod       SignInMethod?
+  /// Kiorex Connect: the intake key Kiorex issued once (AES-GCM sealed with the integration KEK). Signs later connection requests. Never in the audit snapshot, never returned by the API.
+  kiorexIntakeKeyEnc        String?
   /// QC coverage window for a result (hours). NEEDS_HUMAN (NH-LB-005): pathologist to confirm.
   qcValidityHours           Int             @default(24)
   /// HVSAF: organisation safety contact for phlebotomist alerts (safety control, never a flag). Required before a collector can leave.
