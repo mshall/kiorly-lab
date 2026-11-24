@@ -1,4 +1,5 @@
 import { INestApplication, ValidationPipe } from "@nestjs/common";
+import { RejectNulBytesPipe } from "./common/reject-nul-bytes.pipe";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { applyHttpHardening, swaggerEnabled } from "./common/http-hardening";
@@ -10,7 +11,7 @@ export function configureApp(app: INestApplication): void {
   app.setGlobalPrefix("api/v1");
   // `req.rawBody` (HMAC verification: Kiorex/Clinic requests, flag.changed webhook) is filled by Nest because the app is created with `{ rawBody: true }`.
   (app as NestExpressApplication).useBodyParser("json", { limit: "5mb" });
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
+  app.useGlobalPipes(new RejectNulBytesPipe(), new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
   app.useGlobalFilters(new PrismaExceptionFilter());
   if (swaggerEnabled()) { // off in production unless SWAGGER_ENABLED=true
     const doc = SwaggerModule.createDocument(
