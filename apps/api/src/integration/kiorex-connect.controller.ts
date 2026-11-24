@@ -9,7 +9,7 @@ import { KiorexConnectService } from "./kiorex-connect.service";
 const Terms = z.object({ version: z.string() }).strict();
 const Payout = z.object({ label: z.string().max(60) }).strict();
 const Upload = z.object({ name: z.string().max(200), contentBase64: z.string() }).strict();
-const Request = z.object({ rotate: z.boolean().optional(), contactEmail: z.string().email().optional() }).strict();
+const Request = z.object({ rotate: z.boolean().optional(), contactEmail: z.string().email().optional(), enrolmentCode: z.string().max(120).optional() }).strict();
 
 /** "Connect to Kiorex" for a standalone lab (ADR-040): checklist, terms, licence, payout label placeholder, request registration, rotate credentials. */
 @ApiTags("kiorex-connect")

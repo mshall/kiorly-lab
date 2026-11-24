@@ -6,10 +6,11 @@ import { AlertCircle, CheckCircle2, Clock, Lock, RefreshCw } from "lucide-react"
 import { api } from "@/lib/api";
 import { Button, Card, Input, useToast } from "@/components/ui";
 import { ErrorNote } from "@/components/common";
+import { EnrolmentCodeField } from "./EnrolmentCodeField";
 
 type StepStatus = "done" | "action_needed" | "waiting_kiorex" | "blocked";
 interface Step { key: string; status: StepStatus; optional?: boolean; link?: string; detail?: Record<string, unknown> }
-interface Connect { legacy: boolean; status: string; progress: number; canRequest: boolean; steps: Step[]; termsVersion: string; payoutLabel: string | null; terms: { at: string } | null; credentials?: { clientKey: string; clientSecret: string; webhookSecret: string } }
+interface Connect { legacy: boolean; status: string; progress: number; canRequest: boolean; enrolmentCodeRequired?: boolean; steps: Step[]; termsVersion: string; payoutLabel: string | null; terms: { at: string } | null; credentials?: { clientKey: string; clientSecret: string; webhookSecret: string } }
 const ICON = { done: CheckCircle2, action_needed: AlertCircle, waiting_kiorex: Clock, blocked: Lock } as const;
 const TONE = { done: "text-emerald-600", action_needed: "text-amber-600", waiting_kiorex: "text-sky-600", blocked: "text-muted-foreground" } as const;
 const KEY = ["kiorex-connect"];
@@ -18,13 +19,13 @@ const KEY = ["kiorex-connect"];
 export function KiorexConnectPage() {
   const { t } = useTranslation(); const qc = useQueryClient(); const toast = useToast();
   const q = useQuery({ queryKey: KEY, queryFn: () => api<Connect>("/kiorex-connect"), refetchInterval: (s) => (s.state.data?.status === "REQUESTED" ? 15000 : false) });
-  const [label, setLabel] = useState(""); const [creds, setCreds] = useState<Connect["credentials"]>(); const file = useRef<HTMLInputElement>(null);
+  const [code, setCode] = useState(""); const [label, setLabel] = useState(""); const [creds, setCreds] = useState<Connect["credentials"]>(); const file = useRef<HTMLInputElement>(null);
   const onData = (d: Connect, ok?: string) => { qc.setQueryData(KEY, d); if (d.credentials) setCreds(d.credentials); if (ok) toast(ok); };
   const mut = <V,>(fn: (v: V) => Promise<Connect>, ok?: string) => useMutation({ mutationFn: fn, onSuccess: (d) => onData(d, ok) }); // eslint-disable-line react-hooks/rules-of-hooks
   const terms = mut((v: string) => api<Connect>("/kiorex-connect/terms", { method: "PUT", body: { version: v } }));
   const payout = mut((v: string) => api<Connect>("/kiorex-connect/payout", { method: "PUT", body: { label: v } }), t("kiorexConnect.payout.saved"));
   const upload = mut((f: File) => f.arrayBuffer().then((b) => api<Connect>("/kiorex-connect/licence", { method: "POST", body: { name: f.name, contentBase64: btoa(String.fromCharCode(...new Uint8Array(b))) } })), t("kiorexConnect.licenceUpload.uploaded"));
-  const request = mut((rotate: boolean) => api<Connect>("/kiorex-connect/request", { method: "POST", body: { rotate } }), t("kiorexConnect.requested"));
+  const request = mut((rotate: boolean) => api<Connect>("/kiorex-connect/request", { method: "POST", body: { rotate, ...(code.trim() ? { enrolmentCode: code.trim() } : {}) } }).then((r) => { setCode(""); return r; }), t("kiorexConnect.requested"));
   const refresh = mut((_: void) => api<Connect>("/kiorex-connect/refresh", { method: "POST" }));
   const d = q.data;
   return (
@@ -52,8 +53,9 @@ export function KiorexConnectPage() {
                     {s.key === "hours_collection" && Number(dt.missing) > 0 ? <p className="text-xs">{t("kiorexConnect.detail.missing", dt)}</p> : null}
                   </div>
                   {s.link && s.status === "action_needed" && !["payout", "terms", "request", "licence"].includes(s.key) ? <Link className="rounded-md border px-3 py-1.5 text-sm" to={s.link}>{t("kiorexConnect.fix")}</Link> : null}
-                  {s.key === "request" && (s.status === "action_needed" || s.status === "waiting_kiorex") ? <Button disabled={!d.canRequest || request.isPending} onClick={() => request.mutate(false)} data-testid="connect-request">{t("kiorexConnect.request")}</Button> : null}
+                  {s.key === "request" && (s.status === "action_needed" || s.status === "waiting_kiorex") ? <Button disabled={!d.canRequest || request.isPending || (!!d.enrolmentCodeRequired && !code.trim())} onClick={() => request.mutate(false)} data-testid="connect-request">{t("kiorexConnect.request")}</Button> : null}
                 </div>
+                {s.key === "request" && d.enrolmentCodeRequired && d.canRequest ? <EnrolmentCodeField value={code} onChange={setCode} /> : null}
                 {s.key === "licence" && s.status !== "done" ? <div className="mt-3 flex flex-wrap gap-2"><input ref={file} type="file" accept=".pdf,.png,.jpg,.jpeg" className="sr-only" data-testid="connect-licence-input" onChange={(e) => e.target.files?.[0] && upload.mutate(e.target.files[0])} /><Button variant="outline" onClick={() => file.current?.click()}>{t("kiorexConnect.licenceUpload.choose")}</Button><Link className="rounded-md border px-3 py-1.5 text-sm" to="/settings">{t("kiorexConnect.fix")}</Link></div> : null}
                 {s.key === "payout" ? <div className="mt-3 flex flex-wrap gap-2"><Input aria-label={t("kiorexConnect.payout.label")} placeholder={t("kiorexConnect.payout.label")} className="max-w-xs" value={label || d.payoutLabel || ""} onChange={(e) => setLabel(e.target.value)} data-testid="connect-payout" /><Button variant="outline" disabled={!label.trim() || payout.isPending} onClick={() => payout.mutate(label)}>{t("kiorexConnect.payout.save")}</Button></div> : null}
                 {s.key === "terms" ? (d.terms ? <p className="mt-2 text-sm text-emerald-700" data-testid="connect-terms-done">{t("kiorexConnect.terms.accepted")}</p> : <div className="mt-3"><p className="mb-2 text-sm">{t("kiorexConnect.terms.body", { version: d.termsVersion })}</p><Button variant="outline" disabled={terms.isPending} onClick={() => terms.mutate(d.termsVersion)} data-testid="connect-accept">{t("kiorexConnect.terms.accept")}</Button></div>) : null}

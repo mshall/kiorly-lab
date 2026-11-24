@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { canRequest, deriveStatusToken, intakeUrl, kiorexHost, progressPct, publicApiBase, signConnectBody, validatePayoutLabel } from "./kiorex-connect.core";
+import { canRequest, deriveIntakeSigningKey, enrolmentIdOf, intakeHeaders, isEnrolmentCode, newIntakeNonce, deriveStatusToken, intakeUrl, kiorexHost, progressPct, publicApiBase, signConnectBody, validatePayoutLabel } from "./kiorex-connect.core";
 import { computeLabSteps, type LabConnectFacts } from "./kiorex-connect.logic";
 
 const ready = (o: Partial<LabConnectFacts> = {}): LabConnectFacts => ({ status: "CONSENTED", labs: 1, activeTests: 20, pricedTests: 20, labsMissingHours: 0, labsMissingLicenceNo: 0, licenceDocument: true, homeCollectionConfigured: false, payoutLabel: true, termsAccepted: true, liveOnKiorex: false, ...o });
@@ -30,5 +30,16 @@ describe("lab Connect to Kiorex (ADR-040)", () => {
   it("derived status token, signing and lab default port", () => {
     assert.equal(deriveStatusToken("k", "o"), deriveStatusToken("k", "o")); assert.match(signConnectBody("s", 1, "{}"), /^sha256=/);
     assert.equal(intakeUrl(kiorexHost({})), "http://localhost:4000/api/v1/partners/v1/connection-requests"); assert.equal(publicApiBase({}), "http://localhost:3200");
+  });
+  it("intake auth (contracts 1.9.0): enrolment code signs the first request, the issued key later ones; same derivation as kiorex-contracts", () => {
+    const code = "kxe_AAAAAAAA.BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB";
+    assert.equal(deriveIntakeSigningKey(code), "a0ce8b1dc66e4970ef3b844867fabe228c276e5bfffaccfe2ace5e67232adac3"); // contracts test vector
+    const h = intakeHeaders(code, 1700000000, '{"a":1}', code);
+    assert.equal(h["X-Kiorly-Signature"], "sha256=0f75288125b5933d50f18d797e51ff3160081300fb82c2b8753a22711baf3e14"); // contracts test vector
+    assert.equal(h["X-Kiorex-Enrolment"], "kxe_AAAAAAAA");
+    assert.equal(intakeHeaders("kxi_secret", 1, "{}")["X-Kiorex-Enrolment"], undefined);
+    assert.equal(isEnrolmentCode(code), true); assert.equal(isEnrolmentCode("kxe_short"), false); assert.equal(isEnrolmentCode(undefined), false);
+    assert.match(newIntakeNonce(), /^[A-Za-z0-9_-]{16,64}$/);
+    assert.equal(enrolmentIdOf(code), "kxe_AAAAAAAA");
   });
 });
