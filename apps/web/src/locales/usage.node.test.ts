@@ -14,8 +14,15 @@ const files = (d: string): string[] => readdirSync(d).flatMap((n) => { const p =
 describe("i18n coverage", () => {
   it("every static t(\"key\") used in the UI exists in en.json", () => {
     const missing = new Set<string>();
+    // Quick-setup strings live in setup/setup-strings.ts and are merged at runtime (the shared locale files stay untouched): a `setup.<k>` key is covered by a `"<k>":` entry there.
+    const setupSrc = readFileSync(join(src, "setup/setup-strings.ts"), "utf8");
     for (const f of files(src)) {
-      for (const m of readFileSync(f, "utf8").matchAll(/\bt\("([A-Za-z0-9_.]+)"/g)) if (typeof get(en, m[1]) !== "string") missing.add(m[1]);
+      // a call with a default value (`t("key", "Default")`) always renders something; only bare keys must exist
+      for (const m of readFileSync(f, "utf8").matchAll(/\bt\("([A-Za-z0-9_.]+)"(\s*,\s*["'`])?/g)) {
+        if (m[2]) continue;
+        if (m[1].startsWith("setup.") && setupSrc.includes(`"${m[1].split(".").pop()}":`)) continue;
+        if (typeof get(en, m[1]) !== "string") missing.add(m[1]);
+      }
     }
     assert.deepEqual([...missing], []);
   });
