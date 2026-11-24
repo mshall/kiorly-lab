@@ -22,4 +22,10 @@ describe("lab Connect to Kiorex wizard", () => {
     const src = readFileSync(join(here, "KiorexConnectPage.tsx"), "utf8");
     assert.doesNotMatch(src, /#[0-9a-fA-F]{6}\b/); assert.doesNotMatch(src, /\b(ml|mr|pl|pr|text-left|text-right)-/);
   });
+  it("browser-walk regressions: AA colours, decision banner, rotation is not a new request, readable request errors", () => {
+    const src = readFileSync(join(here, "KiorexConnectPage.tsx"), "utf8");
+    assert.match(src, /text-amber-700 dark:text-amber-400/); assert.doesNotMatch(src, /text-(emerald|amber|sky)-600/);
+    for (const s of ["CHANGES_REQUESTED", "REJECTED", "PAUSED"]) assert.ok(en.decision[s] && ar.decision[s], s);
+    assert.match(src, /connect-decision/); assert.match(src, /const rotate = /); assert.match(src, /kiorexConnect\.err\./); assert.match(src, /aria-label=\{t\("kiorexConnect\.licenceUpload\.choose"\)\}/);
+  });
 });

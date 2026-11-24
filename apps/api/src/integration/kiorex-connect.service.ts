@@ -81,8 +81,9 @@ export class KiorexConnectService {
     const t = await this.prisma.tenant.findUniqueOrThrow({ where: { id: u.orgId } }); const host = kiorexHost();
     const clientKey = newClientKey("kl"); const clientSecret = newSecret(); const webhookSecret = newSecret();
     await this.prisma.integrationClient.create({ data: { orgId: u.orgId, key: clientKey, secretEnc: seal(clientSecret), source: "KIOREX_BOOKING", kiorexBaseUrl: host, webhookSecretEnc: seal(webhookSecret) } });
+    const contact = o.contactEmail ?? d0?.contactEmail ?? (await this.prisma.staffUser.findUnique({ where: { id: u.staffId }, select: { email: true } }))?.email ?? undefined; // notifications go to the person who asked
     const body = JSON.stringify({
-      nonce: newIntakeNonce(), statusToken: deriveStatusToken(kek(), u.orgId), kind: "LAB", orgRef: u.orgId, name: t.name, market: t.marketCode, locale: "en", contactEmail: o.contactEmail ?? d0?.contactEmail,
+      nonce: newIntakeNonce(), statusToken: deriveStatusToken(kek(), u.orgId), kind: "LAB", orgRef: u.orgId, name: t.name, market: t.marketCode, locale: "en", contactEmail: contact,
       baseUrl: publicApiBase(), clientKey, clientSecret, webhookSecret,
       readiness: { counts: { labs: state.steps.find((s) => s.key === "lab_site")?.detail?.labs, items: state.steps.find((s) => s.key === "price_list")?.detail?.priced }, documents: { licence: state.steps.find((s) => s.key === "licence")?.status === "done" }, termsAcceptedAt: d0?.terms?.at, termsVersion: d0?.terms?.version, steps: state.steps.map((s) => ({ key: s.key, status: s.status })) },
     });
