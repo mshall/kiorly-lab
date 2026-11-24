@@ -247,6 +247,7 @@ describe("Growth provider links (lab)", () => {
       assert.equal((await patch(made.body.id, { status: "PAUSED" }, f.tokens.OWNER, "/mobile/growth/links")).body.status, "PAUSED");
       assert.equal((await patch(made.body.id, { status: "REVOKED" }, f.tokens.OWNER, "/mobile/growth/links")).status, 403);
       const qr = await call(t, "GET", `/mobile/growth/qr?linkId=${made.body.id}`, { token: f.tokens.OWNER }); assert.equal(qr.status, 200); assert.match(qr.body as string, /^<svg/);
+      const qj = await call(t, "GET", `/mobile/growth/qr?linkId=${made.body.id}&format=json`, { token: f.tokens.OWNER }); assert.equal(qj.status, 200); assert.equal(qj.body.linkId, made.body.id); assert.match(qj.body.svg, /^<svg/); assert.match(qj.body.url, /^https?:\/\//);
       assert.equal((await call(t, "GET", "/mobile/growth/qr", { token: f.tokens.OWNER })).status, 400);
       assert.equal((await call(t, "GET", `/mobile/growth/qr?linkId=${made.body.id}`, { token: other.tokens.OWNER })).status, 404, "another organisation");
       assert.equal((await call(t, "GET", "/mobile/growth/links", { token: f.tokens.OWNER })).body.items.length > 0, true);

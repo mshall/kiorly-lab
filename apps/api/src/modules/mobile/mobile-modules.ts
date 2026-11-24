@@ -1,5 +1,6 @@
 import { ROLE_PERMISSIONS, SIGNATORY_ROLES, type Permission } from "../../auth/rbac";
 import type { StaffRole } from "../../generated/prisma/client";
+import { growthLevel } from "../growth/growth-access";
 
 /** Kiorly module catalogue (role gating by permission). Shared by bootstrap and the upgrade-request feature-key validation. */
 export interface ModuleDef { key: string; anyOf: Permission[]; screens: { name: string; perm?: Permission }[] }
@@ -13,6 +14,8 @@ export const MODULES: ModuleDef[] = [
   { key: "lab.tat", anyOf: ["dashboard.read"], screens: [{ name: "summary" }, { name: "breaches" }] },
   { key: "lab.orders", anyOf: ["orders.read"], screens: [{ name: "today" }, { name: "detail" }, { name: "search" }] },
   { key: "lab.reagents", anyOf: ["inventory.read"], screens: [{ name: "low-stock" }, { name: "expiring" }] },
+  /** GRW-P4-B3: Growth tab. Enabled by the Growth role matrix (growth-access.ts), never by a permission (anyOf is empty on purpose). */
+  { key: "lab.growth", anyOf: [], screens: [{ name: "links" }] },
 ];
 
 /**
@@ -24,7 +27,7 @@ export function modulesForRole(role: StaffRole, signatoryLicenceNo?: string | nu
   const perms = ROLE_PERMISSIONS[role];
   const mayAttest = SIGNATORY_ROLES.includes(role) && Boolean(signatoryLicenceNo);
   return MODULES.map((m) => {
-    const enabled = m.anyOf.some((p) => perms.includes(p));
+    const enabled = m.key === "lab.growth" ? growthLevel(role) !== "none" : m.anyOf.some((p) => perms.includes(p));
     return { key: m.key, enabled, screens: enabled ? m.screens.filter((s) => (!s.perm || perms.includes(s.perm)) && (s.name !== "sign-off" || mayAttest)).map((s) => s.name) : [] };
   });
 }

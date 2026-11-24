@@ -59,3 +59,14 @@ describe("Kiorly: Lab role -> module scoping", () => {
     }
   });
 });
+
+/** GRW-P4-B3: the Growth tab follows the Growth role matrix (growth-access.ts), never a permission. */
+describe("Kiorly: lab.growth module per role", () => {
+  it("admin roles and read roles get the links screen; bench roles get no Growth module", () => {
+    for (const r of ["OWNER", "LAB_DIRECTOR", "BRANCH_MANAGER", "RECEPTION", "SUPERVISOR", "AUTHORIZED_SIGNATORY", "FINANCE"] as const) assert.deepEqual(modulesFor(r).growth, ["links"], r);
+    for (const r of ["TECHNOLOGIST", "PHLEBOTOMIST"] as const) assert.equal(modulesFor(r).growth, null, r);
+  });
+  it("the module never depends on a permission (anyOf is empty)", () => {
+    assert.deepEqual(MODULES.find((m) => m.key === "lab.growth")!.anyOf, []);
+  });
+});
