@@ -25,7 +25,7 @@
     "db:seed:lis:dist": "node dist/seed/seed-lis.js"
   },
   "dependencies": {
-    "@kiorex/contracts": "file:../../vendor/kiorex-contracts-1.9.0.tgz",
+    "@kiorex/contracts": "file:../../vendor/kiorex-contracts-1.10.0.tgz",
     "@kiorly/field-visit": "file:../../vendor/kiorly-field-visit-0.1.0.tgz",
     "@kiorly/lab-shared": "*",
     "@nestjs/common": "^12.5.1",
