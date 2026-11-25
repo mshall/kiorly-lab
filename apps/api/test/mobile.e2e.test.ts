@@ -28,7 +28,7 @@ describe("Kiorly mobile API", () => {
     assert.equal(p.body.org.rawPlan, "PRO");
     assert.deepEqual(p.body.entitlement, { key: "mobile_staff_app", enabled: true, requiredPlan: "PRO", reason: null });
     assert.equal(p.body.safetyAlertsOnly, false);
-    assert.equal(p.body.modules.length, 9);
+    assert.equal(p.body.modules.length, 10); // nine operational modules plus lab.growth (GRW-P4-B3)
     assert.equal(p.body.device, null);
     const c = await call(t, "GET", "/mobile/bootstrap", { token: chain.tokens.OWNER });
     assert.equal(c.body.org.plan, "ENTERPRISE");
