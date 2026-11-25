@@ -104,7 +104,7 @@ export function LoginPage() {
           <h1 className="text-2xl font-semibold tracking-tight">{t("app.product")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{localLogin ? t("auth.devNote") : t("auth.passportNote")}</p>
           {handoffBusy ? <p role="status" data-testid="handoff-busy" className="mt-4 text-sm text-muted-foreground">{t("auth.handoffBusy")}</p> : null}
-          {idleNotice ? <p role="status" data-testid="session-idle-notice" className="mt-4 text-sm text-muted-foreground">{t("errors.codes.SESSION_IDLE")}</p> : null}
+          {idleNotice ? <p role="status" data-testid="session-idle-notice" className="mt-4 text-sm text-muted-foreground">{t("errors.SESSION_IDLE")}</p> : null}
           {handoffErr ? <p role="alert" data-testid="handoff-error" className="mt-4 text-sm text-destructive">{handoffErr}</p> : null}
           {handoff.reason ? <p role="status" data-testid="handoff-reason" className="mt-4 rounded-lg border border-border bg-muted/50 p-3 text-sm">{t(`auth.handoffReason.${handoff.reason}`, { defaultValue: t("auth.handoffReason.other") })}</p> : null}
           {!sim.ready ? <div role="status" aria-busy="true" aria-label={t("auth.login")} data-testid="signin-loading" className="mt-6 h-40 animate-pulse rounded-xl bg-muted/60" /> : null}
