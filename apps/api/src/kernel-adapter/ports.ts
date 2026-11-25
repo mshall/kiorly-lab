@@ -10,7 +10,7 @@ export type Capability = "analyzer_interfaces" | "home_collection" | "referral_l
 
 export interface EntitlementsPort {
   edition(orgId: string): Promise<Edition>;
-  has(orgId: string, capability: Capability): Promise<boolean>;
+  has(orgId: string, capability: Capability, opts?: { readOnlyRequest?: boolean }): Promise<boolean>;
 }
 
 export interface PriceQuery {

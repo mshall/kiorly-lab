@@ -13,6 +13,7 @@ import { HealthModule } from "./health/health.module";
 import { IntegrationModule } from "./integration/integration.module";
 import { EntitlementGuard } from "./kernel-adapter/entitlement.guard";
 import { KernelModule } from "./kernel-adapter/kernel.module";
+import { SubscriptionModule } from "./subscription/subscription.module";
 import { AdminModule } from "./modules/admin/admin.module";
 import { AnalysisQcModule } from "./modules/analysis-qc/analysis-qc.module";
 import { AnalyticsModule } from "./modules/analytics/analytics.module";
@@ -42,7 +43,7 @@ import { PrismaModule } from "./prisma/prisma.module";
 
 @Module({
   imports: [
-    PrismaModule, AuthModule, AuditModule, OutboxModule, AdaptersModule, KernelModule, CoreModule, FeatureFlagsModule, HealthModule,
+    PrismaModule, AuthModule, AuditModule, OutboxModule, AdaptersModule, KernelModule, SubscriptionModule, CoreModule, FeatureFlagsModule, HealthModule,
     AdminModule, CatalogueModule, OrdersModule, SpecimensModule, AnalysisQcModule, AnalyzersModule, CriticalModule, FieldSafetyModule, ReleaseModule, BusinessModule, ProvidersModule, RegistryModule, ReceptionModule, PreanalyticsModule, MicrobiologyModule, HistopathologyModule, QualityModule, InventoryModule, AnalyticsModule, MobileAlertsModule, MobileModule, IntegrationModule, SetupModule, GrowthModule,
   ],
   providers: [

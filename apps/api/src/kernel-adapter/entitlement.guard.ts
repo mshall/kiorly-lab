@@ -18,7 +18,8 @@ export class EntitlementGuard implements CanActivate {
     if (!cap) return true;
     const user = ctx.switchToHttp().getRequest<AuthedRequest>().user;
     if (!user) return true;
-    if (await this.ent.has(user.orgId, cap)) return true;
+    const m = (ctx.switchToHttp().getRequest<AuthedRequest>().method ?? "GET").toUpperCase();
+    if (await this.ent.has(user.orgId, cap, { readOnlyRequest: m === "GET" || m === "HEAD" })) return true;
     throw new HttpException({ code: "PLAN_REQUIRED", capability: cap, edition: user.edition }, 402);
   }
 }

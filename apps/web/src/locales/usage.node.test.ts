@@ -17,11 +17,13 @@ describe("i18n coverage", () => {
     // Quick-setup strings live in setup/setup-strings.ts and are merged at runtime (the shared locale files stay untouched): a `setup.<k>` key is covered by a `"<k>":` entry there.
     const setupSrc = readFileSync(join(src, "setup/setup-strings.ts"), "utf8");
     const growthSrc = readFileSync(join(src, "features/growth/growth-strings-data.ts"), "utf8"); // Growth strings: merged at runtime like Quick setup (GRW-P4-B1)
+    const subSrc = readFileSync(join(src, "features/subscription/subscription-strings.ts"), "utf8"); // SUB-01 strings: merged at runtime like Quick setup
     for (const f of files(src)) {
       // a call with a default value (`t("key", "Default")`) always renders something; only bare keys must exist
       for (const m of readFileSync(f, "utf8").matchAll(/\bt\("([A-Za-z0-9_.]+)"(\s*,\s*["'`])?/g)) {
         if (m[2]) continue;
         if (m[1].startsWith("growth.") && growthSrc.includes(`"${m[1].split(".").pop()}":`)) continue;
+        if (m[1].startsWith("sub.") && subSrc.includes(`"${m[1].slice(4)}":`)) continue;
         if (m[1].startsWith("setup.") && setupSrc.includes(`"${m[1].split(".").pop()}":`)) continue;
         if (typeof get(en, m[1]) !== "string") missing.add(m[1]);
       }

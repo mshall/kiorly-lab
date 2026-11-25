@@ -36,7 +36,8 @@
     "finance": "Finance",
     "analytics": "Analytics",
     "growth": "Growth & links",
-    "kiorexConnect": "Connect to Kiorex"
+    "kiorexConnect": "Connect to Kiorex",
+    "plan": "Plan and subscription"
   },
   "shell": {
     "noAccessTitle": "You don't have access to this page",

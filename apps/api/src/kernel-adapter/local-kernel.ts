@@ -18,8 +18,14 @@ export class LocalEntitlements implements EntitlementsPort {
     const t = await this.prisma.tenant.findUnique({ where: { id: orgId }, select: { edition: true } });
     return t?.edition ?? "LITE";
   }
-  async has(orgId: string, capability: Capability): Promise<boolean> {
-    return EDITION_CAPABILITIES[await this.edition(orgId)].includes(capability);
+  async has(orgId: string, capability: Capability, opts: { readOnlyRequest?: boolean } = {}): Promise<boolean> {
+    if (EDITION_CAPABILITIES[await this.edition(orgId)].includes(capability)) return true;
+    // SUB-01: after a downgrade to Lite, capabilities of the previous edition stay READ-ONLY for the grace window (data is never deleted).
+    if (opts.readOnlyRequest) {
+      const s = await this.prisma.orgSubscription.findUnique({ where: { orgId } });
+      if (s?.previousEdition && s.liteReadOnlyGraceUntil && s.liteReadOnlyGraceUntil > new Date() && EDITION_CAPABILITIES[s.previousEdition].includes(capability)) return true;
+    }
+    return false;
   }
 }
 

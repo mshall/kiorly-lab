@@ -45,6 +45,7 @@ const NAV_GROUPS = [
   { key: "admin", items: [
     { to: "/catalogue", key: "catalogue", icon: BookOpen, perm: "catalogue.read" },
     { to: "/kiorex-connect", key: "kiorexConnect", icon: Link2, perm: "settings.manage" },
+    { to: "/plan", key: "plan", icon: CreditCard, perm: "settings.manage" },
     { to: "/settings", key: "settings", icon: Settings, perm: "staff.manage" },
   ] },
 ] as const;
