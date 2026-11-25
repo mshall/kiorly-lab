@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, getToken, setToken } from "@/lib/api";
 import { takeEndSessionUrl } from "@/lib/passport";
 import { rememberSignInOrg } from "@/lib/sign-in-default";
+import { IDLE_NOTICE_KEY, idleLimitMs } from "@/lib/idle";
 
 export interface Me {
   user: { id: string; displayName: string; role: string; signatory: boolean };
@@ -32,6 +33,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // the next visit to the login page asks the API for THIS organisation's default sign-in method
   const orgId = q.data?.tenant.id;
   useEffect(() => { rememberSignInOrg(orgId); }, [orgId]);
+  const limit = idleLimitMs(import.meta.env.VITE_SESSION_IDLE_MINUTES as string | undefined);
+  useEffect(() => {
+    if (!token || !limit) return;
+    let last = Date.now();
+    const bump = () => { last = Date.now(); };
+    const evs = ["pointerdown", "keydown", "touchstart", "wheel"] as const;
+    for (const e of evs) window.addEventListener(e, bump, { passive: true });
+    const timer = window.setInterval(() => {
+      if (Date.now() - last < limit) return;
+      window.clearInterval(timer); setToken(null); setTok(null); qc.clear(); takeEndSessionUrl(); try { sessionStorage.setItem(IDLE_NOTICE_KEY, "SESSION_IDLE"); } catch { /* private mode: the sign-in page simply shows no notice */ }
+    }, 15_000);
+    return () => { window.clearInterval(timer); for (const e of evs) window.removeEventListener(e, bump); };
+  }, [token, limit, qc]);
   const login = useCallback((t: string) => {
     setToken(t);
     setTok(t);

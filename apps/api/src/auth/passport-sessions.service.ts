@@ -2,7 +2,7 @@ import { BadRequestException, Inject, Injectable, Logger, NotFoundException, Una
 import type { JWTVerifyGetKey } from "jose";
 import { PrismaService } from "../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
-import { jwks, passportConfig, type PassportClaims } from "./passport";
+import { jwks, passportConfig, sessionIdleMinutes, type PassportClaims } from "./passport";
 import { LogoutTokenError, verifyLogoutToken } from "./backchannel";
 
 /** Raw Passport access tokens live at most this long after a logout (they are <= 15 min); revocation records are kept slightly longer. */
@@ -31,8 +31,18 @@ export class PassportSessions {
 
   /** Throws 401 SESSION_REVOKED when the web session was ended (or never existed). */
   async assertActive(sessionId: string): Promise<void> {
-    const s = await this.prisma.passportSession.findUnique({ where: { id: sessionId }, select: { revokedAt: true, expiresAt: true } });
+    const s = await this.prisma.passportSession.findUnique({ where: { id: sessionId }, select: { revokedAt: true, expiresAt: true, lastSeenAt: true } });
     if (!s || s.revokedAt || s.expiresAt.getTime() < Date.now()) throw new UnauthorizedException({ code: "SESSION_REVOKED", message: "Your session ended. Sign in again." });
+    // G-24 idle limit: refuse (and end) a session that made no call for the configured time; otherwise remember activity at most once a minute
+    const idleMin = sessionIdleMinutes(process.env.OIDC_SESSION_IDLE_MINUTES);
+    if (idleMin > 0 && s.lastSeenAt) {
+      const idleMs = Date.now() - s.lastSeenAt.getTime();
+      if (idleMs > idleMin * 60_000) {
+        await this.prisma.passportSession.updateMany({ where: { id: sessionId, revokedAt: null }, data: { revokedAt: new Date(), revokedReason: "idle_timeout" } });
+        throw new UnauthorizedException({ code: "SESSION_REVOKED", message: "Your session ended after a period of inactivity. Sign in again." });
+      }
+      if (idleMs > 60_000) await this.prisma.passportSession.updateMany({ where: { id: sessionId, revokedAt: null }, data: { lastSeenAt: new Date() } });
+    }
   }
 
   /** Raw Passport access token (staff mobile app): refuse when its `sid` was logged out, or its `sub` was logged out after the token was issued. */
