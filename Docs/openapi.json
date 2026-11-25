@@ -188,6 +188,197 @@
         ]
       }
     },
+    "/api/v1/subscription": {
+      "get": {
+        "operationId": "SubscriptionController_state",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "subscription"
+        ]
+      }
+    },
+    "/api/v1/subscription/plans": {
+      "get": {
+        "operationId": "SubscriptionController_plans",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "subscription"
+        ]
+      }
+    },
+    "/api/v1/subscription/downgrade-impact": {
+      "get": {
+        "operationId": "SubscriptionController_impact",
+        "parameters": [
+          {
+            "name": "edition",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "subscription"
+        ]
+      }
+    },
+    "/api/v1/subscription/invoices": {
+      "get": {
+        "operationId": "SubscriptionController_invoices",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "subscription"
+        ]
+      }
+    },
+    "/api/v1/subscription/notices": {
+      "get": {
+        "operationId": "SubscriptionController_notices",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "subscription"
+        ]
+      }
+    },
+    "/api/v1/subscription/auto-renew": {
+      "post": {
+        "operationId": "SubscriptionController_autoRenew",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutoRenewDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "subscription"
+        ]
+      }
+    },
+    "/api/v1/subscription/reactivate": {
+      "post": {
+        "operationId": "SubscriptionController_reactivate",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReactivateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "subscription"
+        ]
+      }
+    },
+    "/api/v1/subscription/payment-method": {
+      "put": {
+        "operationId": "SubscriptionController_paymentMethod",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentMethodDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "subscription"
+        ]
+      }
+    },
     "/api/v1/health/live": {
       "get": {
         "operationId": "HealthController_live",
@@ -15076,6 +15267,21 @@
         ]
       }
     },
+    "/api/v1/integration/v1/commission-rates": {
+      "post": {
+        "operationId": "CommissionRateInboundController_receive",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "HMAC: Kiorex reports the lab's commission rate view; idempotent, newest version wins",
+        "tags": [
+          "integration"
+        ]
+      }
+    },
     "/api/v1/growth/access": {
       "get": {
         "operationId": "ProviderLinksController_access",
@@ -15323,6 +15529,26 @@
           }
         ],
         "summary": "Visits, bookings and completed through your links (counts only)",
+        "tags": [
+          "growth"
+        ]
+      }
+    },
+    "/api/v1/growth/commission-rate": {
+      "get": {
+        "operationId": "ProviderLinksController_commissionRate",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "COM-2: the lab's effective Kiorex commission rate, the default, any own rate and the history (read only; set by Kiorex; owner, lab director, branch manager, finance)",
         "tags": [
           "growth"
         ]
@@ -15606,6 +15832,19 @@
         "type": "http"
       }
     },
-    "schemas": {}
+    "schemas": {
+      "AutoRenewDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "ReactivateDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "PaymentMethodDto": {
+        "type": "object",
+        "properties": {}
+      }
+    }
   }
 }

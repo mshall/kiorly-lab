@@ -3,6 +3,7 @@ import type { AuthUser } from "../../auth/auth.types";
 import { listingPause } from "../../integration/kiorex-listing-pause";
 import { PrismaService } from "../../prisma/prisma.service";
 import { growthLimitsFor } from "./growth-plan-limits";
+import { CommissionRateService } from "./commission-rate.service";
 import { buildPerformance } from "./growth-metrics";
 import { THRESHOLDS, buildRecommendations } from "./growth-recommendations";
 import { utcDay } from "./link-counters";
@@ -11,7 +12,7 @@ import { ProviderLinksService } from "./provider-links.service";
 /** Performance and recommendations for the Growth workspace. Aggregates only; no patient, no test, no result and no money leave the database. */
 @Injectable()
 export class GrowthInsightsService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService, @Inject(ProviderLinksService) private readonly links: ProviderLinksService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService, @Inject(ProviderLinksService) private readonly links: ProviderLinksService, @Inject(CommissionRateService) private readonly rates: CommissionRateService) {}
 
   async performance(user: AuthUser, q: { days?: number } = {}) {
     const orgId = this.links.assert(user, "view");
@@ -31,7 +32,8 @@ export class GrowthInsightsService {
       { total: byStatus.reduce((a, r) => a + r._count._all, 0), completed: n("RELEASED"), rejectedOrCancelled: n("CANCELLED") },
       { visits: daily._sum.visits ?? 0, orders: daily._sum.orders ?? 0, completed: daily._sum.completed ?? 0 },
     );
-    return { days, ...perf, statement: { configured: false, note: "No commission is configured for lab bookings." } };
+    const rate = await this.rates.view(orgId);
+    return { days, ...perf, statement: { configured: rate.state === "SET" } };
   }
 
   async recommendations(user: AuthUser) {

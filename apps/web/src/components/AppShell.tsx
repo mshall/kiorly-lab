@@ -98,13 +98,13 @@ export function AppShell() {
         <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-card/90 px-4 py-2.5 backdrop-blur-sm">
           <Button variant="ghost" size="icon" className="lg:hidden" aria-label="menu" onClick={() => setOpen(true)}><Menu className="h-5 w-5" /></Button>
           <div className="flex-1" />
-          <div className="hidden items-center gap-3 sm:flex">
+          <div className="hidden items-center gap-3 md:flex">
             {!flagOn("lab.module") ? <Badge tone="warn">{t("shell.moduleOff")}</Badge> : null}
             <Badge tone={me?.tenant.integrationMode === "STANDALONE" ? "muted" : "info"} title={t("set.mode")}>{me?.tenant.integrationMode === "STANDALONE" ? t("shell.standalone") : t("shell.integrated")}</Badge>
             <Badge tone="info"><Microscope className="me-1 h-3 w-3" />{me?.tenant.edition}</Badge>
           </div>
           <KxControlPair><ThemeToggle labels={{ theme: t("theme.label"), light: t("theme.light"), dark: t("theme.dark"), system: t("theme.system") }} /><LanguageToggle onChange={setLang} /></KxControlPair>
-          <div className="hidden text-end text-xs sm:block">
+          <div className="hidden text-end text-xs md:block">
             <div className="font-medium">{me?.user.displayName}</div>
             <div className="text-muted-foreground">{me ? t(`role.${me.user.role}`) : ""}</div>
           </div>

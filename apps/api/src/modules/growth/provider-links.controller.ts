@@ -4,6 +4,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { AuthUser } from "../../auth/auth.types";
 import { CurrentUser } from "../../auth/decorators";
 import { GrowthFlagGuard, RequiresGrowthLinks } from "./growth-flag.guard";
+import { CommissionRateService } from "./commission-rate.service";
 import { GrowthInsightsService } from "./growth-insights.service";
 import { ProviderLinksService, type CreateLinkBody, type UpdateLinkBody } from "./provider-links.service";
 
@@ -13,7 +14,7 @@ import { ProviderLinksService, type CreateLinkBody, type UpdateLinkBody } from "
 @UseGuards(GrowthFlagGuard)
 @Controller("growth")
 export class ProviderLinksController {
-  constructor(@Inject(ProviderLinksService) private readonly links: ProviderLinksService, @Inject(GrowthInsightsService) private readonly insights: GrowthInsightsService) {}
+  constructor(@Inject(ProviderLinksService) private readonly links: ProviderLinksService, @Inject(GrowthInsightsService) private readonly insights: GrowthInsightsService, @Inject(CommissionRateService) private readonly rates: CommissionRateService) {}
 
   @Get("access") @ApiOperation({ summary: "What the signed-in user can do in Growth, plan limits, whether the lab is connected to Kiorex" })
   access(@CurrentUser() u: AuthUser) { return this.links.access(u); }
@@ -48,6 +49,9 @@ export class ProviderLinksController {
 
   @Get("summary") @ApiOperation({ summary: "Visits, bookings and completed through your links (counts only)" })
   summary(@CurrentUser() u: AuthUser, @Query("days") days?: string) { return this.links.summary(u, { days: days ? Number(days) : undefined }); }
+
+  @Get("commission-rate") @ApiOperation({ summary: "COM-2: the lab's effective Kiorex commission rate, the default, any own rate and the history (read only; set by Kiorex; owner, lab director, branch manager, finance)" })
+  commissionRate(@CurrentUser() u: AuthUser) { return this.rates.rate(u); }
 
   @Get("performance") @ApiOperation({ summary: "Bookings originated through your links versus the Kiorex marketplace (counts only, no money)" })
   performance(@CurrentUser() u: AuthUser, @Query("days") days?: string) { return this.insights.performance(u, { days: days ? Number(days) : undefined }); }

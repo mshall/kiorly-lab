@@ -348,6 +348,7 @@ model Tenant {
 
   labs  Lab[]
   staff StaffUser[]
+  kiorexCommissionRateView KiorexCommissionRateView?
 }
 
 /// A lab site (branch). Accession numbers are unique per Lab.
@@ -1098,6 +1099,19 @@ model OutboxEvent {
 
   @@index([status, occurredAt])
   @@index([orgId])
+}
+
+/// COM-2: the lab's commission rate as Kiorex reports it (default for labs, this lab's own rate, history). Read-only here: Kiorex super admins set it (maker-checker). One row per tenant, newest `version` wins.
+model KiorexCommissionRateView {
+  id         String   @id @default(cuid())
+  orgId      String   @unique
+  product    String
+  version    BigInt
+  view       Json
+  receivedAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [orgId], references: [id], onDelete: Cascade)
 }
 
 model AuditLog {

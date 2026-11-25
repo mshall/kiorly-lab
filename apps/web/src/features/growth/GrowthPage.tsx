@@ -11,6 +11,7 @@ import { ErrorNote, PageHeader } from "@/components/common";
 const fmtNum = (n: number | string): string => new Intl.NumberFormat(document.documentElement.lang === "ar" ? "ar-EG" : "en").format(Number(n));
 const buttonClass = (o: { variant?: "default" | "outline" } = {}) => `inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 ${o.variant === "outline" ? "border border-input bg-card hover:bg-accent" : "bg-primary text-primary-foreground hover:bg-(--kx-primary-hover)"}`;
 import "./growth-strings";
+import { CommissionRateCard } from "./CommissionRateCard";
 
 /** Growth & links (GRW-P4-B1): links, QR codes and printable reception cards, counts of visits and bookings, suggestions. Counts only: no patient data and no money. */
 interface LinkRow { id: string; code: string; label: string; ownerScope: "ORG" | "BRANCH" | "DESK"; channelKind: string; status: "ACTIVE" | "PAUSED" | "REVOKED"; labId: string | null; labName: string | null; shortUrl: string; last30: { visits: number; orders: number; completed: number } }
@@ -70,9 +71,9 @@ export function GrowthPage() {
               </tr>))}
           </Table>)}
       </Card>
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2"><CardTitle>{t("growth.recsTitle")}</CardTitle><ul className="space-y-2" data-testid="growth-recs">{(recs.data?.items ?? []).map((r) => <li key={r.id} data-rec={r.id} className="flex items-start gap-2 rounded-lg bg-muted/50 p-3 text-sm"><Badge tone={r.severity === "high" ? "crit" : r.severity === "medium" ? "warn" : "muted"}>{t(`growth.sev.${r.severity}`, { defaultValue: r.severity })}</Badge><span>{t(`growth.rec.${r.id}`, r.params)}</span></li>)}{recs.data && !recs.data.items.length && <li className="text-sm text-muted-foreground">{t("growth.recsNone")}</li>}</ul><p className="mt-3 text-xs text-muted-foreground">{t("growth.recGuardrail")}</p></Card>
-        <Card><CardTitle>{t("growth.statementTitle")}</CardTitle><p className="text-sm text-muted-foreground" data-testid="growth-statement">{t("growth.statementNone")}</p></Card>
+        <CommissionRateCard />
       </div>
       {create && <CreateModal sites={me?.labs ?? []} onClose={() => setCreate(false)} onDone={() => { setCreate(false); refresh(); }} />}
       {qr && <QrModal link={qr} onClose={() => setQr(null)} />}
