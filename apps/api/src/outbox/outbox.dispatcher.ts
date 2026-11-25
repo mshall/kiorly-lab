@@ -18,7 +18,7 @@ export class OutboxDispatcher implements OnModuleInit, OnModuleDestroy {
 
   onModuleInit() {
     if (appConfig.timersEnabled()) {
-      this.timer = setInterval(() => void this.dispatchDue().catch((e) => this.log.warn(`outbox sweep failed: ${(e as Error).message}`)), 10_000);
+      this.timer = setInterval(() => void this.dispatchDue().catch((e) => this.log.warn(`outbox sweep failed: ${(e as Error).message}`)), Math.max(250, Number(process.env.OUTBOX_POLL_INTERVAL_MS ?? 10_000) || 10_000)); // 10 s by default; a private test stack sets OUTBOX_POLL_INTERVAL_MS
       this.timer.unref();
     }
   }
