@@ -9,7 +9,8 @@ import { seal } from "../src/common/secret-box";
 /** COM-3 (lab): disclosure and counsel status with the rate view, and the settlement statement through the signed Kiorex statement API (an in-process fake). Every text and figure is a TEST placeholder. */
 describe("COM-3 lab: disclosure, counsel status, settlement statement", () => {
   let t: TestApp, f: Lab, other: Lab, kx: { key: string; secret: string }, fake: Server; const seen: { url: string; headers: Record<string, string | string[] | undefined> }[] = []; const WH = "whsec_com3_lab_test";
-  const statement = (ref: string) => ({ orgRef: ref, period: { from: "2026-12-01T00:00:00.000Z", to: "2027-01-01T00:00:00.000Z" }, currency: "EGP", payoutMethod: "BANK_TRANSFER", onlineCollectionsMinor: 9000, cashVisitCommissionAccruedMinor: 0, cashVisitCommissionNettedMinor: 0, cashVisitCommissionOpenMinor: 0, cashVisitCharges: 0, deductions: { commissionMinor: 900, feesMinor: 100, refundsMinor: 0, chargebacksMinor: 0 }, commission: { totalMinor: 900, collectedMinor: 900, openMinor: 0, disputedOpen: 0 }, netPayableMinor: 8000, paidByBankTransferMinor: 8000, payouts: [{ payoutRef: "po1", paidAt: "2026-12-04T00:00:00.000Z", cashMinor: 8000, commissionDeductedMinor: 900, bankReference: "po1", reconciliation: "MATCHED" }], reconciliation: "MATCHED", future: { x: 1 } });
+  let fees: number | null = 100;
+  const statement = (ref: string) => ({ orgRef: ref, period: { from: "2026-12-01T00:00:00.000Z", to: "2027-01-01T00:00:00.000Z" }, currency: "EGP", payoutMethod: "BANK_TRANSFER", onlineCollectionsMinor: 9000, cashVisitCommissionAccruedMinor: 0, cashVisitCommissionNettedMinor: 0, cashVisitCommissionOpenMinor: 0, cashVisitCharges: 0, deductions: { commissionMinor: 900, feesMinor: fees, refundsMinor: 0, chargebacksMinor: 0 }, commission: { totalMinor: 900, collectedMinor: 900, openMinor: 0, disputedOpen: 0 }, netPayableMinor: 8000, paidByBankTransferMinor: 8000, payouts: [{ payoutRef: "po1", paidAt: "2026-12-04T00:00:00.000Z", cashMinor: 8000, commissionDeductedMinor: 900, bankReference: "po1", reconciliation: "MATCHED" }], reconciliation: "MATCHED", future: { x: 1 } });
   before(async () => {
     t = await bootApp(); f = await makeLab(t); other = await makeLab(t);
     kx = (await call(t, "POST", "/integration-clients", { token: f.tokens.OWNER, body: { source: "KIOREX_BOOKING" } })).body;
@@ -45,6 +46,27 @@ describe("COM-3 lab: disclosure, counsel status, settlement statement", () => {
     assert.equal(r.status, 503); assert.equal(r.body.code ?? r.body.message?.code, "STATEMENT_NOT_CONNECTED");
   });
 
+  it("feesMinor: Lab keeps no fee ledger, so it shows Kiorex's figure or none (never estimated); printable statement", async () => {
+    process.env.KIOREX_MODE = "real";
+    const st = () => get(f.tokens.OWNER, "/growth/commission-statement?period=2026-12");
+    let r = await st(); assert.deepEqual([r.body.deductions.feesMinor, r.body.feesSource], [100, "KIOREX"]);
+    fees = null; r = await st(); assert.deepEqual([r.body.deductions.feesMinor, r.body.feesSource], [null, null]);
+    const ar = await get(f.tokens.OWNER, "/growth/commission-statement/2026-12/print");
+    assert.equal(ar.status, 200); assert.match(ar.headers.get("content-type") ?? "", /text\/html/); assert.match(String(ar.body), /dir="rtl"/); assert.match(String(ar.body), /كشف التسوية/); assert.match(String(ar.body), /po1/); assert.doesNotMatch(String(ar.body), /<script>/);
+    const en = await get(f.tokens.OWNER, "/growth/commission-statement/2026-12/print?lang=en&print=1");
+    assert.match(String(en.body), /Settlement statement/); assert.match(String(en.body), /dir="ltr"/); assert.match(String(en.body), /window\.print/);
+    assert.equal((await get(f.tokens.RECEPTION, "/growth/commission-statement/2026-12/print")).status, 403);
+    assert.equal((await get(f.tokens.OWNER, "/growth/commission-statement/2026-13/print")).status, 400);
+    assert.ok(await t.prisma.auditLog.findFirst({ where: { orgId: f.orgId, action: "kiorex.commission_statement.printed" } }));
+    // Kiorly staff app cards (read only): same figures through /mobile/growth, same roles
+    const mh = { "x-kiorly-client": "kiorly/1.0" };
+    const ms = await call(t, "GET", "/mobile/growth/commission-statement?period=2026-12", { token: f.tokens.OWNER, headers: mh }); assert.equal(ms.status, 200, JSON.stringify(ms.body)); assert.deepEqual([ms.body.deductions.feesMinor, ms.body.feesSource, ms.body.netPayableMinor], [null, null, 8000]);
+    assert.equal((await call(t, "GET", "/mobile/growth/commission-statement?period=2026-12", { token: f.tokens.RECEPTION, headers: mh })).status, 403);
+    const mr = await call(t, "GET", "/mobile/growth/commission-rate", { token: f.tokens.OWNER, headers: mh }); assert.equal(mr.status, 200); assert.ok("state" in mr.body);
+    assert.equal((await call(t, "GET", "/mobile/growth/commission-rate", { token: f.tokens.RECEPTION, headers: mh })).status, 403);
+    fees = 100;
+  });
+
   it("real mode: the statement comes from the Kiorex statement API with the partner HMAC; roles, isolation, CSV, bad period", async () => {
     process.env.KIOREX_MODE = "real";
     const ok = await get(f.tokens.OWNER, "/growth/commission-statement?period=2026-12");
@@ -60,7 +82,7 @@ describe("COM-3 lab: disclosure, counsel status, settlement statement", () => {
     assert.equal((await get(f.tokens.OWNER, "/growth/commission-statement?period=2026-13")).status, 400);
     assert.equal((await get(other.tokens.OWNER, "/growth/commission-statement?period=2026-12")).status, 503);
     const csv = await get(f.tokens.OWNER, "/growth/commission-statement/2026-12/export.csv");
-    assert.equal(csv.status, 200); assert.match(JSON.stringify(csv.body ?? csv.text ?? ""), /netPayable/);
+    assert.equal(csv.status, 200); assert.match(String(csv.body), /netPayable/);
     assert.equal((await get(f.tokens.RECEPTION, "/growth/commission-statement/2026-12/export.csv")).status, 403);
     assert.ok(await t.prisma.auditLog.findFirst({ where: { orgId: f.orgId, action: "kiorex.commission_statement.exported" } }));
     await t.prisma.integrationClient.updateMany({ where: { orgId: f.orgId, key: kx.key }, data: { kiorexBaseUrl: "http://127.0.0.1:1" } });

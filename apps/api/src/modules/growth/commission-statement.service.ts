@@ -6,6 +6,7 @@ import { appConfig } from "../../config/app-config";
 import { PrismaService } from "../../prisma/prisma.service";
 import { CommissionRateService, RATE_ROLES } from "./commission-rate.service";
 import { normalizeStatement, periodRange, type StatementView } from "./commission-statement";
+import { renderStatementHtml } from "./statement-html";
 
 /**
  * COM-3: the settlement statement of one period, the same figures Kiorex finance sees for this organisation (read only). Kiorex pays providers by bank transfer only and never holds or pays cash; the Kiorex fee is netted at settlement.
@@ -46,7 +47,7 @@ export class CommissionStatementService {
     }
   }
 
-  async statement(user: AuthUser, period?: string): Promise<StatementView & { period: StatementView["period"] & { key: string } }> {
+  async statement(user: AuthUser, period?: string): Promise<StatementView & { period: StatementView["period"] & { key: string }; feesSource: "KIOREX" | null }> {
     this.need(user);
     const r = periodRange(period); if (!r) throw new BadRequestException("period must be YYYY-MM");
     const ref = (await this.rates.kiorexOrgRef(user.orgId)) ?? user.orgId;
@@ -54,7 +55,17 @@ export class CommissionStatementService {
     const v = normalizeStatement(body, { orgRef: ref, from: r.from, to: r.to });
     if (!v) throw new ServiceUnavailableException({ code: "STATEMENT_UNAVAILABLE", message: "Kiorex sent an unreadable statement" });
     await this.prisma.auditLog.create({ data: { orgId: user.orgId, action: "kiorex.commission_statement.viewed", entityType: "KiorexCommissionStatement", entityId: r.key, meta: { by: user.staffId } } as never }).catch(() => undefined);
-    return { ...v, orgRef: ref, period: { ...v.period, key: r.key } };
+    // Lab keeps no marketplace fee ledger of its own: fees appear only when Kiorex sends the figure (never estimated here)
+    const feesSource: "KIOREX" | null = v.deductions.feesMinor === null ? null : "KIOREX";
+    return { ...v, orgRef: ref, period: { ...v.period, key: r.key }, feesSource };
+  }
+
+  /** Printable statement (HTML with print CSS; the browser prints it or saves it as PDF), audited like the CSV export. */
+  async printHtml(user: AuthUser, period: string, o: { lang?: string; print?: boolean } = {}): Promise<string> {
+    const s = await this.statement(user, period);
+    const tenant = await this.prisma.tenant.findUnique({ where: { id: user.orgId }, select: { name: true } });
+    await this.prisma.auditLog.create({ data: { orgId: user.orgId, action: "kiorex.commission_statement.printed", entityType: "KiorexCommissionStatement", entityId: s.period.key, meta: { by: user.staffId } } as never }).catch(() => undefined);
+    return renderStatementHtml({ product: "LAB", lang: o.lang === "en" ? "en" : "ar", periodKey: s.period.key, organisation: tenant?.name ?? s.orgRef, statement: s, autoPrint: o.print });
   }
 
   async exportCsv(user: AuthUser, period: string) {
