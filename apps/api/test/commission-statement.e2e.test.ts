@@ -13,7 +13,7 @@ describe("COM-3 lab: disclosure, counsel status, settlement statement", () => {
   before(async () => {
     t = await bootApp(); f = await makeLab(t); other = await makeLab(t);
     kx = (await call(t, "POST", "/integration-clients", { token: f.tokens.OWNER, body: { source: "KIOREX_BOOKING" } })).body;
-    fake = createServer((req, res) => { seen.push({ url: req.url ?? "", headers: req.headers }); const ref = decodeURIComponent((req.url ?? "").split("/settlement-statement/")[1]?.split(/[/?]/)[0] ?? ""); const csv = (req.url ?? "").includes("/export"); res.setHeader("content-type", csv ? "text/csv" : "application/json"); res.end(csv ? "item,amount,deducted,bankReference,status\r\nnetPayable,80.00,,,\r\n" : JSON.stringify(statement(ref))); });
+    fake = createServer((req, res) => { seen.push({ url: req.url ?? "", headers: req.headers }); const ref = String(req.headers["x-kiorly-org-ref"] ?? ""); const csv = (req.url ?? "").includes("/export"); res.setHeader("content-type", csv ? "text/csv" : "application/json"); res.end(csv ? "item,amount,deducted,bankReference,status\r\nnetPayable,80.00,,,\r\n" : JSON.stringify(statement(ref))); });
     await new Promise<void>((r) => fake.listen(0, "127.0.0.1", r));
     await t.prisma.integrationClient.updateMany({ where: { orgId: f.orgId, key: kx.key }, data: { kiorexBaseUrl: `http://127.0.0.1:${(fake.address() as { port: number }).port}`, webhookSecretEnc: seal(WH) } });
   });
@@ -52,7 +52,7 @@ describe("COM-3 lab: disclosure, counsel status, settlement statement", () => {
     assert.deepEqual([ok.body.source, ok.body.orgRef, ok.body.netPayableMinor, ok.body.deductions.feesMinor, ok.body.reconciliation, ok.body.payouts[0].bankReference, ok.body.period.key], ["KIOREX", "lab_ref_1", 8000, 100, "MATCHED", "po1", "2026-12"]);
     assert.equal("future" in ok.body, false);
     const call1 = seen.at(-1)!; const h = call1.headers; const path = call1.url.split("?")[0]!;
-    assert.equal(path, "/api/v1/admin/commissions/settlement-statement/lab_ref_1"); assert.equal(h["x-kiorly-org-ref"], "lab_ref_1"); assert.equal(h["x-kiorly-client-key"], kx.key);
+    assert.equal(path, "/api/v1/partner/commissions/settlement-statement"); assert.equal(h["x-kiorly-org-ref"], "lab_ref_1"); assert.equal(h["x-kiorly-client-key"], kx.key);
     assert.equal(h["x-kiorly-signature"], createHmac("sha256", WH).update(`${h["x-kiorly-timestamp"]}\n${h["x-kiorly-nonce"]}\nGET\n${path}\n${createHash("sha256").update("").digest("hex")}`).digest("base64url"));
     assert.ok(call1.url.includes("from=2026-12-01") && call1.url.includes("to=2027-01-01"));
     for (const r of ["LAB_DIRECTOR", "BRANCH_MANAGER", "FINANCE"] as const) assert.equal((await get(f.tokens[r]!, "/growth/commission-statement?period=2026-12")).status, 200, r);
