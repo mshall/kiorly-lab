@@ -4,11 +4,12 @@ import type { NestExpressApplication } from "@nestjs/platform-express";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { applyHttpHardening, swaggerEnabled } from "./common/http-hardening";
 import { PrismaExceptionFilter } from "./common/prisma-exception.filter";
+import { apiPrefix } from "./config/runtime-env";
 
 /** Shared by main.ts and e2e tests so they boot identically. */
 export function configureApp(app: INestApplication): void {
   applyHttpHardening(app); // security headers, no X-Powered-By, trust-proxy hops
-  app.setGlobalPrefix("api/v1");
+  app.setGlobalPrefix(apiPrefix()); // API_PREFIX, default api/v1
   // `req.rawBody` (HMAC verification: Kiorex/Clinic requests, flag.changed webhook) is filled by Nest because the app is created with `{ rawBody: true }`.
   (app as NestExpressApplication).useBodyParser("json", { limit: "5mb" });
   app.useGlobalPipes(new RejectNulBytesPipe(), new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
