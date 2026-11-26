@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { IntegrationModule } from "../../integration/integration.module";
 import { CommissionRateInboundController } from "./commission-rate-inbound.controller";
 import { CommissionRateService } from "./commission-rate.service";
+import { CommissionStatementService } from "./commission-statement.service";
 import { GrowthInsightsService } from "./growth-insights.service";
 import { GrowthMobileController } from "./growth-mobile.controller";
 import { GrowthMobileService } from "./growth-mobile.service";
@@ -14,7 +15,7 @@ import { PublicLinkController } from "./public-link.controller";
 @Module({
   imports: [IntegrationModule],
   controllers: [CommissionRateInboundController, ProviderLinksController, GrowthMobileController, PublicLinkController, LinkRegistryLookupController],
-  providers: [ProviderLinksService, GrowthInsightsService, CommissionRateService, GrowthMobileService],
+  providers: [ProviderLinksService, GrowthInsightsService, CommissionRateService, CommissionStatementService, GrowthMobileService],
   exports: [ProviderLinksService],
 })
 export class GrowthModule {}
