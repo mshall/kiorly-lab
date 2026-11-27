@@ -4,6 +4,7 @@
  *   ORG_SLUG, ORG_NAME, LAB_NAME, LAB_CODE, OWNER_NAME, OWNER_EMAIL, OWNER_PHONE (E.164: the operator confirmed it, so the first Kiorex Passport sign-in by that verified phone binds the owner
  *   automatically when OIDC_PHONE_LINK=true), optional OWNER_PASSWORD (min 10 characters), optional MARKET_CODE (default EG; fixed for life), TAG_BATCH (registers the row in "DemoMarker" so
  *   `npm run demo-data:remove` can delete a throwaway organisation).
+ * Optional first staff member (a non-privileged role signs in with the password in production-style `both` mode): EXTRA_EMAIL, EXTRA_NAME, EXTRA_ROLE (default TECHNOLOGIST), EXTRA_PASSWORD.
  * Idempotent per slug: an existing organisation is left as it is.
  */
 import { PrismaClient } from "../generated/prisma/client";
@@ -30,6 +31,11 @@ async function main() {
       const t = await tx.tenant.create({ data: { name: need("ORG_NAME"), slug, edition: "LITE", marketCode: market, integrationMode: "STANDALONE" } });
       await tx.lab.create({ data: { orgId: t.id, name: need("LAB_NAME"), code: need("LAB_CODE").toUpperCase() } });
       const owner = await tx.staffUser.create({ data: { orgId: t.id, email, displayName: need("OWNER_NAME"), role: "OWNER", phone, ...(passwordHash ? { passwordHash, passwordChangedAt: new Date() } : {}) } });
+      if (process.env.EXTRA_EMAIL) {
+        const xpw = process.env.EXTRA_PASSWORD; const xerr = xpw ? passwordPolicyError(xpw, process.env.EXTRA_EMAIL) : null; if (xerr) throw new Error(xerr);
+        const role = (process.env.EXTRA_ROLE ?? "TECHNOLOGIST") as "TECHNOLOGIST";
+        await tx.staffUser.create({ data: { orgId: t.id, email: process.env.EXTRA_EMAIL.toLowerCase(), displayName: process.env.EXTRA_NAME ?? "Staff", role, ...(xpw ? { passwordHash: await hashPassword(xpw), passwordChangedAt: new Date() } : {}) } });
+      }
       await tx.priceList.create({ data: { orgId: t.id, name: "Standard", isDefault: true, currency: t.currency } });
       await tx.auditLog.create({ data: { orgId: t.id, actorId: owner.id, action: "tenant.onboard", entityType: "Tenant", entityId: t.id, meta: { via: "operator-script", phoneSet: !!phone, passwordSet: !!pw } } as never });
       if (process.env.TAG_BATCH) await tx.$executeRawUnsafe(`INSERT INTO "DemoMarker" ("tableName","rowId","dataClass","batch") VALUES ('Tenant',$1,'DEMO',$2) ON CONFLICT DO NOTHING`, t.id, process.env.TAG_BATCH);
