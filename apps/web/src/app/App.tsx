@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { AuthCallback } from "@/features/auth/AuthCallback";
+import { MfaRequired } from "@/features/auth/MfaRequired";
 import { OnboardingPage } from "@/features/auth/OnboardingPage";
 
 const OrdersPage = lazy(() => import("@/features/orders/OrdersPage").then((m) => ({ default: m.OrdersPage })));
@@ -42,8 +43,9 @@ const PhlebApp = lazy(() => import("@/features/phleb/PhlebApp").then((m) => ({ d
 const PublicReportPage = lazy(() => import("@/features/release/PublicReportPage").then((m) => ({ default: m.PublicReportPage })));
 
 function Private({ children }: { children: React.ReactNode }) {
-  const { token, loading } = useAuth();
+  const { token, loading, mfaRequired } = useAuth();
   if (!token) return <Navigate to="/login" replace />;
+  if (mfaRequired) return <MfaRequired />;
   if (loading) return <div className="p-8"><Spinner /></div>;
   return <>{children}</>;
 }

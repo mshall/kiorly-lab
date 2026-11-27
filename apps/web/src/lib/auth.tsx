@@ -4,6 +4,7 @@ import { api, getToken, setToken } from "@/lib/api";
 import { takeEndSessionUrl } from "@/lib/passport";
 import { rememberSignInOrg } from "@/lib/sign-in-default";
 import { IDLE_NOTICE_KEY, idleLimitMs } from "@/lib/idle";
+import { isMfaRequired } from "@/lib/mfa-required";
 
 export interface Me {
   user: { id: string; displayName: string; role: string; signatory: boolean };
@@ -18,6 +19,8 @@ interface Ctx {
   token: string | null;
   me: Me | undefined;
   loading: boolean;
+  /** The API refused the session with 403 MFA_REQUIRED: the person has to set up a second factor in Kiorex Passport (friendly screen). */
+  mfaRequired: boolean;
   login: (t: string) => void;
   /** Clears the app session; returns true when the browser is being sent to end the Kiorex Passport session too. */
   logout: () => boolean;
@@ -66,8 +69,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("kiorly:logout", h);
   }, []);
   const value = useMemo<Ctx>(
-    () => ({ token, me: q.data, loading: Boolean(token) && q.isLoading, login, logout, can: (p) => q.data?.permissions.includes(p) ?? false, flagOn: (k) => q.data?.flags[k]?.enabled ?? true }),
-    [token, q.data, q.isLoading, login, logout],
+    () => ({ token, me: q.data, loading: Boolean(token) && q.isLoading, mfaRequired: Boolean(token) && isMfaRequired(q.error), login, logout, can: (p) => q.data?.permissions.includes(p) ?? false, flagOn: (k) => q.data?.flags[k]?.enabled ?? true }),
+    [token, q.data, q.isLoading, q.error, login, logout],
   );
   return <C.Provider value={value}>{children}</C.Provider>;
 }
