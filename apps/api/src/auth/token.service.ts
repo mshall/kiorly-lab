@@ -20,6 +20,8 @@ export interface VerifiedToken {
 
 export const DEV_ISSUER = "kiorly-lab-dev";
 /** Issued by `POST /auth/oidc/exchange` after a verified Passport code exchange (web). Accepted in every mode. */
+/** Issued by `POST /auth/login` (e-mail + password). Accepted only while password sign-in is offered (`dev`, `both`). Never carries the MFA claim. */
+export const PASSWORD_ISSUER = "kiorly-lab-password-session";
 export const SESSION_ISSUER = "kiorly-lab-passport-session";
 
 /**
@@ -31,7 +33,7 @@ export const SESSION_ISSUER = "kiorly-lab-passport-session";
 export class TokenService {
 
   async signDev(input: { staffId: string; amr?: string[]; ttlSeconds?: number }): Promise<string> {
-    if (appConfig.isProd() && appConfig.authMode() === "dev") throw new Error("dev tokens are disabled in production");
+    if (appConfig.isProd() && appConfig.authMode() !== "oidc") throw new Error("dev tokens are disabled in production");
     return new SignJWT({ staffId: input.staffId, amr: input.amr ?? ["pwd"] })
       .setProtectedHeader({ alg: "HS256" })
       .setSubject(`dev:${input.staffId}`)
@@ -40,6 +42,13 @@ export class TokenService {
       .setIssuedAt()
       .setExpirationTime(`${input.ttlSeconds ?? 12 * 3600}s`)
       .sign(new TextEncoder().encode(appConfig.jwtDevSecret()));
+  }
+
+  async issuePasswordSession(staffId: string, ttlSeconds = 10 * 3600): Promise<string> {
+    if (!appConfig.localLogin()) throw new Error("password sign-in is disabled");
+    return new SignJWT({ staffId, amr: ["pwd"] })
+      .setProtectedHeader({ alg: "HS256" }).setSubject(`password-session:${staffId}`).setIssuer(PASSWORD_ISSUER).setAudience(appConfig.oidcAudience()).setIssuedAt()
+      .setExpirationTime(`${ttlSeconds}s`).sign(new TextEncoder().encode(appConfig.jwtDevSecret()));
   }
 
   /** Web session after Passport sign-in (the browser never holds the Passport tokens). */
@@ -63,8 +72,9 @@ export class TokenService {
     try {
       if (peekAlg(token) === "HS256") {
         const { payload } = await jwtVerify(token, new TextEncoder().encode(appConfig.jwtDevSecret()), {
-          issuer: [DEV_ISSUER, SESSION_ISSUER], audience: appConfig.oidcAudience(), algorithms: ["HS256"],
+          issuer: [DEV_ISSUER, SESSION_ISSUER, PASSWORD_ISSUER], audience: appConfig.oidcAudience(), algorithms: ["HS256"],
         });
+        if (payload.iss === PASSWORD_ISSUER && !appConfig.localLogin()) throw new Error("password sign-in is disabled");
         if (payload.iss === DEV_ISSUER && (appConfig.isProd() || appConfig.authMode() !== "dev")) throw new Error("dev auth is disabled");
         if (!payload.sub) throw new Error("no sub");
         if (payload.iss === SESSION_ISSUER && !payload.jti) throw new Error("session id missing");

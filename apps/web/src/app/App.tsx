@@ -5,6 +5,7 @@ import { Spinner } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
 import { LoginPage } from "@/features/auth/LoginPage";
+import { ForgotPasswordPage, ResetPasswordPage } from "@/features/auth/PasswordPages";
 import { AuthCallback } from "@/features/auth/AuthCallback";
 import { MfaRequired } from "@/features/auth/MfaRequired";
 import { OnboardingPage } from "@/features/auth/OnboardingPage";
@@ -55,6 +56,8 @@ export function App() {
     <Suspense fallback={<div className="p-8"><Spinner /></div>}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/onboarding" element={<OnboardingPage />} />
         <Route path="/r/:token" element={<PublicReportPage />} />

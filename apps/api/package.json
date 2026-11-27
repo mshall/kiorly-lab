@@ -17,6 +17,8 @@
     "db:seed": "DEMO_SEED_ALLOWED=true tsx src/seed/seed.ts",
     "db:seed:demo": "DEMO_SEED_ALLOWED=true tsx src/seed/seed-demo.ts",
     "openapi": "rm -rf .tmp-openapi && tsc --ignoreConfig --outDir .tmp-openapi --rootDir . --module commonjs --target ES2022 --experimentalDecorators --emitDecoratorMetadata --esModuleInterop --skipLibCheck --strict --strictPropertyInitialization false --types node scripts/export-openapi.ts && node .tmp-openapi/scripts/export-openapi.js; rm -rf .tmp-openapi",
+    "org:create": "tsx src/seed/onboard-org.ts",
+    "org:create:dist": "node dist/seed/onboard-org.js",
     "demo-data:remove": "tsx src/seed/demo-data-remove.ts",
     "demo-data:remove:dist": "node dist/seed/demo-data-remove.js",
     "db:seed:dist": "node dist/seed/seed.js",

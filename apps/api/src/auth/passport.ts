@@ -47,7 +47,7 @@ export function passportConfig(env: NodeJS.ProcessEnv = process.env): PassportCo
   const issuer = (env.KIOREX_OIDC_ISSUER ?? env.OIDC_ISSUER)?.trim().replace(/\/+$/, "");
   if (!issuer) return null;
   const prod = env.NODE_ENV === "production";
-  const oidc = env.AUTH_MODE === "oidc";
+  const oidc = env.AUTH_MODE === "oidc" || env.AUTH_MODE === "both";
   if (!oidc && (prod || env.AUTH_ACCEPT_PASSPORT !== "true")) return null;
   const webClientId = env.OIDC_WEB_CLIENT_ID?.trim() || "kiorly-lab-web";
   return {

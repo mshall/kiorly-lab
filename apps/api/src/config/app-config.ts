@@ -7,7 +7,13 @@ const mode = (v: string | undefined): Mode => (v === "real" ? "real" : "mock");
 export const appConfig = {
   isProd: () => process.env.NODE_ENV === "production",
   isTest: () => process.env.NODE_ENV === "test",
-  authMode: (): "dev" | "oidc" => (process.env.AUTH_MODE === "oidc" ? "oidc" : "dev"),
+  /** `dev` (local, non-production), `oidc` (Passport only), `both` (explicit: e-mail + password AND Passport side by side, allowed in production). */
+  authMode: (): "dev" | "oidc" | "both" => (process.env.AUTH_MODE === "oidc" ? "oidc" : process.env.AUTH_MODE === "both" ? "both" : "dev"),
+  /** E-mail + password sign-in offered (`dev` and `both`). */
+  localLogin: () => process.env.AUTH_MODE !== "oidc",
+  /** Wrong-password lockout: threshold (3..20, default 5) and minutes (1..240, default 15). A hard range, not a switch. */
+  loginLockThreshold: () => Math.min(20, Math.max(3, Math.floor(Number(process.env.LAB_LOGIN_LOCK_THRESHOLD) || 5))),
+  loginLockMinutes: () => Math.min(240, Math.max(1, Math.floor(Number(process.env.LAB_LOGIN_LOCK_MINUTES) || 15))),
   /**
    * HS256 secret for dev tokens and the Passport web session. Outside production a dev default exists; in production it is REQUIRED
    * (`JWT_SECRET` as injected by the infra secret, or `AUTH_JWT_SECRET`) so sessions are never signed with a well-known key.

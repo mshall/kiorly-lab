@@ -6,6 +6,8 @@ import type { AuthUser } from "../../auth/auth.types";
 import { PERMISSIONS, ROLE_PERMISSIONS } from "../../auth/rbac";
 import { TokenService } from "../../auth/token.service";
 import { normalizePhone } from "../../auth/passport";
+import { hashPassword } from "../../auth/password";
+import { passwordPolicyError } from "../../auth/password-auth.service";
 import { PassportSessions } from "../../auth/passport-sessions.service";
 import { AuditService } from "../../audit/audit.service";
 import { effectiveOrgDefault, type SignInDefaultMethod } from "../../auth/sign-in-default";
@@ -69,15 +71,20 @@ export class AdminService {
 
   // ------------------------------------------------------------ onboarding
   /** Self-serve tenant creation (dev/pilot). Gated by flag lab.module ("No new sign-ups" when OFF). Production sign-up goes through Kiorex Account (NH-LB-016). */
-  async onboard(b: { name: string; slug: string; labName: string; labCode: string; ownerName: string; ownerEmail: string; edition?: Edition; marketCode?: string; loadStarterCatalogue?: boolean; signatoryLicenceNo?: string }) {
+  async onboard(b: { name: string; slug: string; labName: string; labCode: string; ownerName: string; ownerEmail: string; ownerPassword?: string; ownerPhone?: string; edition?: Edition; marketCode?: string; loadStarterCatalogue?: boolean; signatoryLicenceNo?: string }) {
     this.devOnly();
     const market = (b.marketCode ?? "EG").toUpperCase(); // fixed for life once created (founder decision A, 27 Nov 2026): no API changes it afterwards
     assertFlagOn(this.flags, "lab.module", { market });
     if (await this.prisma.tenant.findUnique({ where: { slug: b.slug } })) throw new ConflictException({ code: "SLUG_TAKEN" });
+    const ownerPhone = b.ownerPhone ? normalizePhone(b.ownerPhone) : null;
+    if (b.ownerPhone && !ownerPhone) throw new BadRequestException({ code: "INVALID_PHONE" });
+    const pwErr = b.ownerPassword ? passwordPolicyError(b.ownerPassword, b.ownerEmail) : null;
+    if (pwErr) throw new BadRequestException({ code: "WEAK_PASSWORD", message: pwErr });
+    const ownerHash = b.ownerPassword ? await hashPassword(b.ownerPassword) : null;
     const out = await this.prisma.$transaction(async (tx) => {
       const t = await tx.tenant.create({ data: { name: b.name, slug: b.slug, edition: b.edition ?? "LITE", marketCode: market, integrationMode: "STANDALONE" } });
       const lab = await tx.lab.create({ data: { orgId: t.id, name: b.labName, code: b.labCode.toUpperCase() } });
-      const owner = await tx.staffUser.create({ data: { orgId: t.id, email: b.ownerEmail.toLowerCase(), displayName: b.ownerName, role: "OWNER", signatoryLicenceNo: b.signatoryLicenceNo } });
+      const owner = await tx.staffUser.create({ data: { orgId: t.id, email: b.ownerEmail.toLowerCase(), displayName: b.ownerName, role: "OWNER", signatoryLicenceNo: b.signatoryLicenceNo, phone: ownerPhone, ...(ownerHash ? { passwordHash: ownerHash, passwordChangedAt: new Date() } : {}) } });
       await tx.priceList.create({ data: { orgId: t.id, name: "Standard", isDefault: true, currency: t.currency } });
       await this.audit.record({ orgId: t.id, actorId: owner.id, action: "tenant.onboard", entityType: "Tenant", entityId: t.id }, tx);
       return { tenant: t, lab, owner };
@@ -95,8 +102,8 @@ export class AdminService {
 
   // ----------------------------------------------------------------- staff
   async listStaff(orgId: string) {
-    const rows = await this.prisma.staffUser.findMany({ where: { orgId }, select: { id: true, email: true, displayName: true, role: true, labIds: true, signatoryLicenceNo: true, active: true, phone: true, subject: true }, orderBy: { displayName: "asc" } });
-    return rows.map(({ subject, ...s }) => ({ ...s, passportLinked: !!subject }));
+    const rows = await this.prisma.staffUser.findMany({ where: { orgId }, select: { id: true, email: true, displayName: true, role: true, labIds: true, signatoryLicenceNo: true, active: true, phone: true, subject: true, passwordHash: true }, orderBy: { displayName: "asc" } });
+    return rows.map(({ subject, passwordHash, ...s }) => ({ ...s, passportLinked: !!subject, hasPassword: !!passwordHash }));
   }
 
   /** Names and roles for pickers (collection managers): no phone numbers, e-mail or Passport state. */
@@ -114,19 +121,21 @@ export class AdminService {
     return phone;
   }
 
-  async createStaff(u: AuthUser, b: { email: string; displayName: string; role: StaffRole; labIds?: string[]; signatoryLicenceNo?: string; subject?: string; phone?: string }) {
+  async createStaff(u: AuthUser, b: { email: string; displayName: string; role: StaffRole; labIds?: string[]; signatoryLicenceNo?: string; subject?: string; phone?: string; password?: string }) {
     if (b.role === "OWNER" && u.role !== "OWNER") throw new ForbiddenException({ code: "ONLY_OWNER_CAN_GRANT_OWNER" });
     if (["AUTHORIZED_SIGNATORY", "LAB_DIRECTOR"].includes(b.role) && !b.signatoryLicenceNo) throw new BadRequestException({ code: "LICENCE_REQUIRED_FOR_SIGNATORY" });
     if (await this.prisma.staffUser.findFirst({ where: { orgId: u.orgId, email: b.email.toLowerCase() } })) throw new ConflictException({ code: "EMAIL_TAKEN" });
     await this.assertLabs(u.orgId, b.labIds);
     const phone = await this.cleanPhone(u.orgId, b.phone);
-    const s = await this.prisma.staffUser.create({ data: { orgId: u.orgId, email: b.email.toLowerCase(), displayName: b.displayName, role: b.role, labIds: b.labIds ?? [], signatoryLicenceNo: b.signatoryLicenceNo, subject: b.subject, phone } });
+    const pwErr = b.password ? passwordPolicyError(b.password, b.email) : null;
+    if (pwErr) throw new BadRequestException({ code: "WEAK_PASSWORD", message: pwErr });
+    const s = await this.prisma.staffUser.create({ data: { orgId: u.orgId, email: b.email.toLowerCase(), displayName: b.displayName, role: b.role, labIds: b.labIds ?? [], signatoryLicenceNo: b.signatoryLicenceNo, subject: b.subject, phone, ...(b.password ? { passwordHash: await hashPassword(b.password), passwordChangedAt: new Date() } : {}) } });
     await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "staff.create", entityType: "StaffUser", entityId: s.id, meta: { role: b.role, linkKeySet: !!phone } });
-    const { subject, ...out } = s;
-    return { ...out, passportLinked: !!subject };
+    const { subject, passwordHash, ...out } = s;
+    return { ...out, passportLinked: !!subject, hasPassword: !!passwordHash };
   }
 
-  async updateStaff(u: AuthUser, id: string, b: { displayName?: string; role?: StaffRole; labIds?: string[]; signatoryLicenceNo?: string | null; active?: boolean; phone?: string | null }) {
+  async updateStaff(u: AuthUser, id: string, b: { displayName?: string; role?: StaffRole; labIds?: string[]; signatoryLicenceNo?: string | null; active?: boolean; phone?: string | null; password?: string }) {
     const s = await this.prisma.staffUser.findFirst({ where: { id, orgId: u.orgId } });
     if (!s) throw new NotFoundException({ code: "STAFF_NOT_FOUND" });
     if ((b.role === "OWNER" || s.role === "OWNER") && u.role !== "OWNER") throw new ForbiddenException({ code: "ONLY_OWNER_CAN_CHANGE_OWNER" });
@@ -136,18 +145,20 @@ export class AdminService {
     if (["AUTHORIZED_SIGNATORY", "LAB_DIRECTOR"].includes(role) && !lic) throw new BadRequestException({ code: "LICENCE_REQUIRED_FOR_SIGNATORY" });
     await this.assertLabs(u.orgId, b.labIds);
     const phone = b.phone === undefined ? undefined : await this.cleanPhone(u.orgId, b.phone, id);
+    const pwErr = b.password ? passwordPolicyError(b.password, s.email) : null;
+    if (pwErr) throw new BadRequestException({ code: "WEAK_PASSWORD", message: pwErr });
     let row;
     try {
-      row = await this.prisma.staffUser.update({ where: { id }, data: { displayName: b.displayName, role: b.role, labIds: b.labIds, signatoryLicenceNo: b.signatoryLicenceNo, active: b.active, phone } });
+      row = await this.prisma.staffUser.update({ where: { id }, data: { displayName: b.displayName, role: b.role, labIds: b.labIds, signatoryLicenceNo: b.signatoryLicenceNo, active: b.active, phone, ...(b.password ? { passwordHash: await hashPassword(b.password), passwordChangedAt: new Date(), failedLogins: 0, lockedUntil: null } : {}) } });
     } catch (e) {
       if ((e as { code?: string }).code === "P2002") throw new ConflictException({ code: "PHONE_TAKEN", message: "Another staff member already uses this phone number" });
       throw e;
     }
-    await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "staff.update", entityType: "StaffUser", entityId: id, meta: { fields: Object.keys(b).filter((k) => k !== "phone"), linkKeyChanged: b.phone !== undefined } });
+    await this.audit.record({ orgId: u.orgId, actorId: u.staffId, action: "staff.update", entityType: "StaffUser", entityId: id, meta: { fields: Object.keys(b).filter((k) => k !== "phone" && k !== "password"), passwordChanged: !!b.password, linkKeyChanged: b.phone !== undefined } });
     // deactivating a staff member ends their Kiorex Passport web sessions straight away
     if (b.active === false && s.active) await this.sessions.revokeForStaff(id, "staff_deactivated");
-    const { subject, ...out } = row;
-    return { ...out, passportLinked: !!subject };
+    const { subject, passwordHash, ...out } = row;
+    return { ...out, passportLinked: !!subject, hasPassword: !!passwordHash };
   }
 
   private async assertLabs(orgId: string, labIds?: string[]) {

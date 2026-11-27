@@ -112,7 +112,17 @@
       "openPassport": "Open Kiorex Passport security",
       "signOutAgain": "Sign out and sign in again",
       "help": "If your organisation uses a different sign-in method, ask your owner."
-    }
+    },
+    "forgotTitle": "Reset your password",
+    "forgotLede": "Enter your e-mail. If it belongs to a staff account with a password, we send a link that works for 30 minutes.",
+    "forgotSend": "Send the link",
+    "forgotDone": "If that e-mail has a password sign-in, a reset link is on its way.",
+    "resetTitle": "Choose a new password",
+    "newPassword": "New password",
+    "passwordHint": "At least 10 characters.",
+    "resetSave": "Save the password",
+    "resetDone": "Your password is saved. You can sign in now.",
+    "resetFailed": "The reset did not work. Request a new link."
   },
   "onboarding": {
     "company": "Company name",

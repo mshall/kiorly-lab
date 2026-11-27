@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { KiorlyBrandLockup, KiorlyFootText, KxControlPair, LanguageToggle, Pulse, ThemeToggle, Surface } from "@/brand/ui-kit";
+import { KiorlyBrandLockup, KiorlyFootText, KxControlPair, LanguageToggle, Pulse, ThemeToggle } from "@/brand/ui-kit";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { FlaskConical, ShieldCheck, Smartphone } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { setLang } from "@/lib/i18n";
 import { fetchAuthConfig, startPassportSignIn } from "@/lib/passport";
@@ -12,10 +12,7 @@ import { currentNavigationType, readHandoff, wantsPassportAutostart, withoutHand
 import { rememberSignInMethod } from "@/lib/sign-in-method";
 import { currentOrgHint, rememberSignInOrg } from "@/lib/sign-in-default";
 import { SwitchProductLink } from "@/components/switch-product-link";
-import { SignInMethodTabs } from "@/components/sign-in-method-tabs";
-import { useSignInMethod } from "@/components/use-sign-in-method";
-import { Button, Field, Input } from "@/components/ui";
-import { ErrorNote } from "@/components/common";
+import { UnifiedSignIn } from "@/components/unified-sign-in";
 import { KiorexLogo } from "@/brand/components";
 import { KxBrandBackdrop } from "@/brand/components/web/KxBrandBackdrop";
 
@@ -52,22 +49,15 @@ export function LoginPage() {
     autostarted.current = true; void startPassportSignIn(passport, i18n.language);
   }, [token, passport, search, i18n.language, handoff.code]);
   const localLogin = cfg.data?.localLogin ?? true;
-  // Two methods only: Kiorex Passport (default) and the password / dev sign-in; the last method that signed this browser in is preselected. No Passport on the API: dev sign-in only.
-  const sim = useSignInMethod(cfg.isPending ? undefined : passport !== null, cfg.data?.defaultMethod);
-  const method = localLogin ? sim.method : "passport"; // a Passport-only deployment has no second option
-  const showPassport = sim.ready && passport !== null && method === "passport";
-  const showLocal = sim.ready && localLogin && (!passport || method === "password");
-  // the handoff could not complete (second factor, expired password, organisation): show the product's own password form
-  useEffect(() => { if (handoff.reason && sim.ready) sim.choose("password"); }, [handoff.reason, sim.ready]); // eslint-disable-line react-hooks/exhaustive-deps
-  const [slug, setSlug] = useState(() => orgHint ?? "");
-  const [email, setEmail] = useState("");
-  const m = useMutation({
-    mutationFn: () => api<{ token: string }>("/auth/dev-login", { body: { orgSlug: slug.trim(), email: email.trim() } }),
-    onSuccess: (r) => {
-      login(r.token); rememberSignInMethod("password"); rememberSignInOrg(slug.trim());
+  const [loginErr, setLoginErr] = useState<unknown>(null);
+  const signInPassword = async (v: { email: string; password: string; orgSlug?: string }) => {
+    setLoginErr(null);
+    try {
+      const r = await api<{ token: string }>("/auth/login", { body: { email: v.email, password: v.password, ...(v.orgSlug ? { orgSlug: v.orgSlug } : {}) } });
+      login(r.token); rememberSignInMethod("password"); if (v.orgSlug) rememberSignInOrg(v.orgSlug);
       nav("/");
-    },
-  });
+    } catch (x) { setLoginErr(x); throw x; }
+  };
   if (token) return <Navigate to="/" replace />;
   const points = [{ i: FlaskConical, k: "p1" }, { i: ShieldCheck, k: "p2" }, { i: Smartphone, k: "p3" }] as const;
   return (
@@ -91,31 +81,21 @@ export function LoginPage() {
             <KxControlPair><ThemeToggle labels={{ theme: t("theme.label"), light: t("theme.light"), dark: t("theme.dark"), system: t("theme.system") }} /><LanguageToggle onChange={setLang} /></KxControlPair>
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">{t("app.product")}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{localLogin ? t("auth.devNote") : t("auth.passportNote")}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{t("auth.passportNote")}</p>
           {handoffBusy ? <p role="status" data-testid="handoff-busy" className="mt-4 text-sm text-muted-foreground">{t("auth.handoffBusy")}</p> : null}
           {idleNotice ? <p role="status" data-testid="session-idle-notice" className="mt-4 text-sm text-muted-foreground">{t("errors.SESSION_IDLE")}</p> : null}
           {handoffErr ? <p role="alert" data-testid="handoff-error" className="mt-4 text-sm text-destructive">{handoffErr}</p> : null}
           {handoff.reason ? <p role="status" data-testid="handoff-reason" className="mt-4 rounded-lg border border-border bg-muted/50 p-3 text-sm">{t(`auth.handoffReason.${handoff.reason}`, { defaultValue: t("auth.handoffReason.other") })}</p> : null}
-          {!sim.ready ? <div role="status" aria-busy="true" aria-label={t("auth.login")} data-testid="signin-loading" className="mt-6 h-40 animate-pulse rounded-xl bg-muted/60" /> : null}
-          {sim.ready && passport && localLogin ? <SignInMethodTabs className="mt-6" value={method} onChange={sim.choose} labels={{ group: t("auth.method"), passport: t("auth.methodPassport"), password: t("auth.methodPassword") }} /> : null}
-          {showPassport ? (
-            <div role="tabpanel" id="signin-panel-passport" className="mt-6 space-y-3" data-testid="signin-passport-panel">
-              <Button className="w-full" size="lg" data-testid="signin-passport" onClick={() => void startPassportSignIn(passport!, i18n.language)}>{t("auth.passport")}</Button>
-            </div>
-          ) : null}
-          {showLocal ? <Surface className="mt-6 space-y-5 p-5 shadow-kx-2" data-testid="signin-password-panel" {...(passport ? { role: "tabpanel", id: "signin-panel-password" } : {})}>
-            <form className="space-y-5" onSubmit={(e) => { e.preventDefault(); m.mutate(); }}>
-              <Field label={t("auth.org")}>
-                <Input value={slug} onChange={(e) => setSlug(e.target.value)} autoComplete="organization" spellCheck={false} autoCapitalize="none" required />
-              </Field>
-              <Field label={t("auth.email")}>
-                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" required />
-              </Field>
-              <Button type="submit" className="w-full" size="lg" disabled={m.isPending}>{t("auth.login")}</Button>
-              <ErrorNote error={m.error} />
-            </form>
-            <Link to="/onboarding" className="block text-center text-sm font-medium text-primary underline-offset-4 hover:underline">{t("auth.newLab")}</Link>
-          </Surface> : null}
+          <div className="mt-6">
+            <UnifiedSignIn
+              lang={i18n.language.startsWith("ar") ? "ar" : "en"}
+              loading={cfg.isPending}
+              passport={{ available: passport !== null, onStart: () => passport && void startPassportSignIn(passport, i18n.language) }}
+              local={{ enabled: localLogin, showOrg: true, defaultOrg: orgHint ?? "", onSubmit: signInPassword, forgotHref: "/forgot-password" }}
+              error={loginErr ? { code: loginErr instanceof ApiError ? loginErr.code : undefined, message: loginErr instanceof ApiError ? (loginErr.body?.message as string | undefined) : undefined } : null}
+              footer={<Link to="/onboarding" className="text-sm font-medium text-primary underline-offset-4 hover:underline">{t("auth.newLab")}</Link>}
+            />
+          </div>
           <div className="mt-6 text-center"><SwitchProductLink /></div>
         </div>
       </main>

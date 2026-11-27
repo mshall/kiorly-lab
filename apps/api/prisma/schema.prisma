@@ -258,6 +258,8 @@ enum NotificationPurpose {
   SAFETY_ALERT
   /// Invoice email, payment link and payment receipt (no clinical content).
   BILLING
+  /// Password reset link (no clinical content).
+  ACCOUNT_SECURITY
 }
 
 enum SafetyAlertKind {
@@ -397,6 +399,13 @@ model StaffUser {
   /// AUTHORIZED_SIGNATORY / LAB_DIRECTOR: medical validation credentials.
   signatoryLicenceNo String?
   active             Boolean   @default(true)
+  /// scrypt hash (same format and parameters as the Pharmacy). Null = no password (Passport only). Never returned by any API.
+  passwordHash       String?
+  /// Consecutive wrong passwords; reset on success. At the threshold `lockedUntil` is set (LAB_LOGIN_LOCK_THRESHOLD / LAB_LOGIN_LOCK_MINUTES).
+  failedLogins       Int       @default(0)
+  lockedUntil        DateTime?
+  passwordChangedAt  DateTime?
+  lastLoginAt        DateTime?
   /// Home cards this user dismissed (e.g. "kiorex-home"); per user, server-side.
   dismissedCards     Json      @default("[]")
   createdAt          DateTime  @default(now())
@@ -408,6 +417,18 @@ model StaffUser {
   @@unique([orgId, phone])
   @@index([orgId, role])
   @@index([phone])
+}
+
+/// Single-use password reset token (only the SHA-256 hash is stored; valid 30 minutes).
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  staffId   String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([staffId])
 }
 
 /// A staff web session started with Kiorex Passport. The product session JWT carries this row id (`jti`); a back-channel logout (or

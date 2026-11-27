@@ -2,6 +2,7 @@ import { ForbiddenException, Inject, Injectable, Logger, Optional, UnauthorizedE
 import { PrismaService } from "../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import { TokenService } from "./token.service";
+import { appConfig } from "../config/app-config";
 import { PassportSessions } from "./passport-sessions.service";
 import { discover, hasMfa, normalizePhone, passportConfig, verifyPassportAccessToken, verifyPassportIdToken, type PassportClaims, type PassportConfig } from "./passport";
 
@@ -24,7 +25,7 @@ export class PassportService {
   /** Public config for the web login page (nothing secret). */
   async publicConfig() {
     const cfg = passportConfig();
-    const localLogin = process.env.AUTH_MODE !== "oidc";
+    const localLogin = appConfig.localLogin();
     if (!cfg) return { localLogin, passport: null };
     try {
       const d = await discover(cfg.issuer, this.fetchImpl);
