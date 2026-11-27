@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { ScanBarcode } from "lucide-react";
 import { api } from "@/lib/api";
 import { dt } from "@/lib/format";
-import { Button, Input, Modal, Table, Td } from "@/components/ui";
+import { Button, Input, focusOnMount, Modal, Table, Td } from "@/components/ui";
 import { ErrorNote, PageHeader, StatusBadge } from "@/components/common";
 import { PriorityChip, SearchBox, Segmented, priorityRank } from "@/components/kit";
 import { EmptyState, Surface, TableSkeleton, kcn } from "@/brand/ui-kit";
@@ -35,7 +35,7 @@ export function AccessioningPage() {
         <form className="flex flex-wrap items-end gap-3" onSubmit={(e) => { e.preventDefault(); if (scan) find.mutate(scan.trim()); }}>
           <div className="min-w-56 flex-1">
             <label className="mb-1.5 flex items-center gap-2 text-sm font-medium" htmlFor="scan"><ScanBarcode aria-hidden className="size-4 text-primary" />{t("spec.scanOpen")}</label>
-            <Input id="scan" autoFocus value={scan} onChange={(e) => setScan(e.target.value)} placeholder="TL2611200001" autoComplete="off" spellCheck={false} className="h-12 font-mono text-base tracking-wider" />
+            <Input id="scan" ref={focusOnMount} value={scan} onChange={(e) => setScan(e.target.value)} placeholder="TL2611200001" autoComplete="off" spellCheck={false} className="h-12 font-mono text-base tracking-wider" />
           </div>
           <Button type="submit" size="lg" disabled={!scan || find.isPending}>{t("spec.open")}</Button>
         </form>

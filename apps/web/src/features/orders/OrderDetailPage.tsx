@@ -6,7 +6,7 @@ import { api, download } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { dOnly, dt, money, num } from "@/lib/format";
 import { Check, Eye, FileText, Home } from "lucide-react";
-import { Badge, Button, Card, CardTitle, Input, Modal, Table, Td, useToast } from "@/components/ui";
+import { Badge, Button, Card, CardTitle, Input, focusOnMount, Modal, Table, Td, useToast } from "@/components/ui";
 import { Meta, PdfPreview, PriorityChip } from "@/components/kit";
 import { Skeleton, StatusChip, Surface, kcn } from "@/brand/ui-kit";
 import { ErrorNote, PageHeader, ResultValue, StatusBadge } from "@/components/common";
@@ -217,7 +217,7 @@ export function OrderDetailPage() {
         <div className="mt-4 space-y-2"><ErrorNote error={release.error} /><Button disabled={!channels.length || release.isPending} onClick={() => release.mutate()}>{t("order.release")}</Button></div>
       </Modal>
       <Modal open={cancelOpen} onClose={() => setCancelOpen(false)} title={t("order.cancel")}>
-        <div className="space-y-3"><p className="text-sm text-muted-foreground">{t("oe.cancelNote")}</p><Input value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} placeholder={t("oe.reason")} aria-label={t("oe.reason")} autoFocus /><ErrorNote error={cancel.error} /><Button variant="outline" disabled={cancelReason.trim().length < 3 || cancel.isPending} onClick={() => cancel.mutate()}>{t("order.cancel")}</Button></div>
+        <div className="space-y-3"><p className="text-sm text-muted-foreground">{t("oe.cancelNote")}</p><Input value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} placeholder={t("oe.reason")} aria-label={t("oe.reason")} ref={focusOnMount} /><ErrorNote error={cancel.error} /><Button variant="outline" disabled={cancelReason.trim().length < 3 || cancel.isPending} onClick={() => cancel.mutate()}>{t("order.cancel")}</Button></div>
       </Modal>
       <Modal open={Boolean(deliver)} onClose={() => setDeliver(null)} title={t("oe.deliver")}>
         {deliver ? <div className="space-y-3"><p className="text-sm text-muted-foreground">{t("oe.deliverNote")}</p>

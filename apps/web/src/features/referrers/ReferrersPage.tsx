@@ -5,7 +5,7 @@ import { BriefcaseMedical, Copy, Link2, Plus } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { dt, money } from "@/lib/format";
-import { Badge, Button, Card, Field, Input, Modal, Select, Table, Tabs, Td, useToast } from "@/components/ui";
+import { Badge, Button, Card, Field, Input, focusOnMount, Modal, Select, Table, Tabs, Td, useToast } from "@/components/ui";
 import { SearchBox } from "@/components/kit";
 import { EmptyState, StatCard, Surface, TableSkeleton } from "@/brand/ui-kit";
 import { ErrorNote, PageHeader } from "@/components/common";
@@ -109,7 +109,7 @@ export function ReferrersPage() {
       <Modal open={Boolean(form)} onClose={() => setForm(null)} title={form?.id ? t("common.edit") : t("ref.new")} wide>
         {form ? (
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label={t("ref.name")} className="sm:col-span-2"><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} autoFocus /></Field>
+            <Field label={t("ref.name")} className="sm:col-span-2"><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} ref={focusOnMount} /></Field>
             <Field label={t("ref.kind")}><Select value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })}>{["DOCTOR", "CLINIC", "HOSPITAL", "CORPORATE"].map((k) => <option key={k} value={k}>{t(`ref.kinds.${k}`)}</option>)}</Select></Field>
             <Field label={t("ref.specialty")}><Input value={form.specialty} onChange={(e) => setForm({ ...form, specialty: e.target.value })} /></Field>
             <Field label={t("orders.phone")}><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></Field>

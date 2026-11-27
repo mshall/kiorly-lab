@@ -36,7 +36,7 @@ export function Segmented({ items, value, onChange, label, className }: { items:
   const idx = Math.max(0, items.findIndex((i) => i.id === value));
   const move = (d: number) => { const n = (idx + d + items.length) % items.length; onChange(items[n]!.id); refs.current[n]?.focus(); };
   return (
-    <div role="radiogroup" aria-label={label} className={kcn("inline-flex max-w-full flex-wrap gap-1 rounded-xl border border-border/80 bg-muted/60 p-1", className)}
+    <div role="radiogroup" aria-label={label} tabIndex={-1} className={kcn("outline-none inline-flex max-w-full flex-wrap gap-1 rounded-xl border border-border/80 bg-muted/60 p-1", className)}
       onKeyDown={(e) => { const rtl = document.dir === "rtl"; if (e.key === "ArrowRight") { e.preventDefault(); move(rtl ? -1 : 1); } else if (e.key === "ArrowLeft") { e.preventDefault(); move(rtl ? 1 : -1); } else if (e.key === "ArrowDown") { e.preventDefault(); move(1); } else if (e.key === "ArrowUp") { e.preventDefault(); move(-1); } }}>
       {items.map((i, n) => {
         const on = i.id === value;

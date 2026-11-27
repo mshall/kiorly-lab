@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, Minus, RefreshCw, ShieldCheck } from "lucide-react";
-import { Badge, Button, Card, CardTitle, Modal, Spinner, useToast } from "@/components/ui";
+import { Badge, Button, Card, CardTitle, Modal, ScrollRegion, Spinner, useToast } from "@/components/ui";
 import { ErrorNote } from "@/components/common";
 import { useSubInvoices, useSubMutations, useSubPlans, useSubState, type DowngradeImpact, type PlanRow, type SubState } from "./subscription-api";
 import { capabilityRows, hasCap, isFreeEdition, priceOf, usagePercent } from "./subscription-logic";
@@ -13,7 +13,7 @@ function Meter({ value, label, tone }: { value: number; label: string; tone: "br
 function Switch({ checked, onChange, label, disabled }: { checked: boolean; onChange: (v: boolean) => void; label: string; disabled?: boolean }) {
   return <button type="button" role="switch" aria-checked={checked} aria-label={label} disabled={disabled} onClick={() => onChange(!checked)} className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border border-transparent transition-colors disabled:opacity-50 ${checked ? "bg-primary" : "bg-muted"}`}><span aria-hidden className={`size-5 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-[22px] rtl:translate-x-[-22px]" : "translate-x-0.5 rtl:-translate-x-0.5"}`} /></button>;
 }
-const Region = ({ label, children }: { label: string; children: React.ReactNode }) => <div role="region" aria-label={label} tabIndex={0} className="relative overflow-x-auto rounded-lg border border-border">{children}</div>;
+const Region = ({ label, children }: { label: string; children: React.ReactNode }) => <ScrollRegion label={label} className="relative overflow-x-auto rounded-lg border border-border">{children}</ScrollRegion>;
 
 function useFmt() {
   const { i18n } = useTranslation();

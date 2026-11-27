@@ -6,7 +6,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { dt } from "@/lib/format";
 import { printLabel } from "@/lib/print";
-import { Badge, Button, Card, Field, Input, Select } from "@/components/ui";
+import { Badge, Button, Card, Field, Input, focusOnMount, Select } from "@/components/ui";
 import { LabelPreview } from "@/components/kit";
 import { Skeleton } from "@/brand/ui-kit";
 import { ErrorNote, StatusBadge } from "@/components/common";
@@ -64,7 +64,7 @@ export function SpecimenPanel({ specimenId, onChanged }: { specimenId: string; o
           {next.length > 0 ? (
             <Card className="space-y-3">
               <Field label={t("spec.scanLabel")} hint={t("spec.scanHint")}>
-                <Input autoFocus value={scan} onChange={(e) => setScan(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && next.length === 1 && (!needsScan(next[0]!.action) || scan)) act.mutate(next[0]!.action); }} placeholder={s.barcode.replace(/./g, "•")} inputMode="text" aria-label={t("spec.scanLabel")} className="h-12 font-mono text-base tracking-wider" />
+                <Input ref={focusOnMount} value={scan} onChange={(e) => setScan(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && next.length === 1 && (!needsScan(next[0]!.action) || scan)) act.mutate(next[0]!.action); }} placeholder={s.barcode.replace(/./g, "•")} inputMode="text" aria-label={t("spec.scanLabel")} className="h-12 font-mono text-base tracking-wider" />
               </Field>
               <Field label={t("spec.temperature")}><Input type="number" step="0.1" value={temp} onChange={(e) => setTemp(e.target.value)} className="max-w-40" /></Field>
               <div className="flex flex-wrap gap-2">

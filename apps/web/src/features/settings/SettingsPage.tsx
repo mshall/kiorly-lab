@@ -7,7 +7,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { dt } from "@/lib/format";
 import { Check } from "lucide-react";
-import { Badge, Button, Card, CardTitle, Empty, Field, Input, Select, Table, Tabs, Td, useToast } from "@/components/ui";
+import { Badge, Button, Card, CardTitle, Empty, Field, Input, ScrollRegion, Select, Table, Tabs, Td, useToast } from "@/components/ui";
 import { Surface } from "@/brand/ui-kit";
 import { ErrorNote, PageHeader } from "@/components/common";
 import { AuditViewer, ImportTab, TemplatesTab } from "./SettingsExtras";
@@ -117,7 +117,7 @@ export function SettingsPage() {
         return (
           <Surface className="overflow-hidden">
             <p className="border-b border-border/70 px-4 py-3 text-xs text-muted-foreground">{t("ux.settings.rbacNote")}</p>
-            <div tabIndex={0} role="region" aria-label={t("set.rbac")} className="max-h-[70vh] overflow-auto">
+            <ScrollRegion label={t("set.rbac")} className="max-h-[70vh] overflow-auto">
               <table className="kx-rbac w-full border-separate border-spacing-0 text-xs">
                 <thead>
                   <tr>
@@ -137,7 +137,7 @@ export function SettingsPage() {
                   </tbody>
                 ))}
               </table>
-            </div>
+            </ScrollRegion>
           </Surface>
         );
       })() : null}

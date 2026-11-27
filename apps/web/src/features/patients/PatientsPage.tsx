@@ -6,7 +6,7 @@ import { GitMerge, UserPlus } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { dOnly } from "@/lib/format";
-import { Badge, Button, Card, Field, Input, Modal, Select, Table, Tabs, Td, Textarea, useToast } from "@/components/ui";
+import { Badge, Button, Card, Field, Input, focusOnMount, Modal, Select, Table, Tabs, Td, Textarea, useToast } from "@/components/ui";
 import { SearchBox } from "@/components/kit";
 import { EmptyState, Surface, TableSkeleton } from "@/brand/ui-kit";
 import { ErrorNote, PageHeader } from "@/components/common";
@@ -72,7 +72,7 @@ export function PatientsPage() {
       )}
       <Modal open={open} onClose={() => setOpen(false)} title={t("pat.new")} wide>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label={t("orders.fullName")} className="sm:col-span-2"><Input value={f.fullName} onChange={(e) => setF({ ...f, fullName: e.target.value })} autoFocus /></Field>
+          <Field label={t("orders.fullName")} className="sm:col-span-2"><Input value={f.fullName} onChange={(e) => setF({ ...f, fullName: e.target.value })} ref={focusOnMount} /></Field>
           <Field label={t("orders.dob")}><Input type="date" value={f.dateOfBirth} onChange={(e) => setF({ ...f, dateOfBirth: e.target.value })} /></Field>
           <Field label={t("orders.sex")}><Select value={f.sex} onChange={(e) => setF({ ...f, sex: e.target.value })}>{["F", "M", "OTHER", "UNKNOWN"].map((s) => <option key={s} value={s}>{t(`orders.sexes.${s}`)}</option>)}</Select></Field>
           <Field label={t("orders.phone")}><Input value={f.phone} inputMode="tel" onChange={(e) => setF({ ...f, phone: e.target.value })} /></Field>

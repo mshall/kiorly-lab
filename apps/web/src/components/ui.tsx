@@ -25,10 +25,19 @@ export function Button({ className, variant, size, ...p }: ButtonHTMLAttributes<
 }
 
 const field = "w-full rounded-lg border border-input bg-card px-3 text-sm shadow-kx-1 transition-[border-color,box-shadow] duration-150 placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 aria-invalid:border-[hsl(var(--danger-text))]";
+/** Ref callback that focuses the element once, when it mounts (the keyboard-friendly replacement for the autoFocus attribute; a module-level function so React calls it on mount only, never on re-render). */
+export const focusOnMount = (el: HTMLElement | null) => { el?.focus(); };
+
+/** Scrollable area that keyboard users can reach (WCAG 2.1.1: a scroll container needs focus to be scrolled with the arrow keys), exposed as a labelled region. */
+export function ScrollRegion({ label, className, children }: { label: string; className?: string; children: ReactNode }) {
+  // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- deliberate: a scrollable region must be focusable so the keyboard can scroll it
+  return <div tabIndex={0} role="region" aria-label={label} className={className}>{children}</div>;
+}
+
 export const Input = ({ className, ...p }: InputHTMLAttributes<HTMLInputElement>) => <input className={cn(field, "h-10", className)} {...p} />;
 export const Textarea = ({ className, ...p }: TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea className={cn(field, "py-2", className)} {...p} />;
 export const Select = ({ className, ...p }: SelectHTMLAttributes<HTMLSelectElement>) => <select className={cn(field, "h-10", className)} {...p} />;
-export const Label = ({ className, as, ...p }: React.LabelHTMLAttributes<HTMLLabelElement> & { as?: "span" }) => (as === "span" ? <span className={cn("mb-1 block text-xs font-medium text-muted-foreground", className)}>{p.children}</span> : <label className={cn("mb-1 block text-xs font-medium text-muted-foreground", className)} {...p} />);
+export const Label = ({ className, as, ...p }: React.LabelHTMLAttributes<HTMLLabelElement> & { as?: "span" }) => (as === "span" ? <span className={cn("mb-1 block text-xs font-medium text-muted-foreground", className)}>{p.children}</span> : <label htmlFor={p.htmlFor} className={cn("mb-1 block text-xs font-medium text-muted-foreground", className)} {...p} />);
 export function Field({ label, children, hint, error, className }: { label: string; children: ReactNode; hint?: string; error?: ReactNode; className?: string }) {
   // implicit label association (control inside <label>) so screen readers and tests resolve the control by its label
   return (
@@ -43,7 +52,7 @@ export function Field({ label, children, hint, error, className }: { label: stri
 }
 
 export const Card = ({ className, ...p }: React.HTMLAttributes<HTMLDivElement>) => <div className={cn("rounded-xl border border-border/80 bg-card p-4 shadow-kx-1", className)} {...p} />;
-export const CardTitle = ({ className, ...p }: React.HTMLAttributes<HTMLHeadingElement>) => <h3 className={cn("mb-3 text-sm font-semibold", className)} {...p} />;
+export const CardTitle = ({ className, ...p }: React.HTMLAttributes<HTMLHeadingElement>) => <h3 className={cn("mb-3 text-sm font-semibold", className)} {...p}>{p.children}</h3>;
 
 const tones = {
   ok: "bg-[hsl(var(--success)/0.12)] text-[hsl(var(--success))] ring-1 ring-inset ring-[hsl(var(--success)/0.25)]",
@@ -84,8 +93,8 @@ export function Modal({ open, onClose, title, children, wide, xl }: { open: bool
   }, [open, onClose]);
   if (!open) return null;
   return (
-    <div className="kx-modal-backdrop fixed inset-0 z-50 flex items-end justify-center bg-(--kx-overlay) backdrop-blur-[2px] p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={title} onClick={onClose}>
-      <div ref={box} tabIndex={-1} className={cn("kx-modal max-h-[92vh] w-full overflow-auto rounded-t-2xl bg-card p-5 shadow-kx-4 focus:outline-hidden sm:rounded-2xl", xl ? "sm:max-w-5xl" : wide ? "sm:max-w-3xl" : "sm:max-w-lg")} onClick={(e) => e.stopPropagation()}>
+    <div className="kx-modal-backdrop fixed inset-0 z-50 flex items-end justify-center bg-(--kx-overlay) backdrop-blur-[2px] p-0 sm:items-center sm:p-4" role="presentation" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div ref={box} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1} className={cn("kx-modal max-h-[92vh] w-full overflow-auto rounded-t-2xl bg-card p-5 shadow-kx-4 focus:outline-hidden sm:rounded-2xl", xl ? "sm:max-w-5xl" : wide ? "sm:max-w-3xl" : "sm:max-w-lg")}>
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">{title}</h2>
           <Button variant="ghost" size="icon" onClick={onClose} aria-label="close"><X className="h-4 w-4" /></Button>
@@ -110,14 +119,14 @@ export function Tabs({ tabs, value, onChange }: { tabs: { id: string; label: str
 
 export function Table({ head, children, className }: { head: ReactNode[]; children: ReactNode; className?: string }) {
   return (
-    <div tabIndex={0} role="region" aria-label={head.filter((h) => typeof h === "string" && h).slice(0, 2).join(" / ") || "table"} className={cn("kx-sticky-head kx-table-wrap overflow-auto rounded-xl border border-border/80 shadow-kx-1", className)}>
+    <ScrollRegion label={head.filter((h) => typeof h === "string" && h).slice(0, 2).join(" / ") || "table"} className={cn("kx-sticky-head kx-table-wrap overflow-auto rounded-xl border border-border/80 shadow-kx-1", className)}>
       <table className="kx-table w-full text-sm">
         <thead className="bg-muted/60 text-xs uppercase tracking-wide text-muted-foreground rtl:normal-case rtl:tracking-normal">
           <tr>{head.map((h, i) => <th key={i} className="whitespace-nowrap px-3 py-2.5 text-start text-[11px] font-semibold">{h}</th>)}</tr>
         </thead>
         <tbody className="divide-y divide-border bg-card">{children}</tbody>
       </table>
-    </div>
+    </ScrollRegion>
   );
 }
 export const Td = ({ className, ...p }: React.TdHTMLAttributes<HTMLTableCellElement>) => <td className={cn("px-3 py-2.5 align-middle", className)} {...p} />;

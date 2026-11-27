@@ -6,7 +6,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { setLang } from "@/lib/i18n";
 import { ApiError } from "@/lib/api";
-import { Button, Input } from "@/components/ui";
+import { Button, Input, focusOnMount } from "@/components/ui";
 import { ErrorNote } from "@/components/common";
 
 async function pub<T>(path: string, method = "GET", body?: unknown): Promise<T> {
@@ -46,7 +46,7 @@ export function PublicReportPage() {
             <p className="text-sm text-muted-foreground">{t("public.intro", { phone: info.data.maskedPhone ?? "" })}</p>
             {!sent ? <Button size="lg" className="w-full" onClick={() => send.mutate()} disabled={send.isPending}><ShieldCheck aria-hidden className="size-4" />{t("public.sendCode")}</Button> : (
               <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); if (otp.length === 6) verify.mutate(); }}>
-                <Input inputMode="numeric" autoComplete="one-time-code" autoFocus maxLength={6} dir="ltr" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))} placeholder="••••••" aria-label={t("public.code")} className="h-14 text-center font-mono text-2xl tracking-[0.5em] tabular-nums" />
+                <Input inputMode="numeric" autoComplete="one-time-code" ref={focusOnMount} maxLength={6} dir="ltr" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))} placeholder="••••••" aria-label={t("public.code")} className="h-14 text-center font-mono text-2xl tracking-[0.5em] tabular-nums" />
                 <Button type="submit" size="lg" className="w-full" disabled={otp.length !== 6 || verify.isPending}><Download aria-hidden className="size-4" />{t("public.download")}</Button>
                 <button type="button" disabled={wait > 0 || send.isPending} onClick={() => send.mutate()} className="block w-full text-center text-sm font-medium text-primary underline-offset-4 hover:underline disabled:text-muted-foreground disabled:no-underline">{wait > 0 ? t("ux.public.resendIn", { n: wait }) : t("ux.public.resend")}</button>
               </form>

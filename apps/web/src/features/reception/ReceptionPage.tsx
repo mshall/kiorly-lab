@@ -6,7 +6,7 @@ import { CalendarPlus, MonitorPlay, PhoneCall, Ticket } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { dt, today } from "@/lib/format";
-import { Badge, Button, Card, CardTitle, Field, Input, Modal, Select, Table, Tabs, Td, useToast } from "@/components/ui";
+import { Badge, Button, Card, CardTitle, Field, Input, focusOnMount, Modal, Select, Table, Tabs, Td, useToast } from "@/components/ui";
 import { PriorityChip } from "@/components/kit";
 import { EmptyState, StatCard, Surface } from "@/brand/ui-kit";
 import { ErrorNote, PageHeader, StatusBadge } from "@/components/common";
@@ -98,7 +98,7 @@ export function ReceptionPage() {
       )}
       <Modal open={Boolean(book)} onClose={() => setBook(null)} title={t("rec.book")}>
         {book ? <div className="space-y-3">
-          <Field label={t("orders.fullName")}><Input value={book.patientName} onChange={(e) => setBook({ ...book, patientName: e.target.value })} autoFocus /></Field>
+          <Field label={t("orders.fullName")}><Input value={book.patientName} onChange={(e) => setBook({ ...book, patientName: e.target.value })} ref={focusOnMount} /></Field>
           <div className="grid grid-cols-2 gap-3"><Field label={t("orders.phone")}><Input value={book.phone} onChange={(e) => setBook({ ...book, phone: e.target.value })} /></Field><Field label={t("common.time")}><Input type="time" value={book.time} onChange={(e) => setBook({ ...book, time: e.target.value })} /></Field></div>
           <Field label={t("rec.kind")}><Select value={book.kind} onChange={(e) => setBook({ ...book, kind: e.target.value })}>{["WALK_IN", "PACKAGE", "FOLLOW_UP"].map((k) => <option key={k} value={k}>{t(`rec.kinds.${k}`)}</option>)}</Select></Field>
           <Field label={t("orders.tests")} hint={t("rec.testsHint")}><Input value={book.tests} onChange={(e) => setBook({ ...book, tests: e.target.value })} /></Field>

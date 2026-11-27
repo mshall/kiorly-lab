@@ -5,7 +5,7 @@ import { Box, Truck } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { dt } from "@/lib/format";
-import { Badge, Button, Field, Input, Modal, Select, Table, Tabs, Td, useToast } from "@/components/ui";
+import { Badge, Button, Field, Input, focusOnMount, Modal, Select, Table, Tabs, Td, useToast } from "@/components/ui";
 import { EmptyState } from "@/brand/ui-kit";
 import { ErrorNote, PageHeader } from "@/components/common";
 
@@ -104,7 +104,7 @@ export function StoragePage() {
       </Modal>
       <Modal open={Boolean(newUnit)} onClose={() => setNewUnit(null)} title={t("sto.newUnit")}>
         {newUnit ? <div className="space-y-3">
-          <Field label={t("common.name")}><Input value={newUnit.name} onChange={(e) => setNewUnit({ ...newUnit, name: e.target.value })} autoFocus /></Field>
+          <Field label={t("common.name")}><Input value={newUnit.name} onChange={(e) => setNewUnit({ ...newUnit, name: e.target.value })} ref={focusOnMount} /></Field>
           <Field label={t("sto.kind")}><Select value={newUnit.kind} onChange={(e) => setNewUnit({ ...newUnit, kind: e.target.value })}>{KINDS.map((k) => <option key={k} value={k}>{t(`sto.kinds.${k}`)}</option>)}</Select></Field>
           <div className="grid grid-cols-2 gap-3"><Field label={t("sto.rows")}><Input type="number" min="1" max="26" value={newUnit.rows} onChange={(e) => setNewUnit({ ...newUnit, rows: e.target.value })} /></Field><Field label={t("sto.cols")}><Input type="number" min="1" max="99" value={newUnit.cols} onChange={(e) => setNewUnit({ ...newUnit, cols: e.target.value })} /></Field></div>
           <ErrorNote error={mkUnit.error} /><Button disabled={!newUnit.name || mkUnit.isPending} onClick={() => mkUnit.mutate()}>{t("common.save")}</Button>
