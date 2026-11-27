@@ -109,7 +109,8 @@ test.describe("layout and accessibility", () => {
         await expect(page.locator("html")).toHaveAttribute("dir", lang === "ar" ? "rtl" : "ltr");
         const themeBtn = page.locator('[data-kx-control="theme"]').first();
         if (theme === "dark" && (await themeBtn.getAttribute("data-theme-mode")) !== "dark") await themeBtn.click();
-        if (theme === "dark") { await expect(themeBtn).toHaveAttribute("data-theme-mode", "dark"); await page.waitForTimeout(500); } // let the 240 ms theme cross-fade finish before axe measures contrast
+        if (theme === "dark") await expect(themeBtn).toHaveAttribute("data-theme-mode", "dark");
+        await page.waitForTimeout(500); // let the 240 ms theme and language cross-fade finish before axe measures contrast (also in light: flaky colour-contrast otherwise)
         await expect(page.getByTestId("signin-method")).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
         const r = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
