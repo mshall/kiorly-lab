@@ -91,7 +91,7 @@ export function LoginPage() {
               lang={i18n.language.startsWith("ar") ? "ar" : "en"}
               loading={cfg.isPending}
               passport={{ available: passport !== null, onStart: () => passport && void startPassportSignIn(passport, i18n.language) }}
-              local={{ enabled: localLogin, showOrg: true, defaultOrg: orgHint ?? "", onSubmit: signInPassword, forgotHref: "/forgot-password" }}
+              local={{ enabled: localLogin, showOrg: true, defaultOrg: orgHint && orgHint !== window.location.hostname.split(".")[0] ? orgHint : "", onSubmit: signInPassword, forgotHref: "/forgot-password" }}
               error={loginErr ? { code: loginErr instanceof ApiError ? loginErr.code : undefined, message: loginErr instanceof ApiError ? (loginErr.body?.message as string | undefined) : undefined } : null}
               footer={<Link to="/onboarding" className="text-sm font-medium text-primary underline-offset-4 hover:underline">{t("auth.newLab")}</Link>}
             />

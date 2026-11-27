@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ButtonHTMLAttributes, type ComponentProps, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/cn";
 import { EmptyState } from "@/brand/ui-kit";
 import { PulseLine } from "@/brand/components";
@@ -119,11 +120,12 @@ export function Tabs({ tabs, value, onChange }: { tabs: { id: string; label: str
 }
 
 export function Table({ head, children, className }: { head: ReactNode[]; children: ReactNode; className?: string }) {
+  const { t } = useTranslation();
   return (
     <ScrollRegion label={head.filter((h) => typeof h === "string" && h).slice(0, 2).join(" / ") || "table"} className={cn("kx-sticky-head kx-table-wrap overflow-auto rounded-xl border border-border/80 shadow-kx-1", className)}>
       <table className="kx-table w-full text-sm">
         <thead className="bg-muted/60 text-xs uppercase tracking-wide text-muted-foreground rtl:normal-case rtl:tracking-normal">
-          <tr>{head.map((h, i) => <th key={i} className="whitespace-nowrap px-3 py-2.5 text-start text-[11px] font-semibold">{h}</th>)}</tr>
+          <tr>{head.map((h, i) => <th key={i} className="whitespace-nowrap px-3 py-2.5 text-start text-[11px] font-semibold">{h || <span className="sr-only">{t("common.actions")}</span>}</th>)}</tr>
         </thead>
         <tbody className="divide-y divide-border bg-card">{children}</tbody>
       </table>

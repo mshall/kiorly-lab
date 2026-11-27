@@ -48,6 +48,7 @@
     "integrated": "Integrated"
   },
   "common": {
+    "actions": "Actions",
     "add": "Add",
     "all": "All",
     "change": "Change",
