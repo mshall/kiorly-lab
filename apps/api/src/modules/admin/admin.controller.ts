@@ -8,7 +8,7 @@ import { AdminService } from "./admin.service";
 const Login = z.object({ orgSlug: z.string().min(1), email: z.string().email() }).strict();
 const Onboard = z.object({
   name: z.string().min(2), slug: z.string().regex(/^[a-z0-9-]{3,40}$/), labName: z.string().min(2), labCode: z.string().regex(/^[A-Za-z0-9]{2,6}$/), ownerName: z.string().min(2), ownerEmail: z.string().email(),
-  edition: z.enum(["LITE", "PRO", "CHAIN"]).optional(), marketCode: z.string().length(2).optional(), loadStarterCatalogue: z.boolean().optional(), signatoryLicenceNo: z.string().optional(),
+  edition: z.enum(["LITE", "PRO", "CHAIN"]).optional(), marketCode: z.string().regex(/^[A-Za-z]{2}$/, "marketCode must be a two-letter country code").optional(), loadStarterCatalogue: z.boolean().optional(), signatoryLicenceNo: z.string().optional(),
 }).strict();
 const Role = z.enum(["OWNER", "LAB_DIRECTOR", "AUTHORIZED_SIGNATORY", "TECHNOLOGIST", "PHLEBOTOMIST", "RECEPTION", "BRANCH_MANAGER", "SUPERVISOR", "FINANCE"]);
 const Staff = z.object({ email: z.string().email(), displayName: z.string().min(2), role: Role, labIds: z.array(z.string()).optional(), signatoryLicenceNo: z.string().optional(), subject: z.string().optional(), phone: z.string().max(32).optional() }).strict();

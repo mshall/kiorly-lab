@@ -71,10 +71,11 @@ export class AdminService {
   /** Self-serve tenant creation (dev/pilot). Gated by flag lab.module ("No new sign-ups" when OFF). Production sign-up goes through Kiorex Account (NH-LB-016). */
   async onboard(b: { name: string; slug: string; labName: string; labCode: string; ownerName: string; ownerEmail: string; edition?: Edition; marketCode?: string; loadStarterCatalogue?: boolean; signatoryLicenceNo?: string }) {
     this.devOnly();
-    assertFlagOn(this.flags, "lab.module", { market: b.marketCode ?? "EG" });
+    const market = (b.marketCode ?? "EG").toUpperCase(); // fixed for life once created (founder decision A, 27 Nov 2026): no API changes it afterwards
+    assertFlagOn(this.flags, "lab.module", { market });
     if (await this.prisma.tenant.findUnique({ where: { slug: b.slug } })) throw new ConflictException({ code: "SLUG_TAKEN" });
     const out = await this.prisma.$transaction(async (tx) => {
-      const t = await tx.tenant.create({ data: { name: b.name, slug: b.slug, edition: b.edition ?? "LITE", marketCode: b.marketCode ?? "EG", integrationMode: "STANDALONE" } });
+      const t = await tx.tenant.create({ data: { name: b.name, slug: b.slug, edition: b.edition ?? "LITE", marketCode: market, integrationMode: "STANDALONE" } });
       const lab = await tx.lab.create({ data: { orgId: t.id, name: b.labName, code: b.labCode.toUpperCase() } });
       const owner = await tx.staffUser.create({ data: { orgId: t.id, email: b.ownerEmail.toLowerCase(), displayName: b.ownerName, role: "OWNER", signatoryLicenceNo: b.signatoryLicenceNo } });
       await tx.priceList.create({ data: { orgId: t.id, name: "Standard", isDefault: true, currency: t.currency } });
