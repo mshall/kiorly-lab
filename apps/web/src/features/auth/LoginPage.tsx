@@ -1,9 +1,9 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { KiorlyBrandLockup, KiorlyFootText, KxControlPair, LanguageToggle, Pulse, ThemeToggle, Surface, Skeleton, kcn } from "@/brand/ui-kit";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { KiorlyBrandLockup, KiorlyFootText, KxControlPair, LanguageToggle, Pulse, ThemeToggle, Surface } from "@/brand/ui-kit";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Check, FlaskConical, ShieldCheck, Smartphone } from "lucide-react";
+import { FlaskConical, ShieldCheck, Smartphone } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { setLang } from "@/lib/i18n";
@@ -14,14 +14,10 @@ import { currentOrgHint, rememberSignInOrg } from "@/lib/sign-in-default";
 import { SwitchProductLink } from "@/components/switch-product-link";
 import { SignInMethodTabs } from "@/components/sign-in-method-tabs";
 import { useSignInMethod } from "@/components/use-sign-in-method";
-import { Button, Field, Select } from "@/components/ui";
+import { Button, Field, Input } from "@/components/ui";
 import { ErrorNote } from "@/components/common";
 import { KiorexLogo } from "@/brand/components";
 import { KxBrandBackdrop } from "@/brand/components/web/KxBrandBackdrop";
-
-// DEV ONLY quick-pick test users. Keep the condition inline: Vite folds `import.meta.env.DEV` to false in production builds, which drops the
-// dynamic import and the whole ../../dev folder (asserted by scripts/check-no-dev-test-users.mjs).
-const DevTestUsers = import.meta.env.DEV && import.meta.env.VITE_DEV_TEST_USERS !== "false" ? lazy(() => import("@/dev/dev-test-users")) : null;
 
 /** Dev sign-in (AUTH_MODE=dev). Production uses Kiorex Account OIDC (NH-LB-016); the app never stores passwords. */
 export function LoginPage() {
@@ -63,21 +59,14 @@ export function LoginPage() {
   const showLocal = sim.ready && localLogin && (!passport || method === "password");
   // the handoff could not complete (second factor, expired password, organisation): show the product's own password form
   useEffect(() => { if (handoff.reason && sim.ready) sim.choose("password"); }, [handoff.reason, sim.ready]); // eslint-disable-line react-hooks/exhaustive-deps
-  const orgs = useQuery({ queryKey: ["dev-orgs"], queryFn: () => api<any[]>("/auth/dev/orgs"), retry: false, enabled: localLogin });
-  const [slug, setSlug] = useState("");
+  const [slug, setSlug] = useState(() => orgHint ?? "");
   const [email, setEmail] = useState("");
-  const org = orgs.data?.find((o) => o.slug === (slug || orgs.data?.[0]?.slug));
-  const chosen = email || org?.staff?.[0]?.email;
   const m = useMutation({
-    mutationFn: () => api<{ token: string }>("/auth/dev-login", { body: { orgSlug: org?.slug, email: chosen } }),
+    mutationFn: () => api<{ token: string }>("/auth/dev-login", { body: { orgSlug: slug.trim(), email: email.trim() } }),
     onSuccess: (r) => {
-      login(r.token); rememberSignInMethod("password"); rememberSignInOrg(org?.slug);
+      login(r.token); rememberSignInMethod("password"); rememberSignInOrg(slug.trim());
       nav("/");
     },
-  });
-  const quick = useMutation({
-    mutationFn: (v: { slug: string; email: string }) => api<{ token: string }>("/auth/dev-login", { body: { orgSlug: v.slug, email: v.email } }),
-    onSuccess: (r) => { login(r.token); rememberSignInMethod("password"); nav("/"); },
   });
   if (token) return <Navigate to="/" replace />;
   const points = [{ i: FlaskConical, k: "p1" }, { i: ShieldCheck, k: "p2" }, { i: Smartphone, k: "p3" }] as const;
@@ -115,38 +104,19 @@ export function LoginPage() {
             </div>
           ) : null}
           {showLocal ? <Surface className="mt-6 space-y-5 p-5 shadow-kx-2" data-testid="signin-password-panel" {...(passport ? { role: "tabpanel", id: "signin-panel-password" } : {})}>
-            {orgs.isLoading ? <div role="status" aria-busy="true" className="space-y-3"><Skeleton className="h-10" /><Skeleton className="h-16" /><Skeleton className="h-16" /></div> : null}
-            {orgs.isError ? <ErrorNote error={orgs.error} /> : null}
-            {orgs.data?.length === 0 ? <p className="text-sm">{t("auth.noOrgs")}</p> : null}
-            {org ? (
-              <>
-                <Field label={t("auth.org")}>
-                  <Select value={org.slug ?? ""} onChange={(e) => { setSlug(e.target.value); setEmail(""); }}>{orgs.data!.map((o) => <option key={o.slug} value={o.slug}>{o.name}</option>)}</Select>
-                </Field>
-                <div role="radiogroup" aria-label={t("auth.user")} className="space-y-2">
-                  <div className="text-xs font-medium text-muted-foreground">{t("auth.user")}</div>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {org.staff.map((s: any) => {
-                      const on = s.email === chosen;
-                      return (
-                        <button key={s.email} type="button" role="radio" aria-checked={on} onClick={() => setEmail(s.email)} onDoubleClick={() => m.mutate()}
-                          className={kcn("flex min-h-14 items-center gap-3 rounded-xl border px-3 py-2 text-start transition-[border-color,box-shadow,background-color] duration-150 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring", on ? "border-primary bg-accent shadow-[0_0_0_1px_hsl(var(--primary))]" : "border-border bg-card hover:bg-muted/60")}>
-                          <span aria-hidden className={kcn("grid size-9 shrink-0 place-items-center rounded-full text-sm font-semibold", on ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>{on ? <Check className="size-4" /> : s.displayName.trim().slice(0, 1).toUpperCase()}</span>
-                          <span className="min-w-0"><span dir="auto" className="block truncate text-sm font-medium">{s.displayName}</span><span className="block truncate text-xs text-muted-foreground">{t(`role.${s.role}`)}</span></span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-                <Button className="w-full" size="lg" onClick={() => m.mutate()} disabled={m.isPending}>{t("auth.login")}</Button>
-                <ErrorNote error={m.error} />
-              </>
-            ) : null}
+            <form className="space-y-5" onSubmit={(e) => { e.preventDefault(); m.mutate(); }}>
+              <Field label={t("auth.org")}>
+                <Input value={slug} onChange={(e) => setSlug(e.target.value)} autoComplete="organization" spellCheck={false} autoCapitalize="none" required />
+              </Field>
+              <Field label={t("auth.email")}>
+                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" required />
+              </Field>
+              <Button type="submit" className="w-full" size="lg" disabled={m.isPending}>{t("auth.login")}</Button>
+              <ErrorNote error={m.error} />
+            </form>
             <Link to="/onboarding" className="block text-center text-sm font-medium text-primary underline-offset-4 hover:underline">{t("auth.newLab")}</Link>
           </Surface> : null}
           <div className="mt-6 text-center"><SwitchProductLink /></div>
-          {DevTestUsers ? <Suspense fallback={null}><DevTestUsers busy={quick.isPending} onPick={(slug, email) => quick.mutate({ slug, email })} /></Suspense> : null}
-          {DevTestUsers ? <ErrorNote error={quick.error} /> : null}
         </div>
       </main>
     </div>

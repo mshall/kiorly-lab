@@ -1,6 +1,6 @@
 # Kiorly Lab test guide (DEV ONLY)
 
-> **DEV ONLY / synthetic.** All names, phones, e-mails, passwords, OTPs and TOTP seeds below are fake values for the local stack; they are refused when `NODE_ENV=production` and the sign-in quick-pick ("Test users (dev only)") is not in production builds. Providers are mocked (dev inbox / logs, PSP `sandbox-fake`, video `mock`). No tax-authority integration.
+> **DEV ONLY / synthetic.** All names, phones, e-mails, passwords, OTPs and TOTP seeds below are fake values for the local stack; they are refused when `NODE_ENV=production`; the web app shows no test-user panel or demo hints in any build. Providers are mocked (dev inbox / logs, PSP `sandbox-fake`, video `mock`). No tax-authority integration.
 > This guide is the repo's slice of the workspace guide `TEST_GUIDE.md` (parent folder `kiorex-v2/`, not part of this repository). Facts verified against the seeds and dev databases on 23 Nov 2026.
 
 ## Run the stack and seed it
@@ -21,9 +21,9 @@ cd apps/web && npm run check:dev-test-users
 
 URL: http://localhost:5193/login (API http://localhost:3200/api/v1, `POST /auth/dev-login {orgSlug,email}`, AUTH_MODE=dev only).
 
-## The Test users (dev only) panel
+## No test users in the UI
 
-Below the login card (`apps/web/src/dev/`, lazy behind `import.meta.env.DEV`; hide with `VITE_DEV_TEST_USERS=false`): all 27 dev-logins (3 labs x 9 roles), one click signs in (no password). The older org picker stays above it. Absent from production builds (`scripts/check-no-dev-test-users.mjs`, also run by `src/dev/dev-test-users.node.test.ts`).
+The web app shows no test-user panel, quick-pick or demo hints in any build. In dev auth mode the sign-in form takes the lab slug and e-mail you type (seeded values are in the Test users section below, or sign in via `POST /auth/dev-login`); `scripts/check-no-dev-test-users.mjs` (also `src/lib/no-demo-ui.node.test.ts`) asserts none of them is in the production or development bundle.
 
 ## Test users: 3.5 Kiorly Lab web (:5193, dev-login, no password)
 
