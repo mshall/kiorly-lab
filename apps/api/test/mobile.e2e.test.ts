@@ -19,6 +19,20 @@ describe("Kiorly mobile API", () => {
   });
   after(async () => t.close());
 
+  it("GET /worklist?specimenId= returns exactly that processing specimen with its analytes (the phone opens one specimen even when the list is capped)", async () => {
+    const f = await makeOrder(t, pro, ["GLU"], { patient: { fullName: "Worklist Pt", dateOfBirth: "1990-01-01", sex: "F", phone: "+201000009921" } });
+    await toProcessing(t, pro, f);
+    const one = await call(t, "GET", `/worklist?status=PROCESSING&specimenId=${f.specimens[0]!.id}`, { token: pro.tokens.TECHNOLOGIST, headers: APP });
+    assert.equal(one.status, 200);
+    assert.equal(one.body.length, 1);
+    assert.equal(one.body[0].id, f.specimens[0]!.id);
+    assert.ok(one.body[0].items[0].analytes.length > 0);
+    assert.equal(one.body[0].items[0].analytes[0].valueType !== undefined, true);
+    const none = await call(t, "GET", "/worklist?status=PROCESSING&specimenId=does-not-exist", { token: pro.tokens.TECHNOLOGIST, headers: APP });
+    assert.equal(none.status, 200); assert.deepEqual(none.body, []);
+    assert.equal((await call(t, "GET", `/worklist?specimenId=${f.specimens[0]!.id}`, { token: pro.tokens.PHLEBOTOMIST, headers: APP })).status, 403, "results.read is still required");
+  });
+
   it("entitlement mobile_staff_app by plan: PRO/CHAIN on, LITE off (PLAN_BELOW_PRO), safety-alerts-only fallback", async () => {
     const p = await call(t, "GET", "/mobile/bootstrap", { token: pro.tokens.OWNER });
     assert.equal(p.status, 200);

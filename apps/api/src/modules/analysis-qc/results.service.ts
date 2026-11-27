@@ -419,7 +419,7 @@ export class ResultsService {
   }
 
   /** Technologist worklist: specimens in processing with their expected analytes and entered results. */
-  async worklist(orgId: string, labIds: string[], status: "PROCESSING" | "RECEIVED" = "PROCESSING", f: { section?: LabSection; instrumentId?: string; priority?: string } = {}) {
+  async worklist(orgId: string, labIds: string[], status: "PROCESSING" | "RECEIVED" = "PROCESSING", f: { section?: LabSection; instrumentId?: string; priority?: string; specimenId?: string } = {}) {
     let sections: LabSection[] | undefined = f.section ? [f.section] : undefined;
     if (f.instrumentId) {
       const inst = await this.prisma.instrument.findFirst({ where: { id: f.instrumentId, orgId }, select: { sections: true } });
@@ -427,7 +427,7 @@ export class ResultsService {
       if (inst.sections.length) sections = sections ? sections.filter((x) => inst.sections.includes(x)) : inst.sections;
     }
     const specimens = await this.prisma.specimen.findMany({
-      where: { orgId, status, ...(labIds.length ? { labId: { in: labIds } } : {}), ...(f.priority ? { order: { priority: f.priority } } : {}) },
+      where: { orgId, status, ...(labIds.length ? { labId: { in: labIds } } : {}), ...(f.priority ? { order: { priority: f.priority } } : {}), ...(f.specimenId ? { id: f.specimenId } : {}) },
       include: { order: { select: { id: true, orderNumber: true, priority: true, patient: { select: { fullName: true, sex: true, dateOfBirth: true } } } } }, orderBy: { createdAt: "asc" }, take: 200,
     });
     const items = await this.prisma.orderItem.findMany({
