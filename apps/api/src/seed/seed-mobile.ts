@@ -6,6 +6,7 @@ import { AppModule } from "../app.module";
 import type { AuthUser } from "../auth/auth.types";
 import { loadEnv } from "../config/env";
 import { assertDemoSeedAllowed } from "../common/demo-seed-guard";
+import { tagDemoRows } from "../common/demo-data-tag";
 import { StarterCatalogueService } from "../modules/admin/starter-catalogue.service";
 import { OrdersService } from "../modules/orders/orders.service";
 import { QcService } from "../modules/analysis-qc/qc.service";
@@ -110,7 +111,7 @@ async function main() {
   }
 }
 
-main().catch((e) => {
+main().then(() => tagDemoRows("seed-mobile")).catch((e) => {
   console.error(e);
   process.exit(1);
 });

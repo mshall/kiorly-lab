@@ -19,6 +19,7 @@ import { STARTER_ANALYTES } from "../modules/admin/starter-catalogue";
 import { seal } from "../common/secret-box";
 import { PARTNER_DEV_DEFAULTS } from "@kiorex/contracts";
 import { seedLis } from "./seed-lis";
+import { tagDemoRows } from "../common/demo-data-tag";
 
 /**
  * SYNTHETIC demo data (no real patients, labs or analyzers). Idempotent: skips when the demo tenant exists.
@@ -200,7 +201,7 @@ async function main() {
   await app.close();
 }
 
-main().catch((e) => {
+main().then(() => tagDemoRows("seed")).catch((e) => {
   console.error(e);
   process.exit(1);
 });

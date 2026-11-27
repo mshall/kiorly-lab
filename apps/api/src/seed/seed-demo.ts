@@ -5,6 +5,7 @@ import { AppModule } from "../app.module";
 import type { AuthUser } from "../auth/auth.types";
 import { loadEnv } from "../config/env";
 import { assertDemoSeedAllowed } from "../common/demo-seed-guard";
+import { tagDemoRows } from "../common/demo-data-tag";
 import nurseLabSpec from "./demo-nurse-lab.json";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
@@ -177,4 +178,4 @@ async function main() {
     console.log(`Lab demo seed OK — ${JSON.stringify(done)}; orders total ${await prisma.labOrder.count({ where: { orgId: org } })}`);
   } finally { await app.close(); }
 }
-main().then(() => process.exit(0)).catch((e) => { console.error(e); process.exit(1); });
+main().then(() => tagDemoRows("seed-demo")).then(() => process.exit(0)).catch((e) => { console.error(e); process.exit(1); });

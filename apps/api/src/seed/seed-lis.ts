@@ -6,6 +6,7 @@ import { AppModule } from "../app.module";
 import type { AuthUser } from "../auth/auth.types";
 import { loadEnv } from "../config/env";
 import { assertDemoSeedAllowed } from "../common/demo-seed-guard";
+import { tagDemoRows } from "../common/demo-data-tag";
 import { PrismaService } from "../prisma/prisma.service";
 import { QcService } from "../modules/analysis-qc/qc.service";
 import { seedCatalogue } from "./lis-seed-catalogue";
@@ -78,5 +79,5 @@ async function main() {
   }
 }
 
-if (require.main === module) main().catch((e) => { console.error(e); process.exit(1); });
+if (require.main === module) main().then(() => tagDemoRows("seed-lis")).catch((e) => { console.error(e); process.exit(1); });
 void QcService;
