@@ -73,13 +73,18 @@ describe("integration: Kiorex bookings + Kiorly Clinic handoff (HMAC), outbox, f
 
   it("rejects bad signatures, stale timestamps, replayed nonces, tampered bodies, unknown keys and unknown tests", async () => {
     const body = booking("kx_ref_sec");
-    assert.equal((await post(t, kx, "/integration/v1/orders", body, { secret: "wrong" })).status, 401);
-    assert.equal((await post(t, kx, "/integration/v1/orders", body, { timestamp: Date.now() - 10 * 60_000 })).status, 401);
-    assert.equal((await post(t, kx, "/integration/v1/orders", body, { tamper: true })).status, 401);
-    assert.equal((await post(t, { key: "nope", secret: "x" }, "/integration/v1/orders", body)).status, 401);
+    // every machine-auth rejection has the Pharmacy's shape: 401 { statusCode, code: "HMAC_REJECTED", message: <reason> }
+    const rejected = (r: { status: number; body: Record<string, unknown> }, reason: string, label: string) => {
+      assert.equal(r.status, 401, label);
+      assert.deepEqual(r.body, { statusCode: 401, code: "HMAC_REJECTED", message: reason }, label);
+    };
+    rejected(await post(t, kx, "/integration/v1/orders", body, { secret: "wrong" }), "bad_signature", "wrong secret");
+    rejected(await post(t, kx, "/integration/v1/orders", body, { timestamp: Date.now() - 10 * 60_000 }), "stale_timestamp", "stale timestamp");
+    rejected(await post(t, kx, "/integration/v1/orders", body, { tamper: true }), "bad_signature", "tampered body");
+    rejected(await post(t, { key: "nope", secret: "x" }, "/integration/v1/orders", body), "unknown client key", "unknown key");
     const n = "nonce-1";
     assert.equal((await post(t, kx, "/integration/v1/orders", booking("kx_ref_n"), { nonce: n })).status, 200);
-    assert.equal((await post(t, kx, "/integration/v1/orders", booking("kx_ref_n"), { nonce: n })).status, 401, "replayed nonce");
+    rejected(await post(t, kx, "/integration/v1/orders", booking("kx_ref_n"), { nonce: n }), "nonce replay", "replayed nonce");
     const unk = await post(t, kx, "/integration/v1/orders", booking("kx_ref_unk", { testCodes: ["NOPE"] }));
     assert.equal(unk.status, 422);
     assert.deepEqual(unk.body.codes, ["NOPE"]);

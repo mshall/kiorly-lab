@@ -44,6 +44,10 @@ describe("COM-3 lab: disclosure, counsel status, settlement statement", () => {
     delete process.env.KIOREX_MODE;
     const r = await get(f.tokens.OWNER, "/growth/commission-statement?period=2026-12");
     assert.equal(r.status, 503); assert.equal(r.body.code ?? r.body.message?.code, "STATEMENT_NOT_CONNECTED");
+    // the staff app route answers 200 with a clean "not connected" state (a normal screen, not a server error); the role gate still applies first
+    const mh = { "x-kiorly-client": "kiorly/1.0" };
+    const m = await call(t, "GET", "/mobile/growth/commission-statement?period=2026-12", { token: f.tokens.OWNER, headers: mh }); assert.equal(m.status, 200, JSON.stringify(m.body)); assert.deepEqual(m.body, { connected: false, code: "STATEMENT_NOT_CONNECTED", period: "2026-12" });
+    assert.equal((await call(t, "GET", "/mobile/growth/commission-statement?period=2026-12", { token: f.tokens.RECEPTION, headers: mh })).status, 403);
   });
 
   it("feesMinor: Lab keeps no fee ledger, so it shows Kiorex's figure or none (never estimated); printable statement", async () => {
@@ -60,7 +64,7 @@ describe("COM-3 lab: disclosure, counsel status, settlement statement", () => {
     assert.ok(await t.prisma.auditLog.findFirst({ where: { orgId: f.orgId, action: "kiorex.commission_statement.printed" } }));
     // Kiorly staff app cards (read only): same figures through /mobile/growth, same roles
     const mh = { "x-kiorly-client": "kiorly/1.0" };
-    const ms = await call(t, "GET", "/mobile/growth/commission-statement?period=2026-12", { token: f.tokens.OWNER, headers: mh }); assert.equal(ms.status, 200, JSON.stringify(ms.body)); assert.deepEqual([ms.body.deductions.feesMinor, ms.body.feesSource, ms.body.netPayableMinor], [null, null, 8000]);
+    const ms = await call(t, "GET", "/mobile/growth/commission-statement?period=2026-12", { token: f.tokens.OWNER, headers: mh }); assert.equal(ms.status, 200, JSON.stringify(ms.body)); assert.deepEqual([ms.body.connected, ms.body.deductions.feesMinor, ms.body.feesSource, ms.body.netPayableMinor], [true, null, null, 8000]);
     assert.equal((await call(t, "GET", "/mobile/growth/commission-statement?period=2026-12", { token: f.tokens.RECEPTION, headers: mh })).status, 403);
     const mr = await call(t, "GET", "/mobile/growth/commission-rate", { token: f.tokens.OWNER, headers: mh }); assert.equal(mr.status, 200); assert.ok("state" in mr.body);
     assert.equal((await call(t, "GET", "/mobile/growth/commission-rate", { token: f.tokens.RECEPTION, headers: mh })).status, 403);
