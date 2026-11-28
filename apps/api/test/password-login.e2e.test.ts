@@ -2,6 +2,7 @@ import { after, before, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { type Lab, type TestApp, bootApp, call, makeLab } from "./helpers/app";
 import { hashPassword } from "../src/auth/password";
+import { setCoverageFetcher, type Coverage } from "../src/auth/mfa-policy";
 
 /** Lab e-mail + password sign-in (founder decision 28 Nov 2026): login, lockout, uniform failures, change, reset, role refusal in production-like `both` mode. */
 describe("Lab password sign-in", () => {
@@ -87,6 +88,26 @@ describe("Lab password sign-in", () => {
       const cfg = await call(t, "GET", "/auth/config");
       assert.equal(cfg.body.localLogin, true);
     } finally { process.env.NODE_ENV = "test"; delete process.env.AUTH_MODE; }
+  });
+  it("MFA follows the Passport policy: OFF = the owner may sign in with a password and works; ON = Passport required and old password sessions refused; unreadable = fail closed", async () => {
+    process.env.NODE_ENV = "production"; process.env.AUTH_MODE = "both"; process.env.JWT_SECRET ||= "test-secret-test-secret-test-secret"; process.env.KIOREX_OIDC_ISSUER = "http://passport.invalid";
+    const cov = (mandatory: string[], partial: string[] = []): Coverage => ({ enabled: mandatory.length + partial.length > 0, types: { lab: { mandatory, partial } } });
+    try {
+      setCoverageFetcher(async () => cov([]));
+      const off = await login("OWNER", PW);
+      assert.equal(off.status, 200);
+      assert.equal((await call(t, "GET", "/auth/me", { token: off.body.token })).status, 200, "an owner without the MFA claim works while the policy is off");
+      setCoverageFetcher(async () => cov(["owner"]));
+      const on = await login("OWNER", PW);
+      assert.equal(on.status, 403); assert.equal(on.body.code, "PASSPORT_REQUIRED_FOR_ROLE");
+      const old = await call(t, "GET", "/auth/me", { token: off.body.token });
+      assert.equal(old.status, 403); assert.equal(old.body.code, "MFA_REQUIRED");
+      assert.equal((await login("TECHNOLOGIST", PW)).status, 200);
+      setCoverageFetcher(async () => cov([], ["*"])); // only some laboratories covered
+      assert.equal((await login("OWNER", PW)).status, 403);
+      setCoverageFetcher(async () => { throw new Error("down"); });
+      assert.equal((await login("OWNER", PW)).status, 403);
+    } finally { process.env.NODE_ENV = "test"; delete process.env.AUTH_MODE; delete process.env.KIOREX_OIDC_ISSUER; setCoverageFetcher(undefined); }
   });
   it("oidc mode: password sign-in is switched off", async () => {
     process.env.AUTH_MODE = "oidc";

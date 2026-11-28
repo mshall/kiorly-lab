@@ -121,7 +121,7 @@ export class AuthController {
       if (!s) throw new UnauthorizedException({ statusCode: 401, code: "LOGIN_FAILED", message: "Invalid organisation or e-mail" });
     } else {
       s = await this.pw.verifyCredentials(b.email, b.password ?? "", b.orgSlug);
-      if (passwordRoleRefused(s.role)) throw new HttpException({ statusCode: 403, code: "PASSPORT_REQUIRED_FOR_ROLE", message: "This role signs in with Kiorex Passport (two-step verification). Use Sign in with Kiorex Passport." }, 403);
+      if (await passwordRoleRefused(s.role)) throw new HttpException({ statusCode: 403, code: "PASSPORT_REQUIRED_FOR_ROLE", message: "This role signs in with Kiorex Passport (two-step verification). Use Sign in with Kiorex Passport." }, 403);
     }
     const { code, expiresInSeconds } = await this.handoffCodes().issue({ subjectId: s.id, origin: origin! });
     await this.audit.record({ orgId: s.orgId, actorId: s.id, action: "auth.handoff_issued", entityType: "StaffUser", entityId: s.id, meta: { via: "kiorly-home" } });
@@ -139,7 +139,7 @@ export class AuthController {
     const s = await this.prisma.staffUser.findFirst({ where: { id: subjectId, active: true } });
     if (!s) throw new UnauthorizedException({ statusCode: 401, code: "HANDOFF_INVALID", message: "The sign-in link is invalid or expired. Sign in again." });
     const token = appConfig.authMode() === "dev" && !appConfig.isProd() ? await this.tokens.signDev({ staffId: s.id, amr: ["pwd", "mfa"] }) : await this.tokens.issuePasswordSession(s.id);
-    if (appConfig.authMode() !== "dev" && passwordRoleRefused(s.role)) throw new UnauthorizedException({ statusCode: 401, code: "HANDOFF_INVALID", message: "The sign-in link is invalid or expired. Sign in again." });
+    if (appConfig.authMode() !== "dev" && await passwordRoleRefused(s.role)) throw new UnauthorizedException({ statusCode: 401, code: "HANDOFF_INVALID", message: "The sign-in link is invalid or expired. Sign in again." });
     await this.audit.record({ orgId: s.orgId, actorId: s.id, action: "auth.dev_login", entityType: "StaffUser", entityId: s.id, meta: { via: "kiorly-home-handoff" } });
     return { token, user: { id: s.id, displayName: s.displayName, role: s.role } };
   }

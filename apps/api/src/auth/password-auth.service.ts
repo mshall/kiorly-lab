@@ -6,6 +6,7 @@ import { TokenService } from "./token.service";
 import { appConfig } from "../config/app-config";
 import { hashPassword, verifyPassword } from "./password";
 import { PRIVILEGED_ROLES } from "./rbac";
+import { mfaMandatoryForRole } from "./mfa-policy";
 import { MessagingAdapter } from "../adapters/messaging.adapter";
 import type { StaffRole } from "../generated/prisma/client";
 
@@ -25,10 +26,11 @@ export function passwordPolicyError(pw: string, email?: string | null): string |
 }
 
 /**
- * AUTH_MODE=both in production: privileged roles (owner, lab director, authorised signatory...) sign in with Kiorex Passport, where the MFA policy applies.
- * A password session never carries the MFA claim and every privileged route would answer MFA_REQUIRED, so the answer says so (only after the password was verified).
+ * AUTH_MODE=both in production: privileged roles (owner, lab director, authorised signatory...) may sign in with e-mail + password ONLY while the Passport MFA policy is OFF for the
+ * lab type; with the policy ON, partly ON for some laboratories, or unreadable (fail closed) they use Kiorex Passport, where the factor is enforced. A password session never
+ * carries the MFA claim, so the answer says so (only after the password was verified). Other roles are never refused.
  */
-export const passwordRoleRefused = (role: StaffRole): boolean => appConfig.mfaEnforced() && PRIVILEGED_ROLES.includes(role);
+export const passwordRoleRefused = async (role: StaffRole): Promise<boolean> => appConfig.mfaEnforced() && PRIVILEGED_ROLES.includes(role) && (process.env.FORCE_PRIVILEGED_MFA === "true" || await mfaMandatoryForRole(role, true));
 
 /** E-mail + password sign-in for Lab staff (founder decision 28 Nov 2026). Identity only: tenant, role and lab scope always come from the staff row. */
 @Injectable()
@@ -70,7 +72,7 @@ export class PasswordAuthService {
 
   async login(email: string, password: string, orgSlug?: string) {
     const staff = await this.verifyCredentials(email, password, orgSlug);
-    if (passwordRoleRefused(staff.role)) throw new HttpException({ statusCode: 403, code: "PASSPORT_REQUIRED_FOR_ROLE", message: "This role signs in with Kiorex Passport (two-step verification). Use Sign in with Kiorex Passport." }, 403);
+    if (await passwordRoleRefused(staff.role)) throw new HttpException({ statusCode: 403, code: "PASSPORT_REQUIRED_FOR_ROLE", message: "This role signs in with Kiorex Passport (two-step verification). Use Sign in with Kiorex Passport." }, 403);
     await this.prisma.staffUser.update({ where: { id: staff.id }, data: { failedLogins: 0, lockedUntil: null, lastLoginAt: new Date() } });
     await this.audit.record({ orgId: staff.orgId, actorId: staff.id, action: "auth.login", entityType: "StaffUser", entityId: staff.id, meta: { via: "password" } });
     return { token: await this.tokens.issuePasswordSession(staff.id), user: { id: staff.id, displayName: staff.displayName, role: staff.role } };

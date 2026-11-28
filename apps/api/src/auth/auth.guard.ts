@@ -6,6 +6,7 @@ import type { AuthedRequest } from "./auth.types";
 import { IS_PUBLIC, PERMS } from "./decorators";
 import { hasPermission, mfaSatisfied, type Permission } from "./rbac";
 import { TokenService } from "./token.service";
+import { mfaMandatoryForRole } from "./mfa-policy";
 import { PassportService } from "./passport.service";
 import { PassportSessions } from "./passport-sessions.service";
 import { passportConfig } from "./passport";
@@ -46,7 +47,9 @@ export class AuthGuard implements CanActivate {
         include: { tenant: true },
       });
     if (!staff) throw new UnauthorizedException({ code: "UNKNOWN_STAFF" });
-    if (!mfaSatisfied(staff.role, tok.amr, appConfig.mfaEnforced())) throw new ForbiddenException({ code: "MFA_REQUIRED" });
+    // two-step verification follows the Passport MFA policy for the lab type (mfa-policy.ts): OFF = a Passport (or permitted password) session without the factor works.
+    // FORCE_PRIVILEGED_MFA=true pins the hard rule (tests, strict operators), as does MFA_POLICY_SOURCE=always.
+    if (!mfaSatisfied(staff.role, tok.amr, appConfig.mfaEnforced()) && (process.env.FORCE_PRIVILEGED_MFA === "true" || await mfaMandatoryForRole(staff.role))) throw new ForbiddenException({ code: "MFA_REQUIRED" });
     req.user = {
       staffId: staff.id,
       orgId: staff.orgId,
