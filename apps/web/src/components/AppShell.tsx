@@ -12,6 +12,8 @@ import { applyTenantDefault, setLang } from "@/lib/i18n";
 import { cn } from "@/lib/cn";
 import { Badge, Button } from "@/components/ui";
 import { routeDenied, type GuardedNavItem } from "@/lib/route-access";
+import { OrgIdentityBar } from "@/components/org-identity-bar";
+import { FindTest } from "@/components/find-test";
 import { KiorlyBrandLockup, KxControlPair, LanguageToggle, ThemeToggle } from "@/brand/ui-kit";
 
 const NAV_GROUPS = [
@@ -99,6 +101,8 @@ export function AppShell() {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-card/90 px-4 py-2.5 backdrop-blur-sm">
           <Button variant="ghost" size="icon" className="lg:hidden" aria-label="menu" onClick={() => setOpen(true)}><Menu className="h-5 w-5" /></Button>
+          {me ? <OrgIdentityBar name={me.tenant.name} planLabel={me.tenant.edition} className="max-w-[14rem] sm:max-w-xs" /> : null}
+          {can("orders.create") || can("catalogue.read") ? <FindTest /> : null}
           <div className="flex-1" />
           <div className="hidden items-center gap-3 md:flex">
             {!flagOn("lab.module") ? <Badge tone="warn">{t("shell.moduleOff")}</Badge> : null}

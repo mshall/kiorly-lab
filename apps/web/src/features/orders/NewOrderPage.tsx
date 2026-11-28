@@ -26,7 +26,7 @@ export function NewOrderPage() {
   const [existing, setExisting] = useState<any>(null);
   const [search, setSearch] = useState("");
   const [checked, setChecked] = useState<string[]>([]);
-  const [tests, setTests] = useState<string[]>([]);
+  const [tests, setTests] = useState<string[]>(() => (sp.get("test") ?? "").split(",").map((c) => c.trim()).filter(Boolean)); // "Find a test for a patient" in the top bar opens this page with the test already picked
   const [pkgs, setPkgs] = useState<string[]>([]);
   const [filter, setFilter] = useState("");
   const [source, setSource] = useState("WALK_IN");
