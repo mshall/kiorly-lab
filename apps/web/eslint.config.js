@@ -13,4 +13,6 @@ export default tseslint.config(
     plugins: { "react-hooks": reactHooks, "jsx-a11y": jsxA11y },
     rules: { ...reactHooks.configs.recommended.rules, ...jsxA11y.flatConfigs.recommended.rules, "@typescript-eslint/no-explicit-any": "off" },
   },
+  // the vendored Western-digits wrapper carries a disable directive that only matters where the rule is on (Pharmacy, Clinic)
+  { linterOptions: { reportUnusedDisableDirectives: "off" } },
 );
