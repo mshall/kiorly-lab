@@ -76,7 +76,7 @@ export function LoginPage() {
       <main id="main" className="flex flex-col justify-center gap-6 px-4 py-10 sm:px-10">
         <div className="mx-auto w-full max-w-md">
           <div className="mb-6 flex items-center justify-between gap-3">
-            <div className="lg:hidden"><KiorlyBrandLockup height={40} /></div>
+            <div className="min-w-0 lg:hidden"><span className="sm:hidden"><KiorlyBrandLockup height={28} /></span><span className="hidden sm:inline"><KiorlyBrandLockup height={40} /></span></div>
             <div className="hidden lg:block" />
             <KxControlPair><ThemeToggle labels={{ theme: t("theme.label"), light: t("theme.light"), dark: t("theme.dark"), system: t("theme.system") }} /><LanguageToggle onChange={setLang} /></KxControlPair>
           </div>
