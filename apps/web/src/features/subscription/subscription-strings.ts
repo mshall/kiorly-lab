@@ -44,7 +44,7 @@ const AR: typeof EN = {
   "confirmTitle": "الترقية إلى {{plan}}؟", "confirmBody": "تبدأ الخطة اليوم وتتجدد تلقائياً. يمكنك إيقاف التجديد في أي وقت.", "confirm": "تأكيد الترقية", "upgraded": "تم تحديث خطتك.", "needsCard": "أضف بطاقة ليتم خصم أول تجديد.",
   "lapse": "إذا تعذّر تحصيل دفعة نعيد المحاولة ونذكّرك. بعد {{days}} يوماً تنتقل معملك إلى الخطة المجانية؛ لا يُقفل شيء ولا يُحذف.", "reminders": "نذكّرك قبل كل تجديد بـ {{days}} أيام.", "tax": "تُضاف ضريبة {{rate}}% عند إصدار الفاتورة حيثما تنطبق.",
   "status_ACTIVE": "نشطة", "status_PAST_DUE": "دفعة متأخرة", "inv_PAID": "مدفوعة", "inv_ISSUED": "مستحقة", "inv_VOID": "ملغاة",
-  "cap_kiorex_bookings": "حجوزات كيوركس", "cap_analyzer_interfaces": "ربط الأجهزة", "cap_home_collection": "السحب المنزلي", "cap_referral_labs": "معامل الإحالة", "cap_multi_branch": "معامل متعددة",
+  "cap_kiorex_bookings": "حجوزات كيوريكس", "cap_analyzer_interfaces": "ربط الأجهزة", "cap_home_collection": "السحب المنزلي", "cap_referral_labs": "معامل الإحالة", "cap_multi_branch": "معامل متعددة",
   "ed_LITE": "لايت", "ed_PRO": "برو", "ed_CHAIN": "سلسلة", "nav": "الخطة والاشتراك",
 };
 i18n.addResourceBundle("en", "translation", { sub: EN }, true, false);
