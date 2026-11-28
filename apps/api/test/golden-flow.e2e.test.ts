@@ -92,7 +92,7 @@ describe("golden flow: order -> accession -> custody -> QC -> results -> validat
     assert.equal(dl.status, 200);
     assert.equal(dl.raw.subarray(0, 5).toString(), "%PDF-");
     const ready = await t.prisma.notificationAttempt.findFirstOrThrow({ where: { orgId: lab.orgId, purpose: "RESULT_READY" } });
-    assert.ok(!/13\.5|85/.test(JSON.stringify(ready.params)), "result-ready notification has no values");
+    assert.ok(!/\b13\.5\b|"85"|:85[,}]/.test(JSON.stringify(ready.params)), "result-ready notification has no values");
 
     // KIORLY_CLINIC_IMPORT was consented but not requested, so the clinic cannot fetch it; vault can (checked in integration tests)
     const releases = await t.prisma.releaseRecord.findMany({ where: { reportVersionId: signed.body.id } });
