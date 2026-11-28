@@ -64,7 +64,7 @@ export function LoginPage() {
     <div className="grid min-h-screen lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
       <aside className="relative hidden overflow-hidden p-12 text-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:justify-between" data-testid="login-brand-panel">
         <KxBrandBackdrop />
-        <div className="relative w-fit"><KiorexLogo variant="lockup" product="lab" lang={i18n.language} tone="inverse" height={48} /><p data-kx-tagline className="mt-1 text-xs text-white/70">{t("app.tagline")}</p></div>
+        <div className="relative w-fit"><KiorexLogo variant="lockup" product="lab" lang={i18n.language} tone="inverse" height={i18n.language === "ar" ? 72 : 48} /><p data-kx-tagline className="mt-1 text-xs text-white/70">{t("app.tagline")}</p></div>
         <div className="relative max-w-md space-y-6">
           <h2 className="text-balance text-3xl font-semibold leading-tight">{t("ux.login.headline")}</h2>
           <ul className="space-y-4">

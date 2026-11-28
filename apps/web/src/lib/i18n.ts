@@ -22,9 +22,21 @@ export function savedLang(): Lang | null {
   return null;
 }
 
-/** Arabic (RTL) is the default; a user's own choice wins, then the lab's default language (applied after login). */
+/** A user's own choice wins, then the browser language (Arabic when it says neither), then the lab's default language (applied after login). */
+function browserLang(): Lang {
+  // No saved choice: follow the browser language (first Arabic or English entry of navigator.languages); Arabic (RTL) when it says neither. The AR/EN switch is always visible.
+  try {
+    for (const l of navigator.languages ?? [navigator.language]) {
+      const base = String(l).toLowerCase().split("-")[0];
+      if (base === "ar" || base === "en") return base;
+    }
+  } catch {
+    /* no navigator */
+  }
+  return "ar";
+}
 function initialLang(): Lang {
-  return savedLang() ?? "ar";
+  return savedLang() ?? browserLang();
 }
 
 /** Applies the lab's default language when the user has not chosen one (not persisted, so the lab setting stays authoritative). */
