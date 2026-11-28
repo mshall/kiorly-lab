@@ -1,3 +1,4 @@
+import { usePageTitle } from "@/lib/page-title";
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -52,6 +53,7 @@ const NAV_GROUPS = [
 
 export function AppShell() {
   const { t } = useTranslation();
+  usePageTitle(t("app.docTitle"));
   const { me, can, logout, flagOn } = useAuth();
   const switchHref = switchWorkspaceHref(homeUrlFromEnv({ VITE_KIORLY_HOME_URL: import.meta.env.VITE_KIORLY_HOME_URL as string | undefined, DEV: import.meta.env.DEV, localDefault: import.meta.env.DEV ? LOCAL_HOME_URL : undefined }));
   const [open, setOpen] = useState(false);
