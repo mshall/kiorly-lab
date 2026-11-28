@@ -6,8 +6,8 @@ import { SubscriptionService } from "../src/subscription/subscription.service";
 const DAY = 86_400_000;
 describe("SUB-01 recurring subscription, auto-renew and Lite downgrade (lab)", () => {
   let t: TestApp, svc: SubscriptionService;
-  before(async () => { t = await bootApp(); svc = t.app.get(SubscriptionService); await t.prisma.planPrice.deleteMany({}); await t.prisma.planPrice.create({ data: { edition: "PRO", marketCode: "EG", interval: "MONTHLY", currency: "EGP", amount: "100.00" } }); });
-  after(async () => { await t.prisma.planPrice.deleteMany({}); await t.close(); });
+  before(async () => { t = await bootApp(); svc = t.app.get(SubscriptionService); await t.prisma.$executeRawUnsafe(`TRUNCATE TABLE "PlanPrice"`); await t.prisma.planPrice.create({ data: { edition: "PRO", marketCode: "EG", interval: "MONTHLY", currency: "EGP", amount: "100.00" } }); });
+  after(async () => { await t.prisma.$executeRawUnsafe(`TRUNCATE TABLE "PlanPrice"`); await t.close(); });
   const sub = (l: Lab) => t.prisma.orgSubscription.findUniqueOrThrow({ where: { orgId: l.orgId } });
   const edition = async (l: Lab) => (await t.prisma.tenant.findUniqueOrThrow({ where: { id: l.orgId } })).edition;
   const expire = (l: Lab, extra: object = {}) => t.prisma.orgSubscription.update({ where: { orgId: l.orgId }, data: { currentPeriodEnd: new Date(Date.now() - DAY), currentPeriodStart: new Date(Date.now() - 31 * DAY), ...extra } });
