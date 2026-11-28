@@ -165,4 +165,30 @@ test.describe("Growth & links (lab)", () => {
   test("reduced motion: the page renders without animation dependence", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" }); await open(page, OWNER); await expect(page.getByTestId("growth-summary")).toBeVisible(); await axe(page);
   });
+
+  test("next steps: every suggestion has an Open action, nothing can be dismissed or snoozed, the count shows what is left", async ({ page }) => {
+    await page.route(/\/api\/v1\/growth\/recommendations/, (r) => r.fulfill({ json: { items: [{ id: "CREATE_FIRST_LINK", severity: "medium", params: {}, action: "links" }, { id: "BRANCH_NOT_LISTED", severity: "high", params: { count: 1 }, action: "connect" }] } }));
+    await open(page, OWNER);
+    const recs = page.getByTestId("growth-recs");
+    await expect(recs.locator("li")).toHaveCount(2);
+    await expect(recs.getByTestId("growth-rec-open")).toHaveCount(2);
+    await expect(page.getByTestId("growth-rec-count")).toContainText("2");
+    await expect(page.getByRole("button", { name: /dismiss|snooze|hide/i })).toHaveCount(0);
+    await recs.getByTestId("growth-rec-open").first().click();
+    await expect(page.getByTestId("growth-form")).toBeVisible();
+  });
+
+  test("phone: 360 wide has no sideways scroll, and the top bar is two clean rows with the rest behind one More button", async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 800 });
+    await open(page, OWNER);
+    await noOverflow(page);
+    const more = page.getByTestId("topbar-more");
+    await expect(more).toBeVisible();
+    const b = await more.boundingBox(); expect(b!.width).toBeGreaterThanOrEqual(40); expect(b!.x + b!.width).toBeLessThanOrEqual(360);
+    await expect(page.getByTestId("topbar-more-panel")).toBeHidden();
+    await more.click();
+    await expect(page.getByTestId("topbar-more-panel")).toBeVisible();
+    await expect(more).toHaveAttribute("aria-expanded", "true");
+    await noOverflow(page);
+  });
 });

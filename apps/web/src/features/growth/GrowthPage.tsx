@@ -17,9 +17,18 @@ import { CommissionRateCard } from "./CommissionRateCard";
 interface LinkRow { id: string; code: string; label: string; ownerScope: "ORG" | "BRANCH" | "DESK"; channelKind: string; status: "ACTIVE" | "PAUSED" | "REVOKED"; labId: string | null; labName: string | null; shortUrl: string; last30: { visits: number; orders: number; completed: number } }
 interface Access { level: "admin" | "read" | "none"; connected: boolean; siteScoped: boolean; can: { view: boolean; create: boolean; update: boolean; revoke: boolean }; plan: { key: string; maxActiveLinks: number; linksUsed: number } }
 interface Perf { days: number; links: { visits: number; orders: number; completed: number }; marketplaceOriginated: { orders: number }; acquisitionPending: boolean; statement: { configured: boolean } }
-interface Rec { id: string; severity: string; params: Record<string, number>; action: string }
+interface Rec { id: string; severity: string; params: Record<string, number>; action: "links" | "connect" | "orders" | string }
 const STATUS_TONE: Record<string, Tone> = { ACTIVE: "ok", PAUSED: "warn", REVOKED: "muted" };
 const CHANNELS = ["WEB_LINK", "QR_POSTER", "QR_DESK", "SOCIAL", "SMS", "WHATSAPP_SHARE", "EMAIL_SIG", "GOOGLE_PROFILE"] as const;
+
+/** A next step opens where it is done: links opens the create form (or scrolls to the links), connect the Kiorex connection page, orders the orders list. It stays listed until the work is done. */
+function RecAction({ action, onLinks }: { action: string; onLinks: () => void }) {
+  const { t } = useTranslation();
+  const cls = "inline-flex min-h-11 items-center gap-1 rounded-lg border border-input bg-card px-3 text-sm font-medium hover:bg-accent focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2";
+  if (action === "connect") return <Link to="/kiorex-connect" className={cls} data-testid="growth-rec-open">{t("growth.recOpen")}</Link>;
+  if (action === "orders") return <Link to="/orders" className={cls} data-testid="growth-rec-open">{t("growth.recOpen")}</Link>;
+  return <button type="button" className={cls} onClick={onLinks} data-testid="growth-rec-open">{t("growth.recOpen")}</button>;
+}
 
 function useErr() {
   const { t } = useTranslation();
@@ -55,7 +64,7 @@ export function GrowthPage() {
       <section aria-labelledby="g-stats" className="mb-4"><h2 id="g-stats" className="mb-2 text-sm font-semibold text-muted-foreground">{t("growth.period")}</h2>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" data-testid="growth-summary">{stat("visits", t("growth.statVisits"), p?.links.visits)}{stat("orders", t("growth.statOrders"), p?.links.orders)}{stat("completed", t("growth.statCompleted"), p?.links.completed)}{stat("market", t("growth.statMarket"), p?.marketplaceOriginated.orders)}</div>
         {p?.acquisitionPending && <p className="mt-2 text-xs text-muted-foreground" data-testid="growth-pending">{t("growth.pending")}</p>}</section>
-      <Card className="mb-4">
+      <Card id="growth-links" className="mb-4">
         <div className="mb-3 flex items-center justify-between gap-2"><CardTitle className="mb-0">{t("growth.linksTitle")}</CardTitle>{access.data ? <span className="text-xs text-muted-foreground" data-testid="growth-plan">{t("growth.planUsage", { used: fmtNum(access.data.plan.linksUsed), max: fmtNum(access.data.plan.maxActiveLinks) })}</span> : null}</div>
         <ErrorNote error={links.error} />
         {links.isLoading ? <Spinner /> : !items.length ? <Empty>{t("growth.linksEmpty")}</Empty> : (
@@ -72,7 +81,7 @@ export function GrowthPage() {
           </Table>)}
       </Card>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-3"><CardTitle>{t("growth.recsTitle")}</CardTitle><ul className="space-y-2" data-testid="growth-recs">{(recs.data?.items ?? []).map((r) => <li key={r.id} data-rec={r.id} className="flex items-start gap-2 rounded-lg bg-muted/50 p-3 text-sm"><Badge tone={r.severity === "high" ? "crit" : r.severity === "medium" ? "warn" : "muted"}>{t(`growth.sev.${r.severity}`, { defaultValue: r.severity })}</Badge><span>{t(`growth.rec.${r.id}`, r.params)}</span></li>)}{recs.data && !recs.data.items.length && <li className="text-sm text-muted-foreground">{t("growth.recsNone")}</li>}</ul><p className="mt-3 text-xs text-muted-foreground">{t("growth.recGuardrail")}</p></Card>
+        <Card className="lg:col-span-3"><CardTitle>{t("growth.recsTitle")}{recs.data?.items.length ? <span className="ms-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary" data-testid="growth-rec-count">{t("growth.recProgress", { count: recs.data.items.length })}</span> : null}</CardTitle><ul className="space-y-2" data-testid="growth-recs">{(recs.data?.items ?? []).map((r) => <li key={r.id} data-rec={r.id} className="flex flex-wrap items-start gap-2 rounded-lg bg-muted/50 p-3 text-sm"><Badge tone={r.severity === "high" ? "crit" : r.severity === "medium" ? "warn" : "muted"}>{t(`growth.sev.${r.severity}`, { defaultValue: r.severity })}</Badge><span className="min-w-0 flex-1 basis-48">{t(`growth.rec.${r.id}`, r.params)}</span><RecAction action={r.action} onLinks={() => (can?.create ? setCreate(true) : document.getElementById("growth-links")?.scrollIntoView({ behavior: "smooth" }))} /></li>)}{recs.data && !recs.data.items.length && <li className="text-sm text-muted-foreground">{t("growth.recsNone")}</li>}</ul><p className="mt-3 text-xs text-muted-foreground">{t("growth.recGuardrail")}{recs.data?.items.length ? ` ${t("growth.recPending")}` : ""}</p></Card>
         <div className="min-w-0 lg:col-span-3"><CommissionRateCard /></div>
       </div>
       {create && <CreateModal sites={me?.labs ?? []} onClose={() => setCreate(false)} onDone={() => { setCreate(false); refresh(); }} />}

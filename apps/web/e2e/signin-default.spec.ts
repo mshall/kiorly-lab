@@ -33,6 +33,7 @@ async function mockConfig(page: Page, opts: { passport?: boolean; deployment?: "
   return asked;
 }
 // ADR-061 (28 Nov 2026): the unified card shows BOTH methods at once, so "preselected" now means: both panels are present and there are no method tabs. The per-organisation default only matters to Kiorly Home.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const selected = async (page: Page, _m: "passport" | "password") => { await expect(page.getByTestId("unified-signin")).toBeVisible(); await expect(page.getByTestId("signin-password-panel")).toBeVisible(); await expect(page.getByTestId("signin-passport-panel")).toBeVisible(); };
 const tabs = (page: Page) => page.getByRole("tab");
 

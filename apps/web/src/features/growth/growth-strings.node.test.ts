@@ -1,5 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { GROWTH_AR, GROWTH_EN } from "./growth-strings-data";
 
 const flat = (o: unknown, p = ""): Record<string, string> => (o && typeof o === "object" ? Object.entries(o).reduce<Record<string, string>>((a, [k, v]) => ({ ...a, ...flat(v, p ? `${p}.${k}` : k) }), {}) : { [p]: String(o) });
@@ -20,5 +22,14 @@ describe("Growth strings (AR/EN)", () => {
   it("every recommendation of the closed catalogue has wording, and no wording pushes treatment, price pressure or reviews", () => {
     for (const id of RECS) { assert.ok(en[`rec.${id}`], id); assert.ok(ar[`rec.${id}`], id); }
     for (const v of Object.values(en)) assert.doesNotMatch(v, /\b(discount|cheaper|upsell|buy more|review us|five.star|testimonial)\b/i);
+  });
+});
+
+describe("next steps cannot be hidden (28 Nov 2026)", () => {
+  it("every suggestion opens where it is done and the page has no dismiss, snooze or hide control", () => {
+    const src = readFileSync(join(import.meta.dirname, "GrowthPage.tsx"), "utf8");
+    assert.match(src, /growth-rec-open/);
+    assert.doesNotMatch(src, /dismiss|snooze|hide-forever|dismissed-cards/i);
+    assert.ok(flat(GROWTH_EN)["recOpen"] && flat(GROWTH_AR)["recOpen"] && flat(GROWTH_EN)["recProgress"] && flat(GROWTH_AR)["recPending"]);
   });
 });

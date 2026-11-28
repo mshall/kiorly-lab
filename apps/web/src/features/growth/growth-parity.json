@@ -1,0 +1,572 @@
+{
+ "_note": "Canonical wording shared by the Growth screens of Clinic, Pharmacy and Lab. Edit THIS file in the workspace (scripts/growth-parity) and run scripts/sync-growth-parity.sh; each product test checks its own strings against its copy.",
+ "concepts": {
+  "nextSteps.title": {
+   "en": "What to do next",
+   "ar": "ماذا تفعل الآن",
+   "keys": {
+    "clinic": "growth.rec.title",
+    "lab": "growth.recsTitle",
+    "pharmacy": "growth.recsTitle"
+   }
+  },
+  "nextSteps.allGood": {
+   "en": "Nothing needs your attention right now.",
+   "ar": "لا شيء يحتاج انتباهك الآن.",
+   "keys": {
+    "clinic": "growth.rec.allGood",
+    "lab": "growth.recsNone",
+    "pharmacy": "growth.recsNone"
+   }
+  },
+  "nextSteps.open": {
+   "en": "Open",
+   "ar": "افتح",
+   "keys": {
+    "clinic": "growth.rec.open",
+    "lab": "growth.recOpen",
+    "pharmacy": "growth.recOpen"
+   }
+  },
+  "nextSteps.progress": {
+   "en": "{{count}} next step(s) left",
+   "ar": "تبقّى {{count}} من الخطوات التالية",
+   "keys": {
+    "clinic": "growth.rec.progress",
+    "lab": "growth.recProgress",
+    "pharmacy": "growth.recProgress"
+   }
+  },
+  "nextSteps.pendingHint": {
+   "en": "A step leaves this list only when it is done.",
+   "ar": "لا تغادر الخطوة هذه القائمة إلا عند إنجازها.",
+   "keys": {
+    "clinic": "growth.rec.pendingHint",
+    "lab": "growth.recPending",
+    "pharmacy": "growth.recPending"
+   }
+  },
+  "summary.period": {
+   "en": "Last 30 days",
+   "ar": "آخر 30 يومًا",
+   "keys": {
+    "clinic": "growth.summary.period",
+    "lab": "growth.period",
+    "pharmacy": "growth.period"
+   }
+  },
+  "summary.visits": {
+   "en": "Visits",
+   "ar": "الزيارات",
+   "keys": {
+    "clinic": "growth.summary.visits",
+    "lab": "growth.statVisits",
+    "pharmacy": "growth.statVisits"
+   }
+  },
+  "plan.used": {
+   "en": "{{used}} of {{max}} links used on your plan",
+   "ar": "تم استخدام {{used}} من {{max}} رابطا في باقتك",
+   "keys": {
+    "clinic": "growth.plan.used",
+    "lab": "growth.planUsage",
+    "pharmacy": "growth.planUsage"
+   }
+  },
+  "rate.title": {
+   "en": "Your commission rate",
+   "ar": "نسبة العمولة الخاصة بك",
+   "keys": {
+    "clinic": "kiorexCom.rate.title",
+    "lab": "growth.rate.title",
+    "pharmacy": "growth.rate.title"
+   }
+  },
+  "rate.notSet": {
+   "en": "Rate not set",
+   "ar": "النسبة غير مضبوطة",
+   "keys": {
+    "clinic": "kiorexCom.rate.notSet",
+    "lab": "growth.rate.notSet",
+    "pharmacy": "growth.rate.notSet"
+   }
+  },
+  "rate.effective": {
+   "en": "Rate in effect now",
+   "ar": "النسبة السارية الآن",
+   "keys": {
+    "clinic": "kiorexCom.rate.effective",
+    "lab": "growth.rate.effective",
+    "pharmacy": "growth.rate.effective"
+   }
+  },
+  "rate.upcoming": {
+   "en": "Starts later",
+   "ar": "تبدأ لاحقا",
+   "keys": {
+    "clinic": "kiorexCom.rate.upcoming",
+    "lab": "growth.rate.upcoming",
+    "pharmacy": "growth.rate.upcoming"
+   }
+  },
+  "rate.history": {
+   "en": "Rate history",
+   "ar": "سجل النسب",
+   "keys": {
+    "clinic": "kiorexCom.rate.history",
+    "lab": "growth.rate.history",
+    "pharmacy": "growth.rate.history"
+   }
+  },
+  "rate.percentOf": {
+   "en": "{{pct}} of the fee",
+   "ar": "{{pct}} من الرسم",
+   "keys": {
+    "clinic": "kiorexCom.rate.percentOf",
+    "lab": "growth.rate.percentOf",
+    "pharmacy": "growth.rate.percentOf"
+   }
+  },
+  "rate.flatPer": {
+   "en": "{{amount}} per charge",
+   "ar": "{{amount}} لكل رسم",
+   "keys": {
+    "clinic": "kiorexCom.rate.flatPer",
+    "lab": "growth.rate.flatPer",
+    "pharmacy": "growth.rate.flatPer"
+   }
+  },
+  "rate.min": {
+   "en": "min",
+   "ar": "حد أدنى",
+   "keys": {
+    "clinic": "kiorexCom.rate.min",
+    "lab": "growth.rate.min",
+    "pharmacy": "growth.rate.min"
+   }
+  },
+  "rate.max": {
+   "en": "max",
+   "ar": "حد أقصى",
+   "keys": {
+    "clinic": "kiorexCom.rate.max",
+    "lab": "growth.rate.max",
+    "pharmacy": "growth.rate.max"
+   }
+  },
+  "rate.colFrom": {
+   "en": "Effective from",
+   "ar": "تسري من",
+   "keys": {
+    "clinic": "kiorexCom.rate.colFrom",
+    "lab": "growth.rate.colFrom",
+    "pharmacy": "growth.rate.colFrom"
+   }
+  },
+  "rate.colScope": {
+   "en": "Applies to",
+   "ar": "تنطبق على",
+   "keys": {
+    "clinic": "kiorexCom.rate.colScope",
+    "lab": "growth.rate.colScope",
+    "pharmacy": "growth.rate.colScope"
+   }
+  },
+  "rate.colRate": {
+   "en": "Rate",
+   "ar": "النسبة",
+   "keys": {
+    "clinic": "kiorexCom.rate.colRate",
+    "lab": "growth.rate.colRate",
+    "pharmacy": "growth.rate.colRate"
+   }
+  },
+  "rate.colReason": {
+   "en": "Reason",
+   "ar": "السبب",
+   "keys": {
+    "clinic": "kiorexCom.rate.colReason",
+    "lab": "growth.rate.colReason",
+    "pharmacy": "growth.rate.colReason"
+   }
+  },
+  "rate.backToDefault": {
+   "en": "Back to the default",
+   "ar": "العودة إلى الافتراضي",
+   "keys": {
+    "clinic": "kiorexCom.rate.backToDefault",
+    "lab": "growth.rate.backToDefault",
+    "pharmacy": "growth.rate.backToDefault"
+   }
+  },
+  "rate.yes": {
+   "en": "Yes",
+   "ar": "نعم",
+   "keys": {
+    "clinic": "kiorexCom.params.yes",
+    "lab": "growth.rate.yes",
+    "pharmacy": "growth.rate.yes"
+   }
+  },
+  "rate.no": {
+   "en": "No",
+   "ar": "لا",
+   "keys": {
+    "clinic": "kiorexCom.params.no",
+    "lab": "growth.rate.no",
+    "pharmacy": "growth.rate.no"
+   }
+  },
+  "counsel.label": {
+   "en": "Funds-flow review by Kiorex",
+   "ar": "مراجعة كيوريكس لتدفق الأموال",
+   "keys": {
+    "clinic": "kiorexCom.counsel.label",
+    "lab": "growth.rate.counselLabel",
+    "pharmacy": "growth.rate.counselLabel"
+   }
+  },
+  "counsel.NOT_REVIEWED": {
+   "en": "Not reviewed yet",
+   "ar": "لم تتم المراجعة بعد",
+   "keys": {
+    "clinic": "kiorexCom.counsel.status.NOT_REVIEWED",
+    "lab": "growth.rate.counselNOT_REVIEWED",
+    "pharmacy": "growth.rate.counselNOT_REVIEWED"
+   }
+  },
+  "counsel.APPROVED_WITH_CONDITIONS": {
+   "en": "Approved with conditions",
+   "ar": "معتمدة بشروط",
+   "keys": {
+    "clinic": "kiorexCom.counsel.status.APPROVED_WITH_CONDITIONS",
+    "lab": "growth.rate.counselAPPROVED_WITH_CONDITIONS",
+    "pharmacy": "growth.rate.counselAPPROVED_WITH_CONDITIONS"
+   }
+  },
+  "counsel.APPROVED": {
+   "en": "Approved",
+   "ar": "معتمدة",
+   "keys": {
+    "clinic": "kiorexCom.counsel.status.APPROVED",
+    "lab": "growth.rate.counselAPPROVED",
+    "pharmacy": "growth.rate.counselAPPROVED"
+   }
+  },
+  "counsel.REJECTED": {
+   "en": "Not approved",
+   "ar": "غير معتمدة",
+   "keys": {
+    "clinic": "kiorexCom.counsel.status.REJECTED",
+    "lab": "growth.rate.counselREJECTED",
+    "pharmacy": "growth.rate.counselREJECTED"
+   }
+  },
+  "disclosure.rate": {
+   "en": "Rate disclosure",
+   "ar": "الإفصاح عن النسبة",
+   "keys": {
+    "clinic": "kiorexCom.disclosure.rateDisclosure",
+    "lab": "growth.rate.discRateDisclosure",
+    "pharmacy": "growth.rate.discRateDisclosure"
+   }
+  },
+  "disclosure.terms": {
+   "en": "Commission terms summary",
+   "ar": "ملخص شروط العمولة",
+   "keys": {
+    "clinic": "kiorexCom.disclosure.termsSummary",
+    "lab": "growth.rate.discTermsSummary",
+    "pharmacy": "growth.rate.discTermsSummary"
+   }
+  },
+  "params.title": {
+   "en": "Collection timeline set by Kiorex",
+   "ar": "الجدول الزمني للتحصيل كما حددته كيوريكس",
+   "keys": {
+    "clinic": "kiorexCom.params.title",
+    "lab": "growth.rate.paramsTitle",
+    "pharmacy": "growth.rate.paramsTitle"
+   }
+  },
+  "params.retryDays": {
+   "en": "Retry on days",
+   "ar": "إعادة المحاولة في الأيام",
+   "keys": {
+    "clinic": "kiorexCom.params.retryDays",
+    "lab": "growth.rate.pRetryDays",
+    "pharmacy": "growth.rate.pRetryDays"
+   }
+  },
+  "params.reminderDays": {
+   "en": "Reminders (days from the due date, negative = before)",
+   "ar": "التذكيرات (أيام من تاريخ الاستحقاق، السالب = قبله)",
+   "keys": {
+    "clinic": "kiorexCom.params.reminderDays",
+    "lab": "growth.rate.pReminderDays",
+    "pharmacy": "growth.rate.pReminderDays"
+   }
+  },
+  "params.savedMethodChargeAllowed": {
+   "en": "Charge a saved payment method",
+   "ar": "الخصم من وسيلة دفع محفوظة",
+   "keys": {
+    "clinic": "kiorexCom.params.savedMethodChargeAllowed",
+    "lab": "growth.rate.pSavedMethodChargeAllowed",
+    "pharmacy": "growth.rate.pSavedMethodChargeAllowed"
+   }
+  },
+  "stmt.title": {
+   "en": "Settlement statement",
+   "ar": "كشف التسوية",
+   "keys": {
+    "clinic": "kiorexCom.stmt.title",
+    "lab": "growth.stmt.title",
+    "pharmacy": "growth.stmt.title"
+   }
+  },
+  "stmt.reconciliation": {
+   "en": "Reconciliation",
+   "ar": "المطابقة",
+   "keys": {
+    "clinic": "kiorexCom.stmt.reconciliation",
+    "lab": "growth.stmt.reconciliation",
+    "pharmacy": "growth.stmt.reconciliation"
+   }
+  },
+  "stmt.recon.MATCHED": {
+   "en": "Matched",
+   "ar": "مطابق",
+   "keys": {
+    "clinic": "kiorexCom.stmt.recon.MATCHED",
+    "lab": "growth.stmt.reconMATCHED",
+    "pharmacy": "growth.stmt.reconMATCHED"
+   }
+  },
+  "stmt.recon.UNMATCHED": {
+   "en": "Unmatched",
+   "ar": "غير مطابق",
+   "keys": {
+    "clinic": "kiorexCom.stmt.recon.UNMATCHED",
+    "lab": "growth.stmt.reconUNMATCHED",
+    "pharmacy": "growth.stmt.reconUNMATCHED"
+   }
+  },
+  "stmt.recon.DISPUTED": {
+   "en": "Disputed",
+   "ar": "محل اعتراض",
+   "keys": {
+    "clinic": "kiorexCom.stmt.recon.DISPUTED",
+    "lab": "growth.stmt.reconDISPUTED",
+    "pharmacy": "growth.stmt.reconDISPUTED"
+   }
+  },
+  "stmt.recon.NO_PAYOUT": {
+   "en": "No payout in this month",
+   "ar": "لا توجد مدفوعات في هذا الشهر",
+   "keys": {
+    "clinic": "kiorexCom.stmt.recon.NO_PAYOUT",
+    "lab": "growth.stmt.reconNO_PAYOUT",
+    "pharmacy": "growth.stmt.reconNO_PAYOUT"
+   }
+  },
+  "stmt.card.online": {
+   "en": "Online collections",
+   "ar": "التحصيلات الإلكترونية",
+   "keys": {
+    "clinic": "kiorexCom.stmt.cards.online",
+    "lab": "growth.stmt.cOnline",
+    "pharmacy": "growth.stmt.cOnline"
+   }
+  },
+  "stmt.card.cashAccrued": {
+   "en": "Cash-visit commission accrued",
+   "ar": "عمولة الزيارات النقدية المستحقة",
+   "keys": {
+    "clinic": "kiorexCom.stmt.cards.cashAccrued",
+    "lab": "growth.stmt.cCashAccrued",
+    "pharmacy": "growth.stmt.cCashAccrued"
+   }
+  },
+  "stmt.card.cashNetted": {
+   "en": "Cash-visit commission netted",
+   "ar": "عمولة الزيارات النقدية المخصومة",
+   "keys": {
+    "clinic": "kiorexCom.stmt.cards.cashNetted",
+    "lab": "growth.stmt.cCashNetted",
+    "pharmacy": "growth.stmt.cCashNetted"
+   }
+  },
+  "stmt.card.cashOpen": {
+   "en": "Cash-visit commission still open",
+   "ar": "عمولة الزيارات النقدية المتبقية",
+   "keys": {
+    "clinic": "kiorexCom.stmt.cards.cashOpen",
+    "lab": "growth.stmt.cCashOpen",
+    "pharmacy": "growth.stmt.cCashOpen"
+   }
+  },
+  "stmt.card.cashOnlyAccrued": {
+   "en": "Of which cash at the visit: accrued",
+   "ar": "منها نقد عند الزيارة: مستحقة",
+   "keys": {
+    "clinic": "kiorexCom.stmt.cards.cashOnlyAccrued",
+    "lab": "growth.stmt.cCashOnlyAccrued",
+    "pharmacy": "growth.stmt.cCashOnlyAccrued"
+   }
+  },
+  "stmt.card.cashTransferAccrued": {
+   "en": "Of which cash transfer: accrued",
+   "ar": "منها تحويل نقدي: مستحقة",
+   "keys": {
+    "clinic": "kiorexCom.stmt.cards.cashTransferAccrued",
+    "lab": "growth.stmt.cCashTransferAccrued",
+    "pharmacy": "growth.stmt.cCashTransferAccrued"
+   }
+  },
+  "stmt.card.cashTransferNetted": {
+   "en": "Of which cash transfer: netted",
+   "ar": "منها تحويل نقدي: مخصومة",
+   "keys": {
+    "clinic": "kiorexCom.stmt.cards.cashTransferNetted",
+    "lab": "growth.stmt.cCashTransferNetted",
+    "pharmacy": "growth.stmt.cCashTransferNetted"
+   }
+  },
+  "stmt.card.unknownTender": {
+   "en": "Visits with payment method not reported (exception)",
+   "ar": "زيارات لم تُبلَّغ طريقة دفعها (استثناء)",
+   "keys": {
+    "clinic": "kiorexCom.stmt.cards.unknownTender",
+    "lab": "growth.stmt.cUnknownTender",
+    "pharmacy": "growth.stmt.cUnknownTender"
+   }
+  },
+  "stmt.card.dedCommission": {
+   "en": "Deduction: commission",
+   "ar": "خصم: العمولة",
+   "keys": {
+    "clinic": "kiorexCom.stmt.cards.dedCommission",
+    "lab": "growth.stmt.cDedCommission",
+    "pharmacy": "growth.stmt.cDedCommission"
+   }
+  },
+  "stmt.card.dedFees": {
+   "en": "Deduction: fees",
+   "ar": "خصم: الرسوم",
+   "keys": {
+    "clinic": "kiorexCom.stmt.cards.dedFees",
+    "lab": "growth.stmt.cDedFees",
+    "pharmacy": "growth.stmt.cDedFees"
+   }
+  },
+  "stmt.card.dedRefunds": {
+   "en": "Deduction: refunds",
+   "ar": "خصم: المبالغ المستردة",
+   "keys": {
+    "clinic": "kiorexCom.stmt.cards.dedRefunds",
+    "lab": "growth.stmt.cDedRefunds",
+    "pharmacy": "growth.stmt.cDedRefunds"
+   }
+  },
+  "stmt.card.dedChargebacks": {
+   "en": "Deduction: chargebacks",
+   "ar": "خصم: المطالبات المرتدة",
+   "keys": {
+    "clinic": "kiorexCom.stmt.cards.dedChargebacks",
+    "lab": "growth.stmt.cDedChargebacks",
+    "pharmacy": "growth.stmt.cDedChargebacks"
+   }
+  },
+  "stmt.card.net": {
+   "en": "Net payable",
+   "ar": "صافي المستحق",
+   "keys": {
+    "clinic": "kiorexCom.stmt.cards.net",
+    "lab": "growth.stmt.cNet",
+    "pharmacy": "growth.stmt.cNet"
+   }
+  },
+  "stmt.card.paid": {
+   "en": "Paid by bank transfer",
+   "ar": "المدفوع بتحويل بنكي",
+   "keys": {
+    "clinic": "kiorexCom.stmt.cards.paid",
+    "lab": "growth.stmt.cPaid",
+    "pharmacy": "growth.stmt.cPaid"
+   }
+  },
+  "stmt.payouts": {
+   "en": "Payouts",
+   "ar": "المدفوعات",
+   "keys": {
+    "clinic": "kiorexCom.stmt.payouts",
+    "lab": "growth.stmt.payouts",
+    "pharmacy": "growth.stmt.payouts"
+   }
+  },
+  "stmt.noPayouts": {
+   "en": "No payout in this month.",
+   "ar": "لا توجد مدفوعات في هذا الشهر.",
+   "keys": {
+    "clinic": "kiorexCom.stmt.noPayouts",
+    "lab": "growth.stmt.noPayouts",
+    "pharmacy": "growth.stmt.noPayouts"
+   }
+  },
+  "stmt.bankRef": {
+   "en": "Bank reference",
+   "ar": "مرجع البنك",
+   "keys": {
+    "clinic": "kiorexCom.stmt.bankRef",
+    "lab": "growth.stmt.colBank",
+    "pharmacy": "growth.stmt.colBank"
+   }
+  },
+  "stmt.unavailable": {
+   "en": "The Kiorex statement is not available right now. Nothing has changed in your account; try again later.",
+   "ar": "كشف كيوريكس غير متاح حاليًا. لم يتغير شيء في حسابك؛ حاول لاحقًا.",
+   "keys": {
+    "clinic": "kiorexCom.stmt.unavailable",
+    "lab": "growth.stmt.unavailable",
+    "pharmacy": "growth.stmt.unavailable"
+   }
+  },
+  "stmt.export": {
+   "en": "Export CSV",
+   "ar": "تصدير CSV",
+   "keys": {
+    "clinic": "kiorexCom.export",
+    "lab": "growth.stmt.export",
+    "pharmacy": "growth.stmt.export"
+   }
+  },
+  "stmt.print": {
+   "en": "Print or save as PDF",
+   "ar": "طباعة أو حفظ PDF",
+   "keys": {
+    "clinic": "kiorexCom.stmt.print",
+    "lab": "growth.stmt.print",
+    "pharmacy": "growth.stmt.print"
+   }
+  },
+  "commission.title": {
+   "en": "Commission statement",
+   "ar": "كشف العمولة",
+   "keys": {
+    "clinic": "growth.commission.title",
+    "lab": "growth.statementTitle",
+    "pharmacy": "growth.statementTitle"
+   }
+  },
+  "stmt.period": {
+   "en": "Month",
+   "ar": "الشهر",
+   "keys": {
+    "clinic": "growth.commission.period",
+    "lab": "growth.stmt.period",
+    "pharmacy": "growth.stmt.period"
+   }
+  }
+ }
+}

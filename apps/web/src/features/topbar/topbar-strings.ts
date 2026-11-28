@@ -2,6 +2,7 @@ import i18n from "@/lib/i18n";
 
 /** Top bar wording (organisation chip with plan, "Find a test for a patient"), merged at runtime under `topbar`. */
 const EN = {
+  "more": "More",
   "plan": "Plan", "planHint": "Your organisation's current Kiorly plan",
   "findTest": "Find a test for a patient", "dialogTitle": "Find a test for a patient", "hint": "Type at least 2 letters of the test name or its code, then start an order for a patient.",
   "placeholder": "Test name or code", "none": "No test matches this search.", "failed": "The test list could not load. Try again.", "loading": "Loading tests",
@@ -9,6 +10,7 @@ const EN = {
   "orderFor": "Order for a patient", "openCatalogue": "Open in the catalogue", "shortcut": "Shortcut: Ctrl or Cmd + K",
 };
 const AR = {
+  "more": "المزيد",
   "plan": "الخطة", "planHint": "خطة كيورلي الحالية لمؤسستك",
   "findTest": "ابحث عن تحليل لمريض", "dialogTitle": "ابحث عن تحليل لمريض", "hint": "اكتب حرفين على الأقل من اسم التحليل أو رمزه، ثم ابدأ طلبا لمريض.",
   "placeholder": "اسم التحليل أو رمزه", "none": "لا يوجد تحليل مطابق لهذا البحث.", "failed": "تعذر تحميل قائمة التحاليل. حاول مرة أخرى.", "loading": "جارٍ تحميل التحاليل",

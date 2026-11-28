@@ -2,7 +2,7 @@ import { usePageTitle } from "@/lib/page-title";
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Megaphone, Activity, AlertTriangle, BadgeCheck, BarChart3, BookOpen, BriefcaseMedical, Bug, ClipboardList, CreditCard, FileCheck2, FlaskConical, LayoutDashboard, ArrowLeftRight, LineChart, Link2, LogOut, Menu, Microscope, Package, ScanBarcode, Settings, ShieldCheck, Smartphone, Snowflake, Ticket, Users, Wallet } from "lucide-react";
+import { Megaphone, Activity, AlertTriangle, BadgeCheck, BarChart3, BookOpen, BriefcaseMedical, Bug, ClipboardList, CreditCard, FileCheck2, FlaskConical, LayoutDashboard, EllipsisVertical, ArrowLeftRight, LineChart, Link2, LogOut, Menu, Microscope, Package, ScanBarcode, Settings, ShieldCheck, Smartphone, Snowflake, Ticket, Users, Wallet } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { SetupBar, SetupChecklist } from "@/setup/setup-core";
@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/auth";
 import { homeUrlFromEnv, LOCAL_HOME_URL, switchWorkspaceHref } from "@/lib/kiorly-home";
 import { applyTenantDefault, setLang } from "@/lib/i18n";
 import { cn } from "@/lib/cn";
+import "@/features/topbar/topbar-strings";
 import { Badge, Button } from "@/components/ui";
 import { routeDenied, type GuardedNavItem } from "@/lib/route-access";
 import { OrgIdentityBar } from "@/components/org-identity-bar";
@@ -59,6 +60,7 @@ export function AppShell() {
   const { me, can, logout, flagOn } = useAuth();
   const switchHref = switchWorkspaceHref(homeUrlFromEnv({ VITE_KIORLY_HOME_URL: import.meta.env.VITE_KIORLY_HOME_URL as string | undefined, DEV: import.meta.env.DEV, localDefault: import.meta.env.DEV ? LOCAL_HOME_URL : undefined }));
   const [open, setOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const nav = useNavigate();
   useEffect(() => { applyTenantDefault(me?.tenant.defaultLocale); }, [me?.tenant.defaultLocale]);
   const alerts = useQuery({ queryKey: ["critical-count"], queryFn: () => api<any[]>("/critical-alerts"), enabled: can("critical.read"), refetchInterval: 30_000 });
@@ -99,16 +101,18 @@ export function AppShell() {
       </aside>
       {open ? <div className="fixed inset-0 z-30 bg-black/30 lg:hidden" onClick={() => setOpen(false)} aria-hidden /> : null}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-card/90 px-4 py-2.5 backdrop-blur-sm">
-          <Button variant="ghost" size="icon" className="lg:hidden" aria-label="menu" onClick={() => setOpen(true)}><Menu className="h-5 w-5" /></Button>
-          {me ? <OrgIdentityBar name={me.tenant.name} planLabel={me.tenant.edition} className="max-w-[14rem] sm:max-w-xs" /> : null}
+        <header className="sticky top-0 z-20 flex flex-wrap items-center gap-x-2 gap-y-1.5 border-b border-border bg-card/90 px-3 py-2 backdrop-blur-sm sm:gap-x-3 sm:px-4 2xl:flex-nowrap">
+          <Button variant="ghost" size="icon" className="size-11 shrink-0 lg:hidden" aria-label="menu" onClick={() => setOpen(true)}><Menu className="h-5 w-5" /></Button>
+          {me ? <OrgIdentityBar name={me.tenant.name} planLabel={me.tenant.edition} className="min-w-0 flex-1 sm:max-w-xs sm:flex-none" /> : null}
           {can("orders.create") || can("catalogue.read") ? <FindTest /> : null}
-          <div className="flex-1" />
-          <div className="hidden items-center gap-3 md:flex">
+          <div className="hidden flex-1 2xl:block" />
+          <div className="hidden items-center gap-3 lg:flex">
             {!flagOn("lab.module") ? <Badge tone="warn">{t("shell.moduleOff")}</Badge> : null}
             <Badge tone={me?.tenant.integrationMode === "STANDALONE" ? "muted" : "info"} title={t("set.mode")}>{me?.tenant.integrationMode === "STANDALONE" ? t("shell.standalone") : t("shell.integrated")}</Badge>
             <Badge tone="info"><Microscope className="me-1 h-3 w-3" />{me?.tenant.edition}</Badge>
           </div>
+          <button type="button" className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg border border-input text-muted-foreground hover:bg-muted hover:text-foreground 2xl:hidden" aria-expanded={moreOpen} aria-controls="topbar-more" aria-label={t("topbar.more")} data-testid="topbar-more" onClick={() => setMoreOpen((v) => !v)}><EllipsisVertical aria-hidden className="size-5" /></button>
+          <div id="topbar-more" className={cn("order-last w-full flex-wrap items-center justify-end gap-2 border-t border-border/60 pt-2 motion-safe:animate-in motion-safe:fade-in 2xl:order-none 2xl:flex 2xl:w-auto 2xl:flex-nowrap 2xl:gap-3 2xl:border-0 2xl:pt-0", moreOpen ? "flex" : "hidden")} data-testid="topbar-more-panel">
           <KxControlPair><ThemeToggle labels={{ theme: t("theme.label"), light: t("theme.light"), dark: t("theme.dark"), system: t("theme.system") }} /><LanguageToggle onChange={setLang} /></KxControlPair>
           <div className="hidden text-end text-xs md:block">
             <div className="font-medium">{me?.user.displayName}</div>
@@ -116,6 +120,7 @@ export function AppShell() {
           </div>
           {switchHref ? <a href={switchHref} data-testid="switch-workspace" title={t("auth.switchWorkspace")} aria-label={t("auth.switchWorkspace")} className="inline-flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-sm font-medium text-primary underline-offset-4 hover:underline"><ArrowLeftRight aria-hidden className="size-4 rtl:rotate-180 sm:hidden" /><span className="hidden sm:inline">{t("auth.switchWorkspace")}</span></a> : null}
           <Button variant="outline" size="sm" className="h-10 shrink-0 whitespace-nowrap" aria-label={t("auth.logout")} onClick={() => { if (!logout()) nav("/login"); }}><LogOut aria-hidden className="size-4 rtl:rotate-180 sm:hidden" /><span className="hidden sm:inline">{t("auth.logout")}</span></Button>
+          </div>
         </header>
         <main id="main" className="mx-auto w-full max-w-7xl flex-1 p-4 sm:p-6"><SetupBar />{pathname === "/" && !routeBlocked ? <SetupChecklist /> : null}{routeBlocked ? (
           <div role="alert" data-testid="route-denied" className="mx-auto mt-16 max-w-md space-y-3 text-center">
