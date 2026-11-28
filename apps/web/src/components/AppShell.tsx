@@ -111,7 +111,7 @@ export function AppShell() {
             <div className="text-muted-foreground">{me ? t(`role.${me.user.role}`) : ""}</div>
           </div>
           {switchHref ? <a href={switchHref} data-testid="switch-workspace" title={t("auth.switchWorkspace")} aria-label={t("auth.switchWorkspace")} className="inline-flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-sm font-medium text-primary underline-offset-4 hover:underline"><ArrowLeftRight aria-hidden className="size-4 rtl:rotate-180 sm:hidden" /><span className="hidden sm:inline">{t("auth.switchWorkspace")}</span></a> : null}
-          <Button variant="ghost" size="sm" className="h-10 shrink-0 whitespace-nowrap" aria-label={t("auth.logout")} onClick={() => { if (!logout()) nav("/login"); }}><LogOut aria-hidden className="size-4 rtl:rotate-180 sm:hidden" /><span className="hidden sm:inline">{t("auth.logout")}</span></Button>
+          <Button variant="outline" size="sm" className="h-10 shrink-0 whitespace-nowrap" aria-label={t("auth.logout")} onClick={() => { if (!logout()) nav("/login"); }}><LogOut aria-hidden className="size-4 rtl:rotate-180 sm:hidden" /><span className="hidden sm:inline">{t("auth.logout")}</span></Button>
         </header>
         <main id="main" className="mx-auto w-full max-w-7xl flex-1 p-4 sm:p-6"><SetupBar />{pathname === "/" && !routeBlocked ? <SetupChecklist /> : null}{routeBlocked ? (
           <div role="alert" data-testid="route-denied" className="mx-auto mt-16 max-w-md space-y-3 text-center">
